@@ -43,12 +43,12 @@ export default function Header() {
         <div className="hidden md:flex items-center gap-3">
           <Link href="/login">
             <button className="px-4 py-2 text-sm font-medium text-white border border-purple-500/30 rounded-lg hover:border-purple-500 transition">
-              Resident Portal
+              Login
             </button>
           </Link>
-          <Link href="/login">
+          <Link href="/register">
             <button className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg hover:from-blue-600 hover:to-purple-700 transition">
-              Admin Login
+              Sign Up
             </button>
           </Link>
         </div>
@@ -79,12 +79,12 @@ export default function Header() {
             <div className="flex flex-col gap-2 mt-3 pt-3 border-t border-white/10">
               <Link href="/login" onClick={() => setMobileOpen(false)}>
                 <button className="w-full px-4 py-2 text-sm font-medium text-white border border-purple-500/30 rounded-lg hover:border-purple-500 transition">
-                  Resident Portal
+                  Login
                 </button>
               </Link>
-              <Link href="/login" onClick={() => setMobileOpen(false)}>
+              <Link href="/register" onClick={() => setMobileOpen(false)}>
                 <button className="w-full px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg">
-                  Admin Login
+                  Sign Up
                 </button>
               </Link>
             </div>
