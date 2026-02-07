@@ -42,7 +42,7 @@ export default function SignInPage() {
               id="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder=" " // space placeholder to trigger peer-placeholder-shown
+              placeholder=" "
               className="peer w-full px-4 pt-6 pb-2 rounded-lg bg-dark-light border border-primary-500/20 text-black focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
             <label
