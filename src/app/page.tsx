@@ -1,10 +1,26 @@
+"use client";
+
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+
 export default function Home() {
+  const router = useRouter();
+
+  const handleGetStarted = () => {
+    router.push("/login");
+  };
+
   return (
     <main className="min-h-screen bg-gradient-dark">
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-20 text-center">
-        <h1 className="text-5xl md:text-7xl font-bold mb-6">
+        {/* App Name */}
+        <h1 className="text-6xl md:text-7xl font-extrabold mb-4 bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
+          ProtoChain
+        </h1>
+
+        {/* Hero Headline */}
+        <h2 className="text-4xl md:text-6xl font-bold mb-6">
           <span className="gradient-text">
             Secure Barangay Documents
           </span>
@@ -12,7 +28,7 @@ export default function Home() {
           <span className="text-white">
             with Blockchain Technology
           </span>
-        </h1>
+        </h2>
         
         <p className="text-gray-400 text-lg md:text-xl mb-8 max-w-2xl mx-auto">
           Request, verify, and manage official barangay documents securely 
@@ -20,7 +36,10 @@ export default function Home() {
         </p>
 
         <div className="flex gap-4 justify-center">
-          <button className="bg-gradient-primary text-white px-8 py-3 rounded-lg font-semibold hover:opacity-90 transition">
+          <button
+            onClick={handleGetStarted}
+            className="bg-dark-light text-white px-8 py-3 rounded-lg font-semibold border border-primary-500/30 hover:border-primary-500 transition"
+          >
             Get Started
           </button>
           <button className="bg-dark-light text-white px-8 py-3 rounded-lg font-semibold border border-primary-500/30 hover:border-primary-500 transition">
