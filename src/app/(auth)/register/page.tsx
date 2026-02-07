@@ -35,7 +35,6 @@ export default function SignUpPage() {
     const { name, value } = e.target;
 
     if (name === 'phone') {
-      // Always enforce +63 prefix
       const cleaned = value.replace(/^(\+63)?/, '');
       setFormData({ ...formData, phone: cleaned });
     } else {
@@ -92,7 +91,8 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center px-4 bg-gradient-dark">
+    <div className="relative min-h-screen flex items-center justify-center px-4 pt-20 pb-8 bg-gradient-dark">
+      {/* ☝️ ADDED pt-20 to push content below fixed header */}
 
       {/* Background */}
       <div className="absolute inset-0 -z-10">
@@ -136,7 +136,7 @@ export default function SignUpPage() {
                   onChange={handleChange}
                   placeholder=" "
                   required
-                  className="peer w-full px-4 pt-6 pb-2 rounded-lg bg-dark-light border border-primary-500/20 text-black focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="peer w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
                 <label
                   htmlFor={name}
@@ -161,7 +161,7 @@ export default function SignUpPage() {
               onChange={handleChange}
               placeholder=" "
               required
-              className="peer w-full px-4 pt-6 pb-2 rounded-lg bg-dark-light border border-primary-500/20 text-black focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="peer w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
             <label
               htmlFor="email"
@@ -176,32 +176,31 @@ export default function SignUpPage() {
 
           {/* Phone */}
           <div className="relative">
-          <span className="absolute left-4 top-2 text-gray-400 text-sm select-none">+63</span>
-          <input
-            type="tel"
-            id="phone"
-            name="phone"
-            value={formData.phone}
-            onChange={(e) => {
-              // Only allow numbers
-              const onlyNumbers = e.target.value.replace(/\D/g, '');
-              setFormData({ ...formData, phone: onlyNumbers });
-            }}
-            placeholder=" "
-            required
-            maxLength={10}
-            className="peer w-full pl-14 px-4 pt-6 pb-2 rounded-lg bg-dark-light border border-primary-500/20 text-black focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
-          <label
-            htmlFor="phone"
-            className={`absolute left-14 top-2 text-gray-400 text-sm transition-all
-              peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:-translate-y-1/2
-              peer-focus:top-2 peer-focus:text-xs peer-focus:-translate-y-1
-              ${formData.phone ? 'top-2 text-xs -translate-y-1' : ''}`}
-          >
-            Phone Number
-          </label>
-        </div>
+            <span className="absolute left-4 top-2 text-gray-400 text-sm select-none">+63</span>
+            <input
+              type="tel"
+              id="phone"
+              name="phone"
+              value={formData.phone}
+              onChange={(e) => {
+                const onlyNumbers = e.target.value.replace(/\D/g, '');
+                setFormData({ ...formData, phone: onlyNumbers });
+              }}
+              placeholder=" "
+              required
+              maxLength={10}
+              className="peer w-full pl-14 px-4 pt-6 pb-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+            <label
+              htmlFor="phone"
+              className={`absolute left-14 top-2 text-gray-400 text-sm transition-all
+                peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:-translate-y-1/2
+                peer-focus:top-2 peer-focus:text-xs peer-focus:-translate-y-1
+                ${formData.phone ? 'top-2 text-xs -translate-y-1' : ''}`}
+            >
+              Phone Number
+            </label>
+          </div>
 
           {/* Password & Confirm Password */}
           {['password', 'confirmPassword'].map((name) => {
@@ -220,7 +219,7 @@ export default function SignUpPage() {
                   onChange={handleChange}
                   placeholder=" "
                   required
-                  className="peer w-full px-4 pt-6 pb-2 rounded-lg bg-dark-light border border-primary-500/20 text-black focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="peer w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
                 <label
                   htmlFor={name}
@@ -268,7 +267,7 @@ export default function SignUpPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl hover:opacity-90 transition-all duration-300 font-semibold text-lg"
+            className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-lg shadow-lg hover:shadow-xl hover:opacity-90 transition-all duration-300 font-semibold"
           >
             {loading ? 'Creating Account...' : 'Create Account'}
           </button>
