@@ -2,10 +2,12 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
 export default function SignInPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <div className="relative min-h-screen flex items-center justify-center px-4 bg-gradient-dark">
@@ -47,9 +49,10 @@ export default function SignInPage() {
             />
             <label
               htmlFor="email"
-              className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-base transition-all 
-                         peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400
-                         peer-focus:top-2 peer-focus:text-sm peer-focus:text-primary-500"
+              className={`absolute left-4 top-2 text-gray-400 text-sm transition-all
+                          peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:-translate-y-1/2
+                          peer-focus:top-2 peer-focus:text-xs peer-focus:-translate-y-1
+                          ${email ? 'top-2 text-xs -translate-y-1' : ''}`}
             >
               Email
             </label>
@@ -58,7 +61,7 @@ export default function SignInPage() {
           {/* Password */}
           <div className="relative">
             <input
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -67,12 +70,24 @@ export default function SignInPage() {
             />
             <label
               htmlFor="password"
-              className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-base transition-all 
-                         peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400
-                         peer-focus:top-2 peer-focus:text-sm peer-focus:text-primary-500"
+              className={`absolute left-4 top-2 text-gray-400 text-sm transition-all
+                          peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:-translate-y-1/2
+                          peer-focus:top-2 peer-focus:text-xs peer-focus:-translate-y-1
+                          ${password ? 'top-2 text-xs -translate-y-1' : ''}`}
             >
               Password
             </label>
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400"
+            >
+              {showPassword ? (
+                <EyeIcon className="w-5 h-5" />
+              ) : (
+                <EyeSlashIcon className="w-5 h-5" />
+              )}
+            </button>
           </div>
 
           {/* Button */}
@@ -88,7 +103,7 @@ export default function SignInPage() {
         <div className="text-center space-y-2">
           <p className="text-sm text-gray-400">
             Don&apos;t have an account?{" "}
-            <a href="/sign-up" className="text-primary-500 hover:underline font-medium">
+            <a href="/register" className="text-primary-500 hover:underline font-medium">
               Sign up
             </a>
           </p>
