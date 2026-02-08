@@ -31,7 +31,7 @@ export default function SignInPage() {
         router.push('/admin/dashboard');
       } else {
         // Redirect to resident dashboard
-        router.push('/resident/dashboard');
+        router.push('/dashboard');
       }
     }, 1500);
   };
