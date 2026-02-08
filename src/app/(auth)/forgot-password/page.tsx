@@ -6,7 +6,7 @@ import { useState } from 'react';
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [sent, setSent ] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +51,7 @@ export default function ForgotPasswordPage() {
             {/* Success Message */}
             <h2 className="text-2xl font-bold text-white mb-3">Check Your Email</h2>
             <p className="text-slate-400 mb-2">
-              We've sent a password reset link to
+              We've sent a password reset link to you
             </p>
             <p className="text-white font-medium mb-6 break-all">{email}</p>
             
@@ -60,7 +60,7 @@ export default function ForgotPasswordPage() {
                 Didn't receive the email?
               </p>
               <ul className="text-xs text-slate-500 space-y-1 text-left">
-                <li>• Check your spam or junk folder</li>
+                <li>• Checkssss your spam or junk folder</li>
                 <li>• Make sure you entered the correct email</li>
                 <li>• Wait a few minutes for the email to arrive</li>
               </ul>
