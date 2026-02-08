@@ -15,27 +15,27 @@ import {
 const menuItems = [
   {
     label: 'Dashboard',
-    href: '/resident/dashboard',
+    href: '/dashboard',
     icon: LayoutDashboard,
   },
   {
     label: 'Request Document',
-    href: '/resident/request-document',
+    href: '/request-document',
     icon: FileText,
   },
   {
     label: 'My Requests',
-    href: '/resident/my-requests',
+    href: '/my-requests',
     icon: Clock,
   },
   {
     label: 'My Documents',
-    href: '/resident/my-documents',
+    href: '/my-documents',
     icon: CheckCircle,
   },
   {
     label: 'Profile',
-    href: '/resident/profile',
+    href: '/profile',
     icon: User,
   },
 ];
