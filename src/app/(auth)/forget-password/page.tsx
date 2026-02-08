@@ -60,7 +60,7 @@ export default function ForgotPasswordPage() {
                 Didn't receive the email?
               </p>
               <ul className="text-xs text-slate-500 space-y-1 text-left">
-                <li>• Check your spam or junk folder</li>
+                <li>• Checksss your spam or junk folder</li>
                 <li>• Make sure you entered the correct email</li>
                 <li>• Wait a few minutes for the email to arrive</li>
               </ul>
