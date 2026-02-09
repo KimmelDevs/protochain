@@ -28,7 +28,7 @@ export default function SignInPage() {
       // In real app, this would come from your backend
       if (email.includes('admin')) {
         // Redirect to admin dashboard
-        router.push('/admin/dashboard');
+        router.push('/admindashboard');
       } else {
         // Redirect to resident dashboard
         router.push('/dashboard');
