@@ -28,17 +28,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchUserData = async (firebaseUser: User) => {
-    const result = await getUserById(firebaseUser.uid);
-    if (result.success && result.user) {
-      // Cast through unknown first to avoid type mismatch
-      setUserData(result.user as unknown as UserData);
+    try {
+      const result = await getUserById(firebaseUser.uid);
+      if (result.success && result.user) {
+        setUserData(result.user as unknown as UserData);
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
     }
   };
 
   const refreshUserData = async () => {
-    if (user) {
-      await fetchUserData(user);
-    }
+    if (user) await fetchUserData(user);
   };
 
   useEffect(() => {
@@ -57,9 +58,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => unsubscribe();
   }, []);
 
+  // ✅ Render children always - let each page handle loading state
   return (
     <AuthContext.Provider value={{ user, userData, loading, refreshUserData }}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };

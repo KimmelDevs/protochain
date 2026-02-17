@@ -1,6 +1,6 @@
 'use client';
 
-import { use } from 'react';
+import { use, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/Card';
 import Badge from '@/app/components/ui/Badge';
@@ -10,96 +10,73 @@ import {
   Download, 
   Share2, 
   QrCode,
-  Calendar,
-  User,
   FileText,
   Shield,
   CheckCircle,
   Printer
 } from 'lucide-react';
 import Link from 'next/link';
-
-// Mock data
-const documentDetails: Record<string, any> = {
-  'DOC-001': {
-    id: 'DOC-001',
-    requestId: 'REQ-001',
-    type: 'Barangay Clearance',
-    purpose: 'Employment',
-    dateIssued: '2024-01-16',
-    validUntil: '2024-07-16',
-    issuedBy: 'Hon. Maria Santos',
-    issuedByPosition: 'Barangay Captain',
-    qrCode: 'QR-ABC123XYZ',
-    blockchainHash: '0x1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t',
-    transactionId: 'TX-2024011600001',
-    applicant: {
-      name: 'Juan Dela Cruz',
-      address: 'Block 5 Lot 10, Barangay Salawag, Dasmariñas, Cavite',
-      birthdate: '1990-05-15',
-      civilStatus: 'Single',
-    },
-  },
-  'DOC-002': {
-    id: 'DOC-002',
-    requestId: 'REQ-003',
-    type: 'Certificate of Indigency',
-    purpose: 'Medical Assistance',
-    dateIssued: '2024-01-12',
-    validUntil: '2024-07-12',
-    issuedBy: 'Hon. Maria Santos',
-    issuedByPosition: 'Barangay Captain',
-    qrCode: 'QR-DEF456ABC',
-    blockchainHash: '0x7g8h9i0j1k2l3m4n5o6p7q8r9s0t1u2v3w4x5y6z',
-    transactionId: 'TX-2024011200001',
-    applicant: {
-      name: 'Juan Dela Cruz',
-      address: 'Block 5 Lot 10, Barangay Salawag, Dasmariñas, Cavite',
-      birthdate: '1990-05-15',
-      civilStatus: 'Single',
-    },
-  },
-  'DOC-003': {
-    id: 'DOC-003',
-    requestId: 'REQ-006',
-    type: 'Barangay Clearance',
-    purpose: 'Travel',
-    dateIssued: '2024-01-07',
-    validUntil: '2024-07-07',
-    issuedBy: 'Hon. Maria Santos',
-    issuedByPosition: 'Barangay Captain',
-    qrCode: 'QR-GHI789DEF',
-    blockchainHash: '0x3m4n5o6p7q8r9s0t1u2v3w4x5y6z7a8b9c0d1e2f',
-    transactionId: 'TX-2024010700001',
-    applicant: {
-      name: 'Juan Dela Cruz',
-      address: 'Block 5 Lot 10, Barangay Salawag, Dasmariñas, Cavite',
-      birthdate: '1990-05-15',
-      civilStatus: 'Single',
-    },
-  },
-};
+import { getDocumentById } from '@/app/firebase/firestore';
+import { formatDate } from '@/app/lib/utils/helpers';
 
 export default function DocumentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const document = documentDetails[id];
+  const [document, setDocument] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
 
-  if (!document) {
+  useEffect(() => {
+    const fetchDocument = async () => {
+      const result = await getDocumentById(id);
+      if (result.success && result.document) {
+        setDocument(result.document);
+      } else {
+        setNotFound(true);
+      }
+      setLoading(false);
+    };
+    fetchDocument();
+  }, [id]);
+
+  if (loading) {
     return (
-      <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center">
-        <Card>
-          <CardContent className="p-8 text-center">
-            <p className="text-gray-400 mb-4">Document not found</p>
-            <Link href="/resident/my-documents">
-              <Button>Back to Documents</Button>
-            </Link>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen p-4 lg:p-8">
+        <div className="max-w-5xl mx-auto animate-pulse space-y-6">
+          <div className="h-8 bg-white/10 rounded w-48" />
+          <div className="h-12 bg-white/10 rounded w-96" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 h-96 bg-white/10 rounded-xl" />
+            <div className="space-y-4">
+              <div className="h-48 bg-white/10 rounded-xl" />
+              <div className="h-48 bg-white/10 rounded-xl" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
-  const isValid = new Date(document.validUntil) > new Date();
+  if (notFound || !document) {
+    return (
+      <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center">
+        <div className="text-center">
+          <FileText className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+          <p className="text-gray-400 mb-4">Document not found</p>
+          <Link href="/resident/my-documents">
+            <Button>Back to Documents</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const isValid = () => {
+    if (!document.validUntil) return false;
+    const date = document.validUntil?.toDate 
+      ? document.validUntil.toDate() 
+      : new Date(document.validUntil);
+    return date > new Date();
+  };
 
   return (
     <div className="min-h-screen p-4 lg:p-8">
@@ -123,8 +100,8 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
               <h1 className="text-3xl font-bold text-white mb-2">{document.type}</h1>
               <p className="text-gray-400">Document ID: {document.id}</p>
             </div>
-            <Badge variant={isValid ? 'approved' : 'rejected'} className="text-sm px-4 py-2">
-              {isValid ? 'Valid' : 'Expired'}
+            <Badge variant={isValid() ? 'approved' : 'rejected'}>
+              {isValid() ? 'Valid' : 'Expired'}
             </Badge>
           </div>
         </motion.div>
@@ -154,33 +131,28 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
 
                   {/* Content */}
                   <div className="space-y-4 mb-8">
-                    <p className="text-justify">
-                      TO WHOM IT MAY CONCERN:
-                    </p>
+                    <p>TO WHOM IT MAY CONCERN:</p>
                     <p className="text-justify indent-8">
-                      This is to certify that <strong>{document.applicant.name}</strong>,
-                      of legal age, {document.applicant.civilStatus}, Filipino citizen,
-                      and a bonafide resident of {document.applicant.address}.
+                      This is to certify that <strong>{document.applicant?.name}</strong>,
+                      of legal age, {document.applicant?.civilStatus}, Filipino citizen,
+                      and a bonafide resident of {document.applicant?.address}.
                     </p>
                     <p className="text-justify indent-8">
                       This certification is being issued upon the request of the above-named
                       person for <strong>{document.purpose}</strong> purposes.
                     </p>
                     <p className="text-justify indent-8">
-                      Issued this {new Date(document.dateIssued).toLocaleDateString('en-US', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric'
-                      })} at Barangay Salawag, Dasmariñas, Cavite.
+                      Issued this {formatDate(document.issuedAt)} at Barangay Salawag,
+                      Dasmariñas, Cavite.
                     </p>
                   </div>
 
                   {/* Signature */}
                   <div className="flex justify-end mt-12">
                     <div className="text-center">
-                      <div className="border-t-2 border-black w-64 mb-1"></div>
+                      <div className="border-t-2 border-black w-64 mb-1" />
                       <p className="font-bold">{document.issuedBy}</p>
-                      <p className="text-sm">{document.issuedByPosition}</p>
+                      <p className="text-sm">Barangay Captain</p>
                     </div>
                   </div>
 
@@ -202,35 +174,31 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
               <CardHeader>
                 <CardTitle>Document Information</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-gray-400 mb-1">Document ID</p>
-                    <p className="text-white font-medium font-mono">{document.id}</p>
+                    <p className="text-white font-mono text-sm">{document.id}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-400 mb-1">Request ID</p>
-                    <p className="text-white font-medium font-mono">{document.requestId}</p>
+                    <p className="text-white font-mono text-sm">{document.requestId}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-400 mb-1">Date Issued</p>
-                    <p className="text-white font-medium">
-                      {new Date(document.dateIssued).toLocaleDateString()}
-                    </p>
+                    <p className="text-white">{formatDate(document.issuedAt)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-400 mb-1">Valid Until</p>
-                    <p className="text-white font-medium">
-                      {new Date(document.validUntil).toLocaleDateString()}
-                    </p>
+                    <p className="text-white">{formatDate(document.validUntil)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-400 mb-1">Purpose</p>
-                    <p className="text-white font-medium">{document.purpose}</p>
+                    <p className="text-white">{document.purpose}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-400 mb-1">Issued By</p>
-                    <p className="text-white font-medium">{document.issuedBy}</p>
+                    <p className="text-white">{document.issuedBy}</p>
                   </div>
                 </div>
               </CardContent>
@@ -250,7 +218,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                     <QrCode className="w-32 h-32 text-gray-400" />
                   </div>
                 </div>
-                <p className="text-sm text-gray-400 mb-2">QR Code ID</p>
+                <p className="text-sm text-gray-400 mb-1">QR Code ID</p>
                 <p className="text-white font-mono text-sm">{document.qrCode}</p>
               </CardContent>
             </Card>
@@ -266,15 +234,28 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
               <CardContent className="space-y-3">
                 <div>
                   <p className="text-sm text-gray-400 mb-1">Transaction ID</p>
-                  <p className="text-white font-mono text-xs break-all">{document.transactionId}</p>
+                  <p className="text-white font-mono text-xs break-all">
+                    {document.transactionId || 'Pending...'}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-400 mb-1">Blockchain Hash</p>
-                  <p className="text-white font-mono text-xs break-all">{document.blockchainHash}</p>
+                  <p className="text-white font-mono text-xs break-all">
+                    {document.blockchainHash || 'Pending...'}
+                  </p>
                 </div>
                 <div className="flex items-center gap-2 pt-2">
-                  <CheckCircle className="w-5 h-5 text-green-400" />
-                  <span className="text-sm text-green-400">Verified on Blockchain</span>
+                  {document.blockchainHash ? (
+                    <>
+                      <CheckCircle className="w-5 h-5 text-green-400" />
+                      <span className="text-sm text-green-400">Verified on Blockchain</span>
+                    </>
+                  ) : (
+                    <>
+                      <Shield className="w-5 h-5 text-yellow-400" />
+                      <span className="text-sm text-yellow-400">Awaiting Verification</span>
+                    </>
+                  )}
                 </div>
               </CardContent>
             </Card>

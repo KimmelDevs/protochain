@@ -12,36 +12,46 @@ import {
   updateRequestStatus,
 } from '@/app/firebase/firestore';
 
-// Hook for resident document features
 export const useDocuments = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [requests, setRequests] = useState<any[]>([]);
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user) {
-      fetchUserData();
+    // Wait for auth to finish loading
+    if (authLoading) return;
+
+    // If no user, stop loading and return empty
+    if (!user) {
+      setRequests([]);
+      setDocuments([]);
+      setLoading(false);
+      return;
     }
-  }, [user]);
+
+    fetchUserData();
+  }, [user, authLoading]);
 
   const fetchUserData = async () => {
     if (!user) return;
     setLoading(true);
 
-    const [requestsResult, documentsResult] = await Promise.all([
-      getUserRequests(user.uid),
-      getUserDocuments(user.uid),
-    ]);
+    try {
+      const [requestsResult, documentsResult] = await Promise.all([
+        getUserRequests(user.uid),
+        getUserDocuments(user.uid),
+      ]);
 
-    if (requestsResult.success) {
-      setRequests(requestsResult.requests || []);
+      setRequests(requestsResult.success ? (requestsResult.requests ?? []) : []);
+      setDocuments(documentsResult.success ? (documentsResult.documents ?? []) : []);
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      setRequests([]);
+      setDocuments([]);
+    } finally {
+      setLoading(false);
     }
-    if (documentsResult.success) {
-      setDocuments(documentsResult.documents || []);
-    }
-
-    setLoading(false);
   };
 
   const submitRequest = async (requestData: any) => {
@@ -63,46 +73,50 @@ export const useDocuments = () => {
   };
 };
 
-// Hook for admin document features
 export const useAdminDocuments = () => {
+  const { loading: authLoading } = useAuth();
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
   const [allRequests, setAllRequests] = useState<any[]>([]);
   const [approvedDocuments, setApprovedDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (authLoading) return;
     fetchAdminData();
-  }, []);
+  }, [authLoading]);
 
   const fetchAdminData = async () => {
     setLoading(true);
 
-    const [pendingResult, allResult, approvedResult] = await Promise.all([
-      getPendingRequests(),
-      getAllRequests(),
-      getAllApprovedDocuments(),
-    ]);
+    try {
+      const [pendingResult, allResult, approvedResult] = await Promise.all([
+        getPendingRequests(),
+        getAllRequests(),
+        getAllApprovedDocuments(),
+      ]);
 
-    if (pendingResult.success) setPendingRequests(pendingResult.requests || []);
-    if (allResult.success) setAllRequests(allResult.requests || []);
-    if (approvedResult.success) setApprovedDocuments(approvedResult.documents || []);
-
-    setLoading(false);
+      setPendingRequests(pendingResult.success ? (pendingResult.requests ?? []) : []);
+      setAllRequests(allResult.success ? (allResult.requests ?? []) : []);
+      setApprovedDocuments(approvedResult.success ? (approvedResult.documents ?? []) : []);
+    } catch (error) {
+      console.error('Error fetching admin data:', error);
+      setPendingRequests([]);
+      setAllRequests([]);
+      setApprovedDocuments([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const approveRequest = async (requestId: string, notes?: string, processedBy?: string) => {
     const result = await updateRequestStatus(requestId, 'approved', notes, processedBy);
-    if (result.success) {
-      await fetchAdminData();
-    }
+    if (result.success) await fetchAdminData();
     return result;
   };
 
   const rejectRequest = async (requestId: string, reason: string, processedBy?: string) => {
     const result = await updateRequestStatus(requestId, 'rejected', reason, processedBy);
-    if (result.success) {
-      await fetchAdminData();
-    }
+    if (result.success) await fetchAdminData();
     return result;
   };
 
@@ -115,4 +129,4 @@ export const useAdminDocuments = () => {
     rejectRequest,
     refreshData: fetchAdminData,
   };
-}
+};
