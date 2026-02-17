@@ -23,8 +23,9 @@ export default function SignUpPage() {
     phone: '',
   });
 
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [globalError, setGlobalError] = useState('');
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -35,12 +36,10 @@ export default function SignUpPage() {
     const part1 = digits.slice(0, 3);
     const part2 = digits.slice(3, 6);
     const part3 = digits.slice(6, 10);
-
     let formatted = '';
     if (digits.length > 0) formatted += part1;
     if (digits.length > 3) formatted += ' ' + part2;
     if (digits.length > 6) formatted += ' ' + part3;
-
     return formatted;
   };
 
@@ -55,6 +54,11 @@ export default function SignUpPage() {
     if (digits.length > 0 && digits[0] !== '9') return;
     digits = digits.slice(0, 10);
     setFormData(prev => ({ ...prev, phone: digits }));
+
+    // Clear phone error when typing
+    if (fieldErrors.phone) {
+      setFieldErrors(prev => ({ ...prev, phone: '' }));
+    }
   };
 
   const formattedPhone = formData.phone ? formatPhone(formData.phone) : '';
@@ -86,31 +90,68 @@ export default function SignUpPage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-    setError('');
+
+    // Clear field error when user starts typing
+    if (fieldErrors[name]) {
+      setFieldErrors(prev => ({ ...prev, [name]: '' }));
+    }
+    setGlobalError('');
+
     if (name === 'password') {
       setPasswordStrength(calculatePasswordStrength(value));
+      // Live check confirm password match
+      if (formData.confirmPassword && value !== formData.confirmPassword) {
+        setFieldErrors(prev => ({ ...prev, confirmPassword: 'Passwords do not match' }));
+      } else {
+        setFieldErrors(prev => ({ ...prev, confirmPassword: '' }));
+      }
     }
+
+    if (name === 'confirmPassword') {
+      if (value !== formData.password) {
+        setFieldErrors(prev => ({ ...prev, confirmPassword: 'Passwords do not match' }));
+      } else {
+        setFieldErrors(prev => ({ ...prev, confirmPassword: '' }));
+      }
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    if (!formData.firstName.trim()) errors.firstName = 'First name is required';
+    if (!formData.lastName.trim()) errors.lastName = 'Last name is required';
+    if (!formData.email.trim()) errors.email = 'Email is required';
+    if (!formData.username.trim()) errors.username = 'Username is required';
+    if (!formData.birthday) errors.birthday = 'Birthday is required';
+    if (!formData.civilStatus) errors.civilStatus = 'Civil status is required';
+    if (!formData.address.trim()) errors.address = 'Address is required';
+
+    if (formData.phone.length < 10) {
+      errors.phone = 'Please enter a valid 10-digit phone number';
+    }
+
+    if (!formData.password) {
+      errors.password = 'Password is required';
+    } else if (formData.password.length < 8) {
+      errors.password = 'Password must be at least 8 characters';
+    }
+
+    if (!formData.confirmPassword) {
+      errors.confirmPassword = 'Please confirm your password';
+    } else if (formData.password !== formData.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setGlobalError('');
 
-    // Validations
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-
-    if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters');
-      return;
-    }
-
-    if (formData.phone.length < 10) {
-      setError('Please enter a valid phone number');
-      return;
-    }
+    if (!validateForm()) return;
 
     setLoading(true);
 
@@ -127,7 +168,7 @@ export default function SignUpPage() {
     );
 
     if (!result.success) {
-      setError(result.error || 'Registration failed. Please try again.');
+      setGlobalError(result.error || 'Registration failed. Please try again.');
       setLoading(false);
     }
   };
@@ -154,86 +195,135 @@ export default function SignUpPage() {
           <p className="text-gray-400 text-sm">Join our secure community</p>
         </div>
 
-        {/* Error */}
-        {error && (
+        {/* Global Error */}
+        {globalError && (
           <div className="p-3 bg-red-500/10 border border-red-500 rounded text-red-500 text-sm">
-            {error}
+            {globalError}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Name */}
+
+          {/* Name Row */}
           <div className="grid grid-cols-2 gap-3">
-            <FloatingInput label="First Name" name="firstName" value={formData.firstName} handleChange={handleChange} />
-            <FloatingInput label="Last Name" name="lastName" value={formData.lastName} handleChange={handleChange} />
+            <FloatingInput
+              label="First Name"
+              name="firstName"
+              value={formData.firstName}
+              handleChange={handleChange}
+              error={fieldErrors.firstName}
+            />
+            <FloatingInput
+              label="Last Name"
+              name="lastName"
+              value={formData.lastName}
+              handleChange={handleChange}
+              error={fieldErrors.lastName}
+            />
           </div>
 
-          <FloatingInput label="Email" name="email" type="email" value={formData.email} handleChange={handleChange} />
-          <FloatingInput label="Username" name="username" value={formData.username} handleChange={handleChange} />
+          <FloatingInput
+            label="Email"
+            name="email"
+            type="email"
+            value={formData.email}
+            handleChange={handleChange}
+            error={fieldErrors.email}
+          />
+
+          <FloatingInput
+            label="Username"
+            name="username"
+            value={formData.username}
+            handleChange={handleChange}
+            error={fieldErrors.username}
+          />
 
           {/* Birthday */}
-          <div className="relative">
-            <input
-              ref={dateRef}
-              type="date"
-              name="birthday"
-              value={formData.birthday}
-              onChange={handleChange}
-              required
-              onClick={() => dateRef.current?.showPicker()}
-              className="w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-primary-500 [&::-webkit-calendar-picker-indicator]:invert"
-            />
-            <label className="absolute left-4 top-2 text-xs text-gray-400 pointer-events-none">
-              Birthday
-            </label>
+          <div>
+            <div className="relative">
+              <input
+                ref={dateRef}
+                type="date"
+                name="birthday"
+                value={formData.birthday}
+                onChange={handleChange}
+                onClick={() => dateRef.current?.showPicker()}
+                className={`w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border text-white focus:outline-none focus:ring-2 focus:ring-primary-500 [&::-webkit-calendar-picker-indicator]:invert
+                  ${fieldErrors.birthday ? 'border-red-500' : 'border-white/20'}`}
+              />
+              <label className="absolute left-4 top-2 text-xs text-gray-400 pointer-events-none">
+                Birthday
+              </label>
+            </div>
+            {fieldErrors.birthday && (
+              <p className="text-red-400 text-xs mt-1 ml-1">{fieldErrors.birthday}</p>
+            )}
           </div>
 
           {/* Civil Status */}
-          <div className="relative">
-            <select
-              name="civilStatus"
-              value={formData.civilStatus}
-              onChange={handleChange}
-              required
-              className="peer w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-            >
-              <option value="" disabled hidden></option>
-              <option value="Single" className="text-black">Single</option>
-              <option value="Married" className="text-black">Married</option>
-              <option value="Widowed" className="text-black">Widowed</option>
-              <option value="Separated" className="text-black">Separated</option>
-            </select>
-            <label
-              className={`absolute left-4 text-gray-400 text-sm transition-all pointer-events-none
-              ${formData.civilStatus ? 'top-2 text-xs -translate-y-1' : 'top-1/2 -translate-y-1/2 text-base'}
-              peer-focus:top-2 peer-focus:text-xs peer-focus:-translate-y-1`}
-            >
-              Civil Status
-            </label>
+          <div>
+            <div className="relative">
+              <select
+                name="civilStatus"
+                value={formData.civilStatus}
+                onChange={handleChange}
+                className={`peer w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border text-white focus:outline-none focus:ring-2 focus:ring-primary-500
+                  ${fieldErrors.civilStatus ? 'border-red-500' : 'border-white/20'}`}
+              >
+                <option value="" disabled hidden></option>
+                <option value="Single" className="text-black">Single</option>
+                <option value="Married" className="text-black">Married</option>
+                <option value="Widowed" className="text-black">Widowed</option>
+                <option value="Separated" className="text-black">Separated</option>
+              </select>
+              <label
+                className={`absolute left-4 text-gray-400 text-sm transition-all pointer-events-none
+                ${formData.civilStatus ? 'top-2 text-xs -translate-y-1' : 'top-1/2 -translate-y-1/2 text-base'}
+                peer-focus:top-2 peer-focus:text-xs peer-focus:-translate-y-1`}
+              >
+                Civil Status
+              </label>
+            </div>
+            {fieldErrors.civilStatus && (
+              <p className="text-red-400 text-xs mt-1 ml-1">{fieldErrors.civilStatus}</p>
+            )}
           </div>
 
-          <FloatingInput label="Address" name="address" value={formData.address} handleChange={handleChange} />
+          <FloatingInput
+            label="Address"
+            name="address"
+            value={formData.address}
+            handleChange={handleChange}
+            error={fieldErrors.address}
+          />
 
           {/* Phone */}
-          <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-              +63
-            </span>
-            <input
-              type="tel"
-              value={formattedPhone}
-              onChange={handlePhoneChange}
-              onFocus={handlePhoneFocus}
-              placeholder=" "
-              className="peer w-full pl-16 pr-4 pt-6 pb-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
-            <label
-              className={`absolute left-16 text-gray-400 text-sm transition-all pointer-events-none
-              ${formData.phone ? 'top-2 text-xs -translate-y-1' : 'top-1/2 -translate-y-1/2 text-base'}
-              peer-focus:top-2 peer-focus:text-xs peer-focus:-translate-y-1`}
-            >
-              Phone Number
-            </label>
+          <div>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                +63
+              </span>
+              <input
+                type="tel"
+                value={formattedPhone}
+                onChange={handlePhoneChange}
+                onFocus={handlePhoneFocus}
+                placeholder=" "
+                className={`peer w-full pl-16 pr-4 pt-6 pb-2 rounded-lg bg-white/10 border text-white focus:outline-none focus:ring-2 focus:ring-primary-500
+                  ${fieldErrors.phone ? 'border-red-500' : 'border-white/20'}`}
+              />
+              <label
+                className={`absolute left-16 text-gray-400 text-sm transition-all pointer-events-none
+                ${formData.phone ? 'top-2 text-xs -translate-y-1' : 'top-1/2 -translate-y-1/2 text-base'}
+                peer-focus:top-2 peer-focus:text-xs peer-focus:-translate-y-1`}
+              >
+                Phone Number
+              </label>
+            </div>
+            {fieldErrors.phone && (
+              <p className="text-red-400 text-xs mt-1 ml-1">{fieldErrors.phone}</p>
+            )}
           </div>
 
           {/* Password Tips */}
@@ -259,57 +349,87 @@ export default function SignUpPage() {
             </div>
           )}
 
-          {/* Passwords */}
-          {['password', 'confirmPassword'].map((name) => {
-            const isPassword = name === 'password';
-            const value = formData[name as keyof typeof formData];
-            const show = isPassword ? showPassword : showConfirmPassword;
-            const setShow = isPassword ? setShowPassword : setShowConfirmPassword;
-
-            return (
-              <div key={name} className="relative">
-                <input
-                  type={show ? 'text' : 'password'}
-                  name={name}
-                  value={value}
-                  onChange={handleChange}
-                  required
-                  placeholder=" "
-                  className="peer w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                />
-                <label
-                  className={`absolute left-4 text-gray-400 text-sm transition-all pointer-events-none
-                  ${value ? 'top-2 text-xs -translate-y-1' : 'top-1/2 -translate-y-1/2 text-base'}
-                  peer-focus:top-2 peer-focus:text-xs peer-focus:-translate-y-1`}
-                >
-                  {isPassword ? 'Password' : 'Confirm Password'}
-                </label>
-
-                <button
-                  type="button"
-                  onClick={() => setShow(!show)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
-                >
-                  {show ? <EyeIcon className="w-5 h-5" /> : <EyeSlashIcon className="w-5 h-5" />}
-                </button>
-
-                {/* Password Strength */}
-                {isPassword && formData.password && (
-                  <div className="mt-2 space-y-1">
-                    <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full transition-all duration-300 ${strength.color}`}
-                        style={{ width: `${(passwordStrength / 5) * 100}%` }}
-                      />
-                    </div>
-                    <p className="text-xs text-gray-300">
-                      Strength: <span className="font-semibold">{strength.text}</span>
-                    </p>
-                  </div>
-                )}
+          {/* Password */}
+          <div>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder=" "
+                className={`peer w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border text-white focus:outline-none focus:ring-2 focus:ring-primary-500
+                  ${fieldErrors.password ? 'border-red-500' : 'border-white/20'}`}
+              />
+              <label
+                className={`absolute left-4 text-gray-400 text-sm transition-all pointer-events-none
+                ${formData.password ? 'top-2 text-xs -translate-y-1' : 'top-1/2 -translate-y-1/2 text-base'}
+                peer-focus:top-2 peer-focus:text-xs peer-focus:-translate-y-1`}
+              >
+                Password
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
+              >
+                {showPassword ? <EyeIcon className="w-5 h-5" /> : <EyeSlashIcon className="w-5 h-5" />}
+              </button>
+            </div>
+            {fieldErrors.password && (
+              <p className="text-red-400 text-xs mt-1 ml-1">{fieldErrors.password}</p>
+            )}
+            {/* Password Strength */}
+            {formData.password && !fieldErrors.password && (
+              <div className="mt-2 space-y-1">
+                <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-300 ${strength.color}`}
+                    style={{ width: `${(passwordStrength / 5) * 100}%` }}
+                  />
+                </div>
+                <p className="text-xs text-gray-300">
+                  Strength: <span className="font-semibold">{strength.text}</span>
+                </p>
               </div>
-            );
-          })}
+            )}
+          </div>
+
+          {/* Confirm Password */}
+          <div>
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                placeholder=" "
+                className={`peer w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border text-white focus:outline-none focus:ring-2 focus:ring-primary-500
+                  ${fieldErrors.confirmPassword ? 'border-red-500' : 'border-white/20'}`}
+              />
+              <label
+                className={`absolute left-4 text-gray-400 text-sm transition-all pointer-events-none
+                ${formData.confirmPassword ? 'top-2 text-xs -translate-y-1' : 'top-1/2 -translate-y-1/2 text-base'}
+                peer-focus:top-2 peer-focus:text-xs peer-focus:-translate-y-1`}
+              >
+                Confirm Password
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
+              >
+                {showConfirmPassword ? <EyeIcon className="w-5 h-5" /> : <EyeSlashIcon className="w-5 h-5" />}
+              </button>
+            </div>
+            {fieldErrors.confirmPassword && (
+              <p className="text-red-400 text-xs mt-1 ml-1">{fieldErrors.confirmPassword}</p>
+            )}
+            {/* Show match checkmark */}
+            {formData.confirmPassword && !fieldErrors.confirmPassword && (
+              <p className="text-green-400 text-xs mt-1 ml-1">✓ Passwords match</p>
+            )}
+          </div>
 
           <button
             type="submit"
@@ -341,26 +461,38 @@ export default function SignUpPage() {
   );
 }
 
-/* Floating Input Component */
-function FloatingInput({ label, name, value, handleChange, type = "text" }: any) {
+/* Floating Input Component - Updated with error support */
+function FloatingInput({ label, name, value, handleChange, type = "text", error }: {
+  label: string;
+  name: string;
+  value: string;
+  handleChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  type?: string;
+  error?: string;
+}) {
   return (
-    <div className="relative">
-      <input
-        type={type}
-        name={name}
-        value={value}
-        onChange={handleChange}
-        placeholder=" "
-        required
-        className="peer w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-      />
-      <label
-        className={`absolute left-4 text-gray-400 text-sm transition-all pointer-events-none
-        ${value ? 'top-2 text-xs -translate-y-1' : 'top-1/2 -translate-y-1/2 text-base'}
-        peer-focus:top-2 peer-focus:text-xs peer-focus:-translate-y-1`}
-      >
-        {label}
-      </label>
+    <div>
+      <div className="relative">
+        <input
+          type={type}
+          name={name}
+          value={value}
+          onChange={handleChange}
+          placeholder=" "
+          className={`peer w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border text-white focus:outline-none focus:ring-2 focus:ring-primary-500
+            ${error ? 'border-red-500' : 'border-white/20'}`}
+        />
+        <label
+          className={`absolute left-4 text-gray-400 text-sm transition-all pointer-events-none
+          ${value ? 'top-2 text-xs -translate-y-1' : 'top-1/2 -translate-y-1/2 text-base'}
+          peer-focus:top-2 peer-focus:text-xs peer-focus:-translate-y-1`}
+        >
+          {label}
+        </label>
+      </div>
+      {error && (
+        <p className="text-red-400 text-xs mt-1 ml-1">{error}</p>
+      )}
     </div>
   );
 }

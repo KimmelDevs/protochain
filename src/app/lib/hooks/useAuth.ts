@@ -39,9 +39,9 @@ export const useAuthActions = () => {
     if (result.success && result.userData) {
       // Redirect based on role
       if (result.userData.role === 'admin') {
-        router.push('/admin/dashboard');
+        router.push('/admindashboard');
       } else {
-        router.push('/resident/dashboard');
+        router.push('/dashboard');
       }
     } else {
       return { 
