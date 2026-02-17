@@ -1,7 +1,7 @@
 import { 
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  signOut,
+  signOut as firebaseSignOut,
   sendPasswordResetEmail,
   updateProfile,
   User
@@ -72,7 +72,7 @@ export const loginUser = async (email: string, password: string) => {
 // Logout user
 export const logoutUser = async () => {
   try {
-    await signOut(auth);
+    await firebaseSignOut(auth);
     return { success: true };
   } catch (error: any) {
     console.error('Logout error:', error);
