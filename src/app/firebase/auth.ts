@@ -10,9 +10,10 @@ import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from './config';
 
 // Register new user
+// Update createDocumentRequest in firestore.ts to include extra fields
 export const registerUser = async (
-  email: string, 
-  password: string, 
+  email: string,
+  password: string,
   userData: {
     firstName: string;
     lastName: string;
@@ -22,16 +23,13 @@ export const registerUser = async (
   }
 ) => {
   try {
-    // Create auth user
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
 
-    // Update display name
     await updateProfile(user, {
       displayName: `${userData.firstName} ${userData.lastName}`
     });
 
-    // Create user document in Firestore
     await setDoc(doc(db, 'users', user.uid), {
       uid: user.uid,
       email: email,
@@ -47,8 +45,7 @@ export const registerUser = async (
 
     return { success: true, user };
   } catch (error: any) {
-    console.error('Registration error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: error.code };
   }
 };
 
