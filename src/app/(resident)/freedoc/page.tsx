@@ -13,6 +13,7 @@
  * IMPORTANT: Place templates at:
  *   public/files/BRGY-CLEARANCE-TEMPLATE.docx
  *   public/files/CERTIFICATION-OF-DEATH.docx
+ *   public/files/BUSINESS-CLEARANCE.docx
  *
  * JSZip is loaded dynamically from CDN for the clearance template.
  */
@@ -246,74 +247,95 @@ async function buildBrgyClearance(form: FormValues): Promise<void> {
 }
 
 async function buildBusinessClearance(form: FormValues): Promise<void> {
-  const { owner, business, location, date } = form;
-  const doc = new Document({
-    sections: [
-      {
-        properties: { page: pageProps },
-        children: [
-          ...makeHeader(),
-          ...spacer(2),
-          makeLine("BARANGAY BUSINESS CLEARANCE", true, true, false, 28),
-          ...spacer(1),
-          makeLine("To whom it may concern,", true),
-          ...spacer(1),
-          new Paragraph({
-            alignment: AlignmentType.JUSTIFIED,
-            children: [
-              new TextRun({
-                text: "Pursuant to Existing Ordinance of this Barangay, BUSINESS CLEARANCE is Granted to ",
-                size: 22,
-              }),
-              new TextRun({
-                text: owner,
-                bold: true,
-                size: 22,
-                underline: { type: UnderlineType.SINGLE },
-              }),
-              new TextRun({ text: ", owner of ", size: 22 }),
-              new TextRun({ text: business, bold: true, size: 22 }),
-              new TextRun({
-                text: ` located at ${location}, Brgy. Guin-On, Calbayog City, Samar.`,
-                size: 22,
-              }),
-            ],
-          }),
-          ...spacer(1),
-          makeLine(
-            "Applicants are hereby advised to follow strictly existing ordinance in relation with the conduct of his/her business. Violation of the same is a ground for the revocation of this clearance."
-          ),
-          ...spacer(1),
-          makeLine(
-            "This clearance is issued at the request of the party for whatever legal purpose it may serve best."
-          ),
-          ...spacer(1),
-          makeLine(
-            `Issued this ${date} at Brgy. Guin-on, Calbayog City, Samar, Philippines.`
-          ),
-          ...spacer(3),
-          makeLine("HON. BENJAMIN O. JAROPOJOP", true),
-          makeLine("Punong Barangay"),
-          ...spacer(2),
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: owner,
-                bold: true,
-                size: 22,
-                underline: { type: UnderlineType.SINGLE },
-              }),
-            ],
-          }),
-          makeLine("Applicant Signature over Printed Name"),
-          ...spacer(1),
-          makeLine("Not Valid Without Official Seal", false, true),
-        ],
-      },
-    ],
+  const { owner, business, location, issuedDay, issuedDaySuffix, issuedMonth, issuedYear } = form;
+
+  // Load JSZip dynamically if needed
+  // @ts-ignore
+  if (typeof window.JSZip === "undefined") {
+    await new Promise<void>((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error("Failed to load JSZip"));
+      document.head.appendChild(s);
+    });
+  }
+  // @ts-ignore
+  const JSZip = window.JSZip;
+
+  const response = await fetch("/files/BUSINESS-CLEARANCE.docx");
+  if (!response.ok) throw new Error(`Could not load template: ${response.status}`);
+  const arrayBuffer = await response.arrayBuffer();
+  const zip = await JSZip.loadAsync(arrayBuffer);
+
+  const xmlEscape = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+     .replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+
+  let content: string = await zip.file("word/document.xml").async("string");
+
+  // Replace owner name (appears in body paragraph and at bottom as applicant)
+  // Body: "Grante GREGORIO BALDOMARO GOMEZ, "
+  content = content.replace(
+    /Grante GREGORIO BALDOMARO GOMEZ, /g,
+    `Granted to ${xmlEscape(owner)}, `
+  );
+
+  // Applicant line at bottom: "GREGORIO BALDOMARO COMEZ"
+  content = content.replace(
+    /GREGORIO BALDOMARO COMEZ/g,
+    xmlEscape(owner)
+  );
+
+  // Replace business name: "of AGRICULTURAL PRODUCTS "
+  content = content.replace(
+    /of AGRICULTURAL PRODUCTS /g,
+    `of ${xmlEscape(business)} `
+  );
+
+  // Replace location — it's fragmented but "PUROK-1 " appears as "PUROK-1 " in a run
+  // The location text "PUROK-1 " followed by "Brgy." — replace just the PUROK-1 part
+  content = content.replace(
+    /(<w:t[^>]*>)PUROK-1 (<\/w:t>)/g,
+    `$1${xmlEscape(location)} $2`
+  );
+
+  // Replace issued day: "04"
+  content = content.replace(
+    /(<w:t[^>]*>)04(<\/w:t>)/,
+    `$1${xmlEscape(issuedDay)}$2`
+  );
+
+  // Replace day suffix: "th" (in superscript run after the day number)
+  content = content.replace(
+    /(<w:t[^>]*>)th(<\/w:t>)/,
+    `$1${xmlEscape(issuedDaySuffix)}$2`
+  );
+
+  // Replace month: "of DECEMBER "
+  content = content.replace(
+    /of DECEMBER /g,
+    `of ${xmlEscape(issuedMonth)} `
+  );
+
+  // Replace year: "2025"
+  content = content.replace(
+    /(<w:t[^>]*>)2025(<\/w:t>)/g,
+    `$1${xmlEscape(issuedYear)}$2`
+  );
+
+  zip.file("word/document.xml", content);
+
+  const outBuffer = await zip.generateAsync({ type: "arraybuffer" });
+  const blob = new Blob([outBuffer], {
+    type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   });
-  const buf = await Packer.toBuffer(doc);
-  saveDocx(buf, `Business_Clearance_${owner.replace(/\s+/g, "_")}.docx`);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `Business_Clearance_${owner.replace(/\s+/g, "_")}.docx`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 async function buildCertificationOfDeath(form: FormValues): Promise<void> {
@@ -643,12 +665,15 @@ const DOCS: DocConfig[] = [
     color: "#1b3a6b",
     accent: "#2563eb",
     fields: [
-      { key: "owner", label: "Owner Name", placeholder: "GREGORIO B. GOMEZ" },
+      { key: "owner", label: "Owner Full Name", placeholder: "GREGORIO BALDOMARO GOMEZ" },
       { key: "business", label: "Business Name", placeholder: "AGRICULTURAL PRODUCTS" },
-      { key: "location", label: "Location", placeholder: "PUROK-1" },
-      { key: "date", label: "Date", placeholder: "April 1, 2026" },
+      { key: "location", label: "Location / Purok", placeholder: "PUROK-1" },
+      { key: "issuedDay", label: "Issued Day (number)", placeholder: "04" },
+      { key: "issuedDaySuffix", label: "Day Suffix", placeholder: "th" },
+      { key: "issuedMonth", label: "Issued Month", placeholder: "DECEMBER" },
+      { key: "issuedYear", label: "Issued Year", placeholder: "2025" },
     ],
-    defaults: { date: getToday() },
+    defaults: {},
     onDownload: buildBusinessClearance,
   },
   {
