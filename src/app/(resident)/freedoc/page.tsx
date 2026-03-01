@@ -15,6 +15,7 @@
  *   public/files/CERTIFICATION-OF-DEATH.docx
  *   public/files/BUSINESS-CLEARANCE.docx
  *   public/files/Certification.docx
+ *   public/files/Oath-of-Undertaking-for-First-Time-Jobseeker.docx
  *
  * JSZip is loaded dynamically from CDN for the clearance template.
  */
@@ -567,123 +568,97 @@ async function buildFirstTimeJobseekerCert(form: FormValues): Promise<void> {
 }
 
 async function buildOathOfUndertaking(form: FormValues): Promise<void> {
-  const { name, age, purok, years, signDate } = form;
+  const { name, age, purok, years, signDay, signDaySuffix, signMonth, signYear } = form;
 
-  const oathItems = [
-    "That this is the first time that I will actively look for a job and therefore requesting that a Barangay Certification be issued in my favor to avail the benefits of the law;",
-    "That I am aware that the benefit and privilege/s under the said law shall be valid only for one (1) year from the date that the Barangay Certification is issued;",
-    "That I can avail the benefits of the law once;",
-    "That I understand that my personal information shall be included in the Roster/list of First Time Jobseekers and will not be used for any unlawful purposes;",
-    "That I will inform and/or report to the barangay personally, through text or other means, or through my family/relatives once I get employed; and",
-    "That I am not a beneficiary of the JobStart program under R.A. No. 10869 and other laws that give similar exemption for the documents or transactions exempted under R.A. No. 11261;",
-    "That if issued the requested certification, I will not use the same in any fraud, neither falsely nor help and/or assist in the fabrication of the said certification;",
-    "That this undertaking is made solely for the purpose of obtaining a barangay certification consistent with the objective of R.A. No. 11261 and not for any other purpose;",
-    "That I consent to the use of my personal information pursuant to the Data Privacy Act and other applicable laws, rules and regulations.",
-  ];
+  // Load JSZip dynamically if needed
+  // @ts-ignore
+  if (typeof window.JSZip === "undefined") {
+    await new Promise<void>((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error("Failed to load JSZip"));
+      document.head.appendChild(s);
+    });
+  }
+  // @ts-ignore
+  const JSZip = window.JSZip;
 
-  const doc = new Document({
-    numbering: {
-      config: [
-        {
-          reference: "oath-items",
-          levels: [
-            {
-              level: 0,
-              format: LevelFormat.DECIMAL,
-              text: "%1.",
-              alignment: AlignmentType.LEFT,
-              style: { paragraph: { indent: { left: 720, hanging: 360 } } },
-            },
-          ],
-        },
-      ],
-    },
-    sections: [
-      {
-        properties: { page: pageProps },
-        children: [
-          ...makeHeader(),
-          ...spacer(2),
-          makeLine("OATH OF UNDERTAKING", true, true, false, 28),
-          ...spacer(1),
-          new Paragraph({
-            alignment: AlignmentType.JUSTIFIED,
-            children: [
-              new TextRun({ text: "I, ", size: 22 }),
-              new TextRun({
-                text: name,
-                bold: true,
-                size: 22,
-                underline: { type: UnderlineType.SINGLE },
-              }),
-              new TextRun({
-                text: `, ${age} years of age, is a resident of ${purok}, Brgy. Guin-on, Calbayog City, Samar for ${years} years, availing the benefits of `,
-                size: 22,
-              }),
-              new TextRun({ text: "Republic Act 11261", bold: true, size: 22 }),
-              new TextRun({ text: ", other known as the ", size: 22 }),
-              new TextRun({
-                text: "First Time Jobseekers Act of 2019",
-                bold: true,
-                size: 22,
-              }),
-              new TextRun({
-                text: ", do hereby declare, agree and undertake to abide and be bound by the following:",
-                size: 22,
-              }),
-            ],
-          }),
-          ...spacer(1),
-          ...oathItems.map(
-            (text) =>
-              new Paragraph({
-                numbering: { reference: "oath-items", level: 0 },
-                alignment: AlignmentType.JUSTIFIED,
-                children: [new TextRun({ text, size: 22 })],
-                spacing: { after: 120 },
-              })
-          ),
-          ...spacer(1),
-          new Paragraph({
-            alignment: AlignmentType.JUSTIFIED,
-            children: [
-              new TextRun({
-                text: `Signed, this ${signDate}, in Barangay Guin-on, Calbayog City, Samar.`,
-                size: 22,
-              }),
-            ],
-          }),
-          ...spacer(3),
-          new Paragraph({
-            children: [
-              new TextRun({ text: name, bold: true, size: 22 }),
-              new TextRun({
-                text: "          BENJAMIN O. JAROPOJOP",
-                bold: true,
-                size: 22,
-              }),
-            ],
-          }),
-          new Paragraph({
-            children: [
-              new TextRun({ text: "First Time Jobseeker", size: 22 }),
-              new TextRun({
-                text: "          Punong Barangay",
-                size: 22,
-              }),
-            ],
-          }),
-          ...spacer(1),
-          makeLine("Witnessed by:"),
-          ...spacer(1),
-          makeLine("HON. RUEL I. EYA", true),
-          makeLine("BARANGAY KAGAWAD"),
-        ],
-      },
-    ],
+  const response = await fetch("/files/Oath-of-Undertaking-for-First-Time-Jobseeker.docx");
+  if (!response.ok) throw new Error(`Could not load template: ${response.status}`);
+  const arrayBuffer = await response.arrayBuffer();
+  const zip = await JSZip.loadAsync(arrayBuffer);
+
+  const xmlEscape = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+     .replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+
+  let content: string = await zip.file("word/document.xml").async("string");
+
+  // Replace name — appears twice (intro paragraph + signature line)
+  content = content.replace(/EGBERT KIA DELA CRUZ/g, xmlEscape(name));
+
+  // Replace age — template has " ,  2" then "3" as separate runs (font hint split)
+  // Replace the whole pair by targeting the first run's text
+  content = content.replace(
+    /(<w:t[^>]*>) ,  2(<\/w:t>)<\/w:r><w:r><w:rPr>[^<]*(?:<[^>]*>)*<\/w:rPr><w:t>3(<\/w:t>)/,
+    (_match, open, close) =>
+      `${open} ,  ${xmlEscape(age)}${close}</w:r>`
+  );
+  // Fallback: simpler replacement if the above doesn't match edge cases
+  content = content.replace(
+    /(<w:t[^>]*xml:space="preserve">) ,  2(<\/w:t>)/,
+    `$1 ,  ${xmlEscape(age.slice(0, -1))}$2`
+  );
+
+  // Replace purok number — "2" own run after "years of age, is a resident of Purok "
+  content = content.replace(
+    /(years of age, is a resident of Purok <\/w:t><\/w:r><w:r[^>]*><w:rPr>[^<]*(?:<[^>]*>)*<\/w:rPr><w:t>)[^<]*/,
+    `$1${xmlEscape(purok)}`
+  );
+
+  // Replace years — "Samar for 5 years,"
+  content = content.replace(
+    /Samar for 5 years,/g,
+    `Samar for ${xmlEscape(years)} years,`
+  );
+
+  // Replace signed day number — " 2" run after "Signed, this"
+  content = content.replace(
+    /(Signed, this<\/w:t><\/w:r><w:r[^>]*><w:rPr>[^<]*(?:<[^>]*>)*<\/w:rPr><w:t xml:space="preserve">) 2(<\/w:t>)/,
+    `$1 ${xmlEscape(signDay)}$2`
+  );
+
+  // Replace day suffix — "nd" superscript run
+  content = content.replace(
+    /(<w:vertAlign w:val="superscript"[^/]*)\/><\/w:rPr><w:t>nd(<\/w:t>)/,
+    `$1/></w:rPr><w:t>${xmlEscape(signDaySuffix)}$2`
+  );
+
+  // Replace month — " SEPTEMBER " run
+  content = content.replace(
+    /(<w:t[^>]*>) SEPTEMBER (<\/w:t>)/g,
+    `$1 ${xmlEscape(signMonth.toUpperCase())} $2`
+  );
+
+  // Replace year — " 2024, in Barangay" run
+  content = content.replace(
+    / 2024, in Barangay Guin-on, Calbayog City, Samar\./g,
+    ` ${xmlEscape(signYear)}, in Barangay Guin-on, Calbayog City, Samar.`
+  );
+
+  zip.file("word/document.xml", content);
+
+  const outBuffer = await zip.generateAsync({ type: "arraybuffer" });
+  const blob = new Blob([outBuffer], {
+    type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   });
-  const buf = await Packer.toBuffer(doc);
-  saveDocx(buf, `Oath_of_Undertaking_${name.replace(/\s+/g, "_")}.docx`);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `Oath_of_Undertaking_${name.replace(/\s+/g, "_")}.docx`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ─── Doc Config ──────────────────────────────────────────────────────────────
@@ -776,13 +751,16 @@ const DOCS: DocConfig[] = [
     color: "#14403a",
     accent: "#0d9488",
     fields: [
-      { key: "name", label: "Full Name", placeholder: "JUAN DELA CRUZ" },
+      { key: "name", label: "Full Name", placeholder: "EGBERT KIA DELA CRUZ" },
       { key: "age", label: "Age", placeholder: "23" },
-      { key: "purok", label: "Purok / Address", placeholder: "Purok 2" },
+      { key: "purok", label: "Purok Number", placeholder: "2" },
       { key: "years", label: "Years of Residency", placeholder: "5" },
-      { key: "signDate", label: "Date Signed", placeholder: "2nd day of APRIL 2026" },
+      { key: "signDay", label: "Signed Day (number)", placeholder: "2" },
+      { key: "signDaySuffix", label: "Day Suffix", placeholder: "nd" },
+      { key: "signMonth", label: "Signed Month", placeholder: "SEPTEMBER" },
+      { key: "signYear", label: "Signed Year", placeholder: "2024" },
     ],
-    defaults: { signDate: getSignDate() },
+    defaults: {},
     onDownload: buildOathOfUndertaking,
   },
 ];
