@@ -5,6 +5,54 @@ import Link from "next/link";
 import { useState } from "react";
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { useAuthActions } from '@/app/lib/hooks/useAuth';
+import { FirebaseError } from 'firebase/app';
+
+// Map Firebase error codes to human-readable messages
+function getFirebaseErrorMessage(error: unknown): string {
+  if (error instanceof FirebaseError) {
+    switch (error.code) {
+      // Credential errors
+      case 'auth/invalid-credential':
+      case 'auth/wrong-password':
+      case 'auth/user-not-found':
+        return 'Invalid email or password. Please try again.';
+
+      // Email errors
+      case 'auth/invalid-email':
+        return 'Please enter a valid email address.';
+
+      // Account errors
+      case 'auth/user-disabled':
+        return 'This account has been disabled. Please contact support.';
+
+      // Rate limiting
+      case 'auth/too-many-requests':
+        return 'Too many failed attempts. Please wait a few minutes and try again.';
+
+      // Network
+      case 'auth/network-request-failed':
+        return 'Network error. Please check your connection and try again.';
+
+      // Popup/redirect (if you ever add Google sign-in)
+      case 'auth/popup-closed-by-user':
+        return 'Sign-in popup was closed. Please try again.';
+
+      case 'auth/cancelled-popup-request':
+        return 'Another sign-in is already in progress.';
+
+      // Catch-all for any other Firebase error
+      default:
+        return `Something went wrong (${error.code}). Please try again.`;
+    }
+  }
+
+  // Non-Firebase errors (network timeouts, unexpected throws, etc.)
+  if (error instanceof Error) {
+    return error.message || 'An unexpected error occurred.';
+  }
+
+  return 'An unexpected error occurred. Please try again.';
+}
 
 export default function SignInPage() {
   const { login } = useAuthActions();
@@ -19,10 +67,22 @@ export default function SignInPage() {
     setError('');
     setLoading(true);
 
-    const result = await login(email, password);
+    try {
+      const result = await login(email, password);
 
-    if (!result.success) {
-      setError(result.error || 'Invalid email or password');
+      if (!result.success) {
+        // If useAuth already parsed the error into a string, show it directly.
+        // Otherwise fall back to the raw error object.
+        setError(
+          typeof result.error === 'string'
+            ? result.error
+            : getFirebaseErrorMessage(result.error)
+        );
+      }
+    } catch (err) {
+      // Safety net — catches anything login() itself throws instead of returning
+      setError(getFirebaseErrorMessage(err));
+    } finally {
       setLoading(false);
     }
   };
@@ -44,9 +104,7 @@ export default function SignInPage() {
       {/* Login Card */}
       <div className="backdrop-blur-md shadow-xl rounded-2xl w-full max-w-md p-8 space-y-6 border border-white/20 bg-white/5">
         <div className="text-center">
-          <h2 className="text-3xl font-bold text-white">
-            Welcome Back
-          </h2>
+          <h2 className="text-3xl font-bold text-white">Welcome Back</h2>
           <p className="text-gray-400 text-sm">
             Log in to continue to ProtoChain
           </p>
@@ -54,7 +112,24 @@ export default function SignInPage() {
 
         {/* Error Message */}
         {error && (
-          <div className="p-3 bg-red-500/10 border border-red-500 rounded text-red-500 text-sm">
+          <div
+            role="alert"
+            className="flex items-start gap-2 p-3 bg-red-500/10 border border-red-500/60 rounded-lg text-red-400 text-sm"
+          >
+            {/* Warning icon */}
+            <svg
+              className="w-4 h-4 mt-0.5 shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
+              />
+            </svg>
             {error}
           </div>
         )}
@@ -140,9 +215,25 @@ export default function SignInPage() {
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">
-                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                <svg
+                  className="animate-spin h-5 w-5 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
                 </svg>
                 Logging in...
               </span>
@@ -155,8 +246,11 @@ export default function SignInPage() {
         {/* Links */}
         <div className="text-center space-y-2">
           <p className="text-sm text-gray-400">
-            Don&apos;t have an account?{" "}
-            <Link href="/register" className="text-primary-500 hover:underline font-medium">
+            Don&apos;t have an account?{' '}
+            <Link
+              href="/register"
+              className="text-primary-500 hover:underline font-medium"
+            >
               Sign up
             </Link>
           </p>
