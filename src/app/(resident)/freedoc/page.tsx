@@ -14,6 +14,7 @@
  *   public/files/BRGY-CLEARANCE-TEMPLATE.docx
  *   public/files/CERTIFICATION-OF-DEATH.docx
  *   public/files/BUSINESS-CLEARANCE.docx
+ *   public/files/Certification.docx
  *
  * JSZip is loaded dynamically from CDN for the clearance template.
  */
@@ -439,79 +440,130 @@ async function buildCertificationOfDeath(form: FormValues): Promise<void> {
 }
 
 async function buildFirstTimeJobseekerCert(form: FormValues): Promise<void> {
-  const { bcnNo, name, purok, years, date } = form;
-  const doc = new Document({
-    sections: [
-      {
-        properties: { page: pageProps },
-        children: [
-          ...makeHeader(),
-          ...spacer(2),
-          new Paragraph({
-            alignment: AlignmentType.RIGHT,
-            children: [new TextRun({ text: `BCN NO.: ${bcnNo}`, size: 22 })],
-          }),
-          makeLine("BARANGAY CERTIFICATION", true, true, false, 26),
-          makeLine(
-            "(First Time Job Seekers Assistant Act – RA 11261)",
-            false,
-            true,
-            false,
-            20
-          ),
-          ...spacer(1),
-          new Paragraph({
-            alignment: AlignmentType.JUSTIFIED,
-            children: [
-              new TextRun({ text: "This is to certify that Mr./Ms. ", size: 22 }),
-              new TextRun({
-                text: name,
-                bold: true,
-                size: 22,
-                underline: { type: UnderlineType.SINGLE },
-              }),
-              new TextRun({
-                text: `, a resident of ${purok}, Barangay Guin-on, Calbayog City, Samar, for ${years} year(s)/month(s), is a qualified availee of RA 11261 or the `,
-                size: 22,
-              }),
-              new TextRun({
-                text: "FIRST TIME JOBSEEKER Act of 2019",
-                bold: true,
-                size: 22,
-              }),
-              new TextRun({ text: ".", size: 22 }),
-            ],
-          }),
-          ...spacer(1),
-          makeLine(
-            "I further certify that the holder/bearer was informed of his/her rights, including the duties and responsibilities accorded by RA 11261 through the Oath of Undertaking he/she has signed and executed in the presence of our Barangay Officials."
-          ),
-          ...spacer(1),
-          new Paragraph({
-            alignment: AlignmentType.JUSTIFIED,
-            children: [
-              new TextRun({
-                text: `Signed this ${date}, in Calbayog City, Samar. `,
-                size: 22,
-              }),
-              new TextRun({
-                text: "This certification is valid only until one (1) year from the date of issuance.",
-                size: 22,
-                italics: true,
-              }),
-            ],
-          }),
-          ...spacer(3),
-          makeLine("HON. BENJAMIN O. JAROPOJOP", true),
-          makeLine("Punong Barangay"),
-          ...spacer(1),
-          makeLine("Not Valid Without Official Seal", false, true),
-        ],
-      },
-    ],
+  const { bcnNo, name, purok, years, issuedDay, issuedDaySuffix, issuedMonth, issuedYear } = form;
+
+  // Load JSZip dynamically if needed
+  // @ts-ignore
+  if (typeof window.JSZip === "undefined") {
+    await new Promise<void>((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error("Failed to load JSZip"));
+      document.head.appendChild(s);
+    });
+  }
+  // @ts-ignore
+  const JSZip = window.JSZip;
+
+  const response = await fetch("/files/Certification.docx");
+  if (!response.ok) throw new Error(`Could not load template: ${response.status}`);
+  const arrayBuffer = await response.arrayBuffer();
+  const zip = await JSZip.loadAsync(arrayBuffer);
+
+  const xmlEscape = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+     .replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+
+  let content: string = await zip.file("word/document.xml").async("string");
+
+  // The template has TWO certifications on one page.
+  // We replace both name occurrences (first and second person) with the same applicant.
+
+  // Replace first name: "JIRAH JALAYAJAY ARIMALA"
+  content = content.replace(
+    /JIRAH JALAYAJAY ARIMALA/g,
+    xmlEscape(name)
+  );
+
+  // Replace second name: "MAIKA DELA CRUZ MERILLES"
+  content = content.replace(
+    /MAIKA DELA CRUZ MERILLES/g,
+    xmlEscape(name)
+  );
+
+  // Replace BCN number — template has "09" as own run after "BCN NO.: "
+  // There are two BCN lines; first has " BCN NO.: 09", second has " BCN NO.: " then "09" separately
+  // Replace the intact " BCN NO.: 09" run
+  content = content.replace(
+    /(<w:t[^>]*>) BCN NO\.: 09(<\/w:t>)/g,
+    `$1 BCN NO.: ${xmlEscape(bcnNo)}$2`
+  );
+  // Replace standalone "09" run that follows "BCN NO.: "
+  content = content.replace(
+    /(<w:t[^>]*>)09(<\/w:t>)/g,
+    `$1${xmlEscape(bcnNo)}$2`
+  );
+
+  // Replace Purok number — "2" in first cert, "4" in second cert are their own runs
+  // Both sit between '" a resident of Purok "' and '", Barangay Guin-on'
+  // The purok number runs appear right after the 'Purok ' text run
+  // Replace all instances of the purok number (they're standalone bold runs)
+  // First occurrence: "2", second: "4"
+  let purokCount = 0;
+  content = content.replace(
+    /(a resident of Purok <\/w:t><\/w:r><w:r[^>]*><w:rPr>[^<]*(?:<[^<]*>)*<\/w:rPr><w:t>)([^<]+)(<\/w:t>)/,
+    (match, before, _val, after) => `${before}${xmlEscape(purok)}${after}`
+  );
+  content = content.replace(
+    /(a resident of Purok <\/w:t><\/w:r><w:r[^>]*><w:rPr>[^<]*(?:<[^<]*>)*<\/w:rPr><w:t>)([^<]+)(<\/w:t>)/,
+    (match, before, _val, after) => `${before}${xmlEscape(purok)}${after}`
+  );
+
+  // Replace years "5 years/month" — "5" is embedded in the long text run
+  content = content.replace(
+    /for 5 years\/month,/g,
+    `for ${xmlEscape(years)} years/month,`
+  );
+
+  // Replace issued day number — "06" (both certs)
+  content = content.replace(
+    /(<w:t[^>]*>)06(<\/w:t>)/g,
+    `$1${xmlEscape(issuedDay)}$2`
+  );
+
+  // Replace day suffix — "TH" (superscript run, both certs)
+  content = content.replace(
+    /(<w:t[^>]*>)TH(<\/w:t>)/g,
+    `$1${xmlEscape(issuedDaySuffix.toUpperCase())}$2`
+  );
+
+  // Replace month in "day of OCTOBER " (both certs)
+  content = content.replace(
+    /(<w:t[^>]*>)OCTOBER (<\/w:t>)/g,
+    `$1${xmlEscape(issuedMonth.toUpperCase())} $2`
+  );
+
+  // Replace year in "2025, in Calbayog" body text
+  content = content.replace(
+    /2025, in Calbayog City, Samar\./g,
+    `${xmlEscape(issuedYear)}, in Calbayog City, Samar.`
+  );
+
+  // Replace "OCTOBER 06" date lines (signature area, both certs)
+  content = content.replace(
+    /(<w:t[^>]*>)OCTOBER 06(<\/w:t>)/g,
+    `$1${xmlEscape(issuedMonth.toUpperCase())} ${xmlEscape(issuedDay)}$2`
+  );
+
+  // Replace ", 2025" year in signature date lines
+  content = content.replace(
+    /(<w:t[^>]*>), 2025(<\/w:t>)/g,
+    `$1, ${xmlEscape(issuedYear)}$2`
+  );
+
+  zip.file("word/document.xml", content);
+
+  const outBuffer = await zip.generateAsync({ type: "arraybuffer" });
+  const blob = new Blob([outBuffer], {
+    type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   });
-  const buf = await Packer.toBuffer(doc);
-  saveDocx(buf, `FTJ_Certification_${name.replace(/\s+/g, "_")}.docx`);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `FTJ_Certification_${name.replace(/\s+/g, "_")}.docx`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 async function buildOathOfUndertaking(form: FormValues): Promise<void> {
@@ -705,13 +757,16 @@ const DOCS: DocConfig[] = [
     color: "#7c3900",
     accent: "#d97706",
     fields: [
-      { key: "bcnNo", label: "BCN Number", placeholder: "10" },
-      { key: "name", label: "Full Name", placeholder: "JUAN DELA CRUZ" },
-      { key: "purok", label: "Purok / Address", placeholder: "Purok 2" },
+      { key: "bcnNo", label: "BCN Number", placeholder: "09" },
+      { key: "name", label: "Full Name", placeholder: "JIRAH JALAYAJAY ARIMALA" },
+      { key: "purok", label: "Purok Number", placeholder: "2" },
       { key: "years", label: "Years of Residency", placeholder: "5" },
-      { key: "date", label: "Date Signed", placeholder: "April 1, 2026" },
+      { key: "issuedDay", label: "Issued Day (number)", placeholder: "06" },
+      { key: "issuedDaySuffix", label: "Day Suffix", placeholder: "TH" },
+      { key: "issuedMonth", label: "Issued Month", placeholder: "OCTOBER" },
+      { key: "issuedYear", label: "Issued Year", placeholder: "2025" },
     ],
-    defaults: { date: getToday() },
+    defaults: {},
     onDownload: buildFirstTimeJobseekerCert,
   },
   {
