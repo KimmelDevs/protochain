@@ -1,17 +1,6 @@
 // Format date to readable string
 export const formatDate = (date: any): string => {
   if (!date) return 'N/A';
-
-  // Handle Firestore Timestamp
-  if (date?.toDate) {
-    return date.toDate().toLocaleDateString('en-PH', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  }
-
-  // Handle string date
   return new Date(date).toLocaleDateString('en-PH', {
     year: 'numeric',
     month: 'long',
@@ -22,17 +11,6 @@ export const formatDate = (date: any): string => {
 // Format date with time
 export const formatDateTime = (date: any): string => {
   if (!date) return 'N/A';
-
-  if (date?.toDate) {
-    return date.toDate().toLocaleString('en-PH', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  }
-
   return new Date(date).toLocaleString('en-PH', {
     year: 'numeric',
     month: 'long',
@@ -61,26 +39,24 @@ export const generateQRCode = (documentId: string): string => {
   return `QR-${documentId}-${Date.now().toString(36).toUpperCase()}`;
 };
 
-// Get Firebase auth error messages in human readable form
-export const getAuthErrorMessage = (errorCode: string): string => {
-  switch (errorCode) {
-    case 'auth/email-already-in-use':
-      return 'This email is already registered. Please login instead.';
-    case 'auth/invalid-email':
-      return 'Please enter a valid email address.';
-    case 'auth/weak-password':
-      return 'Password must be at least 6 characters.';
-    case 'auth/user-not-found':
-      return 'No account found with this email.';
-    case 'auth/wrong-password':
-      return 'Incorrect password. Please try again.';
-    case 'auth/too-many-requests':
-      return 'Too many failed attempts. Please try again later.';
-    case 'auth/network-request-failed':
-      return 'Network error. Please check your connection.';
-    default:
-      return 'An error occurred. Please try again.';
-  }
+// Get Supabase auth error messages in human readable form
+export const getAuthErrorMessage = (error: string): string => {
+  const msg = error.toLowerCase();
+  if (msg.includes('email already') || msg.includes('already registered'))
+    return 'This email is already registered. Please login instead.';
+  if (msg.includes('invalid email'))
+    return 'Please enter a valid email address.';
+  if (msg.includes('weak password') || msg.includes('at least 6'))
+    return 'Password must be at least 6 characters.';
+  if (msg.includes('user not found') || msg.includes('invalid login credentials'))
+    return 'Invalid email or password. Please try again.';
+  if (msg.includes('email not confirmed'))
+    return 'Please verify your email before logging in.';
+  if (msg.includes('too many requests'))
+    return 'Too many failed attempts. Please try again later.';
+  if (msg.includes('network'))
+    return 'Network error. Please check your connection.';
+  return error || 'An error occurred. Please try again.';
 };
 
 // File size formatter
@@ -92,7 +68,7 @@ export const formatFileSize = (bytes: number): string => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-// Truncate blockchain hash for display
+// Truncate hash/UUID for display
 export const truncateHash = (hash: string, start = 6, end = 4): string => {
   if (!hash) return '';
   if (hash.length <= start + end) return hash;
