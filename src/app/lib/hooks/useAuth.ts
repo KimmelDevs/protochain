@@ -43,9 +43,21 @@ export function useAuthActions() {
       if (profileError) return { success: false, error: profileError.message };
     }
 
+    router.push('/resident/dashboard');
+    return { success: true };
+  };
+
+  const login = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return { success: false, error: error.message };
     router.push('/dashboard');
     return { success: true };
   };
 
-  return { register }; // Make sure to return the function if needed
+  const logout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
+
+  return { register, login, logout }; // ✅ make sure all 3 are here
 }

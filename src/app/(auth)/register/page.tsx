@@ -54,8 +54,6 @@ export default function SignUpPage() {
     if (digits.length > 0 && digits[0] !== '9') return;
     digits = digits.slice(0, 10);
     setFormData(prev => ({ ...prev, phone: digits }));
-
-    // Clear phone error when typing
     if (fieldErrors.phone) {
       setFieldErrors(prev => ({ ...prev, phone: '' }));
     }
@@ -91,7 +89,6 @@ export default function SignUpPage() {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
 
-    // Clear field error when user starts typing
     if (fieldErrors[name]) {
       setFieldErrors(prev => ({ ...prev, [name]: '' }));
     }
@@ -99,7 +96,6 @@ export default function SignUpPage() {
 
     if (name === 'password') {
       setPasswordStrength(calculatePasswordStrength(value));
-      // Live check confirm password match
       if (formData.confirmPassword && value !== formData.confirmPassword) {
         setFieldErrors(prev => ({ ...prev, confirmPassword: 'Passwords do not match' }));
       } else {
@@ -164,6 +160,9 @@ export default function SignUpPage() {
         phone: `+63${formData.phone}`,
         address: formData.address,
         role: 'resident',
+        username: formData.username,
+        birthday: formData.birthday,
+        civilStatus: formData.civilStatus,
       }
     );
 
@@ -425,7 +424,6 @@ export default function SignUpPage() {
             {fieldErrors.confirmPassword && (
               <p className="text-red-400 text-xs mt-1 ml-1">{fieldErrors.confirmPassword}</p>
             )}
-            {/* Show match checkmark */}
             {formData.confirmPassword && !fieldErrors.confirmPassword && (
               <p className="text-green-400 text-xs mt-1 ml-1">✓ Passwords match</p>
             )}
@@ -461,7 +459,7 @@ export default function SignUpPage() {
   );
 }
 
-/* Floating Input Component - Updated with error support */
+/* Floating Input Component */
 function FloatingInput({ label, name, value, handleChange, type = "text", error }: {
   label: string;
   name: string;
