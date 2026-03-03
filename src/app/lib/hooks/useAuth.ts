@@ -43,17 +43,28 @@ export function useAuthActions() {
       if (profileError) return { success: false, error: profileError.message };
     }
 
-    router.push('/resident/dashboard');
-    return { success: true };
-  };
-
-  const login = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return { success: false, error: error.message };
     router.push('/dashboard');
     return { success: true };
   };
+const login = async (email: string, password: string) => {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) return { success: false, error: error.message };
 
+  // Fetch role from profiles
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', data.user.id)
+    .single();
+
+  if (profile?.role === 'admin') {
+    router.push('/admindashboard');
+  } else {
+    router.push('/dashboard');
+  }
+
+  return { success: true };
+};
   const logout = async () => {
     await supabase.auth.signOut();
     router.push('/login');

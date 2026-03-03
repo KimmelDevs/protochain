@@ -1,65 +1,71 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { 
-  LayoutDashboard, 
-  Clock, 
-  CheckCircle, 
+import { usePathname, useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/app/lib/supabase';
+import {
+  LayoutDashboard,
+  Clock,
+  CheckCircle,
   XCircle,
-  Users, 
+  Users,
   FileText,
   Settings,
   LogOut,
   Shield,
   BarChart3
 } from 'lucide-react';
-
 const menuItems = [
-  {
-    label: 'Dashboard',
-    href: '/admindashboard',
-    icon: LayoutDashboard,
-  },
-  {
-    label: 'Pending Requests',
-    href: '/pending-requests',
-    icon: Clock,
-  },
-  {
-    label: 'Approved Documents',
-    href: '/approved-documents',
-    icon: CheckCircle,
-  },
-  {
-    label: 'Rejected Requests',
-    href: '/rejected-requests',
-    icon: XCircle,
-  },
-  {
-    label: 'All Documents',
-    href: '/all-documents',
-    icon: FileText,
-  },
-  {
-    label: 'Residents',
-    href: '/residents',
-    icon: Users,
-  },
-  {
-    label: 'Reports',
-    href: '/reports',
-    icon: BarChart3,
-  },
-  {
-    label: 'Settings',
-    href: '/settings',
-    icon: Settings,
-  },
+  { label: 'Dashboard', href: '/admindashboard', icon: LayoutDashboard },
+  { label: 'Pending Requests', href: '/pending-requests', icon: Clock },
+  { label: 'Approved Documents', href: '/approved-documents', icon: CheckCircle },
+  { label: 'Rejected Requests', href: '/rejected-requests', icon: XCircle },
+  { label: 'All Documents', href: '/all-documents', icon: FileText },
+  { label: 'Residents', href: '/residents', icon: Users },
+  { label: 'Reports', href: '/reports', icon: BarChart3 },
+  { label: 'Settings', href: '/settings', icon: Settings },
 ];
+
+interface AdminProfile {
+  firstName: string;
+  lastName: string;
+  role: string;
+}
 
 export default function AdminSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [profile, setProfile] = useState<AdminProfile | null>(null);
+
+  useEffect(() => {
+    const load = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from('profiles')
+        .select('firstName, lastName, role')
+        .eq('id', user.id)
+        .single();
+      if (data) setProfile(data);
+    };
+    load();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
+
+  const initials = profile
+    ? `${profile.firstName?.[0] ?? ''}${profile.lastName?.[0] ?? ''}`.toUpperCase()
+    : '?';
+
+  const fullName = profile
+    ? `${profile.firstName} ${profile.lastName}`
+    : 'Loading...';
+
+  const roleLabel = profile?.role === 'admin' ? 'Administrator' : profile?.role ?? '';
 
   return (
     <aside className="w-64 h-screen bg-[#0f0f23] border-r border-white/10 flex flex-col sticky top-0">
@@ -76,25 +82,21 @@ export default function AdminSidebar() {
         </Link>
       </div>
 
-      {/* Menu Items - Scrollable */}
+      {/* Nav */}
       <nav className="flex-1 p-4 overflow-y-auto">
         <ul className="space-y-2">
           {menuItems.map((item) => {
             const isActive = pathname === item.href;
             const Icon = item.icon;
-            
             return (
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  className={`
-                    flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200
-                    ${
-                      isActive
-                        ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-lg'
-                        : 'text-gray-400 hover:text-white hover:bg-white/5'
-                    }
-                  `}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200
+                    ${isActive
+                      ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-lg'
+                      : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    }`}
                 >
                   <Icon className="w-5 h-5" />
                   <span className="font-medium text-sm">{item.label}</span>
@@ -107,22 +109,18 @@ export default function AdminSidebar() {
 
       {/* Admin Info & Logout */}
       <div className="p-4 border-t border-white/10 flex-shrink-0 space-y-3">
-        {/* Admin Info */}
         <div className="flex items-center gap-3 px-4 py-2">
-          <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-600 rounded-full flex items-center justify-center text-white font-bold">
-            MS
+          <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+            {initials}
           </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-white">Maria Santos</p>
-            <p className="text-xs text-gray-400">Barangay Captain</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-white truncate">{fullName}</p>
+            <p className="text-xs text-gray-400 capitalize">{roleLabel}</p>
           </div>
         </div>
 
-        {/* Logout Button */}
         <button
-          onClick={() => {
-            window.location.href = '/login';
-          }}
+          onClick={handleLogout}
           className="flex items-center gap-3 px-4 py-3 rounded-lg w-full text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200"
         >
           <LogOut className="w-5 h-5" />
