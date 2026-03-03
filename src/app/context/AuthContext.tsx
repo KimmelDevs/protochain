@@ -1,67 +1,74 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/app/firebase/config';
-import { getUserById } from '@/app/firebase/firestore';
-import { UserData } from '@/app/types';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { supabase } from '@/app/lib/supabase';
+import { User } from '@supabase/supabase-js';
+
+interface UserData {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  address: string;
+  role: string;
+  username: string;
+  birthday: string;
+  civilStatus: string;
+}
 
 interface AuthContextType {
   user: User | null;
   userData: UserData | null;
   loading: boolean;
-  refreshUserData: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   userData: null,
   loading: true,
-  refreshUserData: async () => {},
 });
 
-export const useAuth = () => useContext(AuthContext);
-
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUserData = async (firebaseUser: User) => {
-    try {
-      const result = await getUserById(firebaseUser.uid);
-      if (result.success && result.user) {
-        setUserData(result.user as unknown as UserData);
-      }
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-    }
-  };
-
-  const refreshUserData = async () => {
-    if (user) await fetchUserData(user);
-  };
-
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser);
-
-      if (firebaseUser) {
-        await fetchUserData(firebaseUser);
-      } else {
-        setUserData(null);
-      }
-
-      setLoading(false);
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (session?.user) fetchUserData(session.user.id);
+      else setLoading(false);
     });
 
-    return () => unsubscribe();
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) fetchUserData(session.user.id);
+      else {
+        setUserData(null);
+        setLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  // ✅ Render children always - let each page handle loading state
+  const fetchUserData = async (userId: string) => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    setUserData(data);
+    setLoading(false);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, userData, loading, refreshUserData }}>
+    <AuthContext.Provider value={{ user, userData, loading }}>
       {children}
     </AuthContext.Provider>
   );
-};
+}
+
+export const useAuth = () => useContext(AuthContext);

@@ -1,81 +1,51 @@
-'use client';
-
 import { useRouter } from 'next/navigation';
-import { registerUser, loginUser, logoutUser, resetPassword } from '@/app/firebase/auth';
-import { getAuthErrorMessage } from '@/app/lib/utils/helpers';
+import { supabase } from '@/app/lib/supabase';
 
-
-export const useAuthActions = () => {
+export function useAuthActions() {
   const router = useRouter();
 
   const register = async (
     email: string,
     password: string,
-    userData: {
+    metadata: {
       firstName: string;
       lastName: string;
       phone: string;
-      address?: string;
-      role?: 'resident' | 'admin';
+      address: string;
+      role: string;
+      username: string;
+      birthday: string;
+      civilStatus: string;
     }
   ) => {
-    const result = await registerUser(email, password, userData);
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: metadata }
+    });
 
-    if (result.success) {
-      router.push('/login');
-    } else {
-      return { 
-        success: false, 
-        error: getAuthErrorMessage(result.error || '') 
-      };
+    if (error) return { success: false, error: error.message };
+
+    if (data.user) {
+      const { error: profileError } = await supabase.from('profiles').insert({
+        id: data.user.id,
+        email,
+        firstName: metadata.firstName,
+        lastName: metadata.lastName,
+        phone: metadata.phone,
+        address: metadata.address,
+        role: metadata.role,
+        username: metadata.username,
+        birthday: metadata.birthday,
+        civilStatus: metadata.civilStatus,
+      });
+
+      if (profileError) return { success: false, error: profileError.message };
     }
 
-    return result;
+    router.push('/dashboard');
+    return { success: true };
   };
 
-  const login = async (email: string, password: string) => {
-    const result = await loginUser(email, password);
-
-    if (result.success && result.userData) {
-      // Redirect based on role
-      if (result.userData.role === 'admin') {
-        router.push('/admindashboard');
-      } else {
-        router.push('/dashboard');
-      }
-    } else {
-      return { 
-        success: false, 
-        error: getAuthErrorMessage(result.error || '') 
-      };
-    }
-
-    return result;
-  };
-
-  const logout = async () => {
-    const result = await logoutUser();
-    if (result.success) {
-      router.push('/login');
-    }
-    return result;
-  };
-
-  const forgotPassword = async (email: string) => {
-    const result = await resetPassword(email);
-    if (!result.success) {
-      return { 
-        success: false, 
-        error: getAuthErrorMessage(result.error || '') 
-      };
-    }
-    return result;
-  };
-
-  return {
-    register,
-    login,
-    logout,
-    forgotPassword,
-  };
-};
+  return { register }; // Make sure to return the function if needed
+}
