@@ -1,26 +1,22 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/Card';
-import Input from '@/app/components/ui/Input';
-import Select from '@/app/components/ui/Select';
 import TextArea from '@/app/components/ui/TextArea';
+import Select from '@/app/components/ui/Select';
 import Button from '@/app/components/ui/Button';
 import Alert from '@/app/components/ui/Alert';
-import { 
-  ArrowLeft, 
-  Upload, 
-  X,
-  FileText,
-  AlertCircle,
-  CheckCircle
-} from 'lucide-react';
+import { ArrowLeft, Loader2, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/app/lib/supabase';
 
-// Document type configurations
-const documentConfig: Record<string, any> = {
+const documentConfig: Record<string, {
+  title: string;
+  description: string;
+  purposes: { value: string; label: string }[];
+}> = {
   'barangay-clearance': {
     title: 'Barangay Clearance',
     description: 'General-purpose clearance for employment, business, and other transactions.',
@@ -31,43 +27,6 @@ const documentConfig: Record<string, any> = {
       { value: 'loan', label: 'Loan Application' },
       { value: 'others', label: 'Others' },
     ],
-    requiredDocuments: [
-      'Valid Government-issued ID',
-      'Proof of Residency (Utility Bill, Lease Contract, etc.)',
-      'Recent 2x2 Photo (Optional)',
-    ],
-  },
-  'certificate-of-residency': {
-    title: 'Certificate of Residency',
-    description: 'Official proof that you are a resident of the barangay.',
-    purposes: [
-      { value: 'school', label: 'School Requirement' },
-      { value: 'employment', label: 'Employment' },
-      { value: 'government', label: 'Government Transaction' },
-      { value: 'others', label: 'Others' },
-    ],
-    requiredDocuments: [
-      'Valid Government-issued ID',
-      'Proof of Residency (Utility Bill, Lease Contract, etc.)',
-      'Proof of address (at least 6 months residency)',
-    ],
-  },
-  'certificate-of-indigency': {
-    title: 'Certificate of Indigency',
-    description: 'Certificate for availing government assistance and scholarships.',
-    purposes: [
-      { value: 'medical', label: 'Medical Assistance' },
-      { value: 'scholarship', label: 'Scholarship' },
-      { value: 'burial', label: 'Burial Assistance' },
-      { value: 'financial', label: 'Financial Assistance' },
-      { value: 'others', label: 'Others' },
-    ],
-    requiredDocuments: [
-      'Valid Government-issued ID',
-      'Proof of Residency',
-      'Proof of Income (if applicable)',
-      'Supporting documents for assistance',
-    ],
   },
   'business-clearance': {
     title: 'Business Clearance',
@@ -77,366 +36,364 @@ const documentConfig: Record<string, any> = {
       { value: 'renewal', label: 'Business Renewal' },
       { value: 'expansion', label: 'Business Expansion' },
     ],
-    requiredDocuments: [
-      'Valid Government-issued ID',
-      'DTI/SEC Registration',
-      'Business Location Map/Sketch',
-      'Proof of Property Ownership or Lease Contract',
+  },
+  'certification-of-death': {
+    title: 'Certification of Death',
+    description: 'Official barangay certification for the death of a resident.',
+    purposes: [
+      { value: 'legal', label: 'Legal Purpose' },
+      { value: 'insurance', label: 'Insurance' },
+      { value: 'government', label: 'Government Transaction' },
+      { value: 'others', label: 'Others' },
     ],
   },
   'job-seeker': {
-    title: 'Job Seeker Certificate',
+    title: 'First Time Jobseeker Certification',
     description: 'Certification for first-time job seekers under RA 11261.',
     purposes: [
       { value: 'job-application', label: 'Job Application' },
     ],
-    requiredDocuments: [
-      'Valid Government-issued ID',
-      'Birth Certificate',
-      'Proof of Residency',
-      'Diploma or Certificate of Graduation',
-    ],
   },
-  'barangay-certification': {
-    title: 'Barangay Certification',
-    description: 'General-purpose certification for various legal and personal needs.',
+  'oath-of-undertaking': {
+    title: 'Oath of Undertaking',
+    description: 'Oath of undertaking for first-time job seekers under RA 11261.',
     purposes: [
-      { value: 'legal', label: 'Legal Purpose' },
-      { value: 'personal', label: 'Personal Purpose' },
-      { value: 'government', label: 'Government Transaction' },
-      { value: 'others', label: 'Others' },
-    ],
-    requiredDocuments: [
-      'Valid Government-issued ID',
-      'Proof of Residency',
-      'Supporting documents (if applicable)',
+      { value: 'job-application', label: 'Job Application' },
     ],
   },
 };
+
+function FloatInput({
+  label, value, onChange, type = 'text', required = false,
+}: {
+  label: string; value: string; onChange: (v: string) => void; type?: string; required?: boolean;
+}) {
+  return (
+    <div className="relative">
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder=" "
+        required={required}
+        className={`peer w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border border-white/20 text-white
+          focus:outline-none focus:ring-2 focus:ring-primary-500
+          ${type === 'date' ? '[&::-webkit-calendar-picker-indicator]:invert' : ''}`}
+      />
+      <label className={`absolute left-4 text-gray-400 text-sm transition-all pointer-events-none
+        ${value ? 'top-2 text-xs' : 'top-1/2 -translate-y-1/2'}
+        peer-focus:top-2 peer-focus:text-xs peer-focus:translate-y-0`}>
+        {label}{required ? ' *' : ''}
+      </label>
+    </div>
+  );
+}
 
 export default function RequestDocumentFormPage({ params }: { params: Promise<{ type: string }> }) {
   const { type } = use(params);
   const router = useRouter();
   const config = documentConfig[type];
 
-  const [formData, setFormData] = useState({
-    firstName: '',
-    middleName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    address: '',
-    purpose: '',
-    customPurpose: '',
-    additionalInfo: '',
-  });
+  const [profile, setProfile] = useState<Record<string, string> | null>(null);
 
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
-  const [loading, setLoading] = useState(false);
+  // Common
+  const [purpose, setPurpose] = useState('');
+  const [customPurpose, setCustomPurpose] = useState('');
+  const [additionalInfo, setAdditionalInfo] = useState('');
+
+  // Barangay Clearance
+  const [purok, setPurok] = useState('');
+  const [ctcNo, setCtcNo] = useState('');
+  const [ctcDateIssued, setCtcDateIssued] = useState('');
+  const [ctcPlaceIssued, setCtcPlaceIssued] = useState('');
+
+  // Business Clearance
+  const [businessName, setBusinessName] = useState('');
+
+  // Certification of Death
+  const [deceasedName, setDeceasedName] = useState('');
+  const [deceasedAge, setDeceasedAge] = useState('');
+  const [dateOfDeath, setDateOfDeath] = useState('');
+  const [placeOfDeath, setPlaceOfDeath] = useState('');
+  const [relationship, setRelationship] = useState('');
+
+  // Job Seeker / Oath
+  const [yearsOfResidency, setYearsOfResidency] = useState('');
+  const [bcnNo, setBcnNo] = useState('');
+
+  // UI
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { router.push('/login'); return; }
+        const { data, error: profileError } = await supabase
+          .from('profiles')
+          .select('firstName, lastName, email, phone, address, civilStatus, birthday')
+          .eq('id', user.id)
+          .single();
+        if (profileError) throw profileError;
+        setProfile({ ...data, id: user.id });
+      } catch {
+        setError('Failed to load your profile. Please refresh.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [router]);
+
+  const validate = (): boolean => {
+    if (!purpose) { setError('Please select a purpose.'); return false; }
+    if (purpose === 'others' && !customPurpose.trim()) { setError('Please specify your purpose.'); return false; }
+    if (type === 'barangay-clearance') {
+      if (!purok.trim() || !ctcNo.trim() || !ctcDateIssued || !ctcPlaceIssued.trim()) {
+        setError('Please fill in all required fields.'); return false;
+      }
+    }
+    if (type === 'business-clearance') {
+      if (!businessName.trim() || !purok.trim()) {
+        setError('Please fill in all required fields.'); return false;
+      }
+    }
+    if (type === 'certification-of-death') {
+      if (!deceasedName.trim() || !deceasedAge.trim() || !dateOfDeath || !placeOfDeath.trim() || !relationship.trim()) {
+        setError('Please fill in all deceased person details.'); return false;
+      }
+    }
+    if (type === 'job-seeker') {
+      if (!purok.trim() || !yearsOfResidency.trim() || !bcnNo.trim()) {
+        setError('Please fill in all required fields.'); return false;
+      }
+    }
+    if (type === 'oath-of-undertaking') {
+      if (!purok.trim() || !yearsOfResidency.trim()) {
+        setError('Please fill in all required fields.'); return false;
+      }
+    }
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    if (!validate()) return;
+    if (!profile) { setError('Profile not loaded. Please refresh.'); return; }
+
+    setSubmitting(true);
+    try {
+      const { error: insertError } = await supabase.from('requests').insert({
+        user_id: profile.id,
+        document_type: type,
+        type: config.title,
+        purpose,
+        custom_purpose: customPurpose || null,
+        additional_info: additionalInfo || null,
+        status: 'pending',
+        ...(type === 'barangay-clearance' && { purok, ctc_no: ctcNo, ctc_date_issued: ctcDateIssued, ctc_place_issued: ctcPlaceIssued }),
+        ...(type === 'business-clearance' && { business_name: businessName, purok }),
+        ...(type === 'certification-of-death' && { deceased_name: deceasedName, deceased_age: deceasedAge, date_of_death: dateOfDeath, place_of_death: placeOfDeath, relationship_to_deceased: relationship }),
+        ...(type === 'job-seeker' && { purok, years_of_residency: yearsOfResidency, bcn_no: bcnNo }),
+        ...(type === 'oath-of-undertaking' && { purok, years_of_residency: yearsOfResidency }),
+      });
+      if (insertError) throw insertError;
+      setSubmitted(true);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to submit request.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (!config) {
     return (
       <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center">
         <Card>
           <CardContent className="p-8 text-center">
-            <p className="text-gray-400 mb-4">Document type not found</p>
-            <Link href="/resident/request-document">
-              <Button>Back to Document Types</Button>
-            </Link>
+            <p className="text-lg font-semibold text-white mb-2">Not Found</p>
+            <p className="text-gray-400 mb-6">This document type does not exist.</p>
+            <Link href="/request-document"><Button>Back to Document Types</Button></Link>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-    setError('');
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const newFiles = Array.from(e.target.files);
-      setUploadedFiles([...uploadedFiles, ...newFiles]);
-    }
-  };
-
-  const removeFile = (index: number) => {
-    setUploadedFiles(uploadedFiles.filter((_, i) => i !== index));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-
-    // Validation
-    if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.address || !formData.purpose) {
-      setError('Please fill in all required fields');
-      return;
-    }
-
-    if (uploadedFiles.length === 0) {
-      setError('Please upload at least one required document');
-      return;
-    }
-
-    setLoading(true);
-
-    // TODO: Submit to backend
-    console.log('Form Data:', formData);
-    console.log('Uploaded Files:', uploadedFiles);
-
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
-      router.push('/resident/my-requests');
-    }, 2000);
-  };
-
-  return (
-    <div className="min-h-screen p-4 lg:p-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Back Button */}
-        <Link href="/resident/request-document">
-          <Button variant="ghost" className="mb-6 gap-2">
-            <ArrowLeft className="w-4 h-4" />
-            Back to Document Types
-          </Button>
-        </Link>
-
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6"
-        >
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
-            {config.title}
-          </h1>
-          <p className="text-gray-400">{config.description}</p>
-        </motion.div>
-
-        {/* Info Alert */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="mb-6"
-        >
-          <Alert variant="info" title="Required Documents">
-            <ul className="list-disc list-inside space-y-1">
-              {config.requiredDocuments.map((doc: string, index: number) => (
-                <li key={index}>{doc}</li>
-              ))}
-            </ul>
-          </Alert>
-        </motion.div>
-
-        {/* Error Alert */}
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6"
-          >
-            <Alert variant="error" title="Error" onClose={() => setError('')}>
-              {error}
-            </Alert>
-          </motion.div>
-        )}
-
-        {/* Form */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
+  if (submitted) {
+    return (
+      <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center">
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
           <Card>
-            <CardHeader>
-              <CardTitle>Application Form</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Personal Information */}
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">Personal Information</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Input
-                      label="First Name *"
-                      name="firstName"
-                      value={formData.firstName}
-                      onChange={handleInputChange}
-                      required
-                    />
-                    <Input
-                      label="Middle Name"
-                      name="middleName"
-                      value={formData.middleName}
-                      onChange={handleInputChange}
-                    />
-                    <Input
-                      label="Last Name *"
-                      name="lastName"
-                      value={formData.lastName}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                </div>
-
-                {/* Contact Information */}
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">Contact Information</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input
-                      label="Email Address *"
-                      name="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      required
-                    />
-                    <Input
-                      label="Phone Number *"
-                      name="phone"
-                      type="tel"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      placeholder="+63 912 345 6789"
-                      required
-                    />
-                  </div>
-                </div>
-
-                {/* Address */}
-                <div>
-                  <TextArea
-                    label="Complete Address *"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    rows={3}
-                    placeholder="Block, Lot, Street, Barangay, City/Municipality, Province"
-                    required
-                  />
-                </div>
-
-                {/* Purpose */}
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">Purpose of Request</h3>
-                  <div className="space-y-4">
-                    <Select
-                      label="Select Purpose *"
-                      name="purpose"
-                      value={formData.purpose}
-                      onChange={handleInputChange}
-                      options={[
-                        { value: '', label: 'Choose a purpose...' },
-                        ...config.purposes,
-                      ]}
-                      required
-                    />
-                    {formData.purpose === 'others' && (
-                      <Input
-                        label="Specify Purpose *"
-                        name="customPurpose"
-                        value={formData.customPurpose}
-                        onChange={handleInputChange}
-                        placeholder="Please specify your purpose"
-                        required
-                      />
-                    )}
-                  </div>
-                </div>
-
-                {/* Additional Information */}
-                <div>
-                  <TextArea
-                    label="Additional Information (Optional)"
-                    name="additionalInfo"
-                    value={formData.additionalInfo}
-                    onChange={handleInputChange}
-                    rows={4}
-                    placeholder="Any additional details that may help process your request..."
-                  />
-                </div>
-
-                {/* File Upload */}
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">Upload Requirements *</h3>
-                  <div className="space-y-4">
-                    {/* Upload Button */}
-                    <div>
-                      <label className="block w-full">
-                        <div className="border-2 border-dashed border-white/20 rounded-lg p-8 text-center hover:border-purple-500/50 transition-colors cursor-pointer">
-                          <Upload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                          <p className="text-white mb-2">Click to upload documents</p>
-                          <p className="text-sm text-gray-400">
-                            PDF, JPG, PNG (Max 5MB per file)
-                          </p>
-                          <input
-                            type="file"
-                            multiple
-                            accept=".pdf,.jpg,.jpeg,.png"
-                            onChange={handleFileUpload}
-                            className="hidden"
-                          />
-                        </div>
-                      </label>
-                    </div>
-
-                    {/* Uploaded Files List */}
-                    {uploadedFiles.length > 0 && (
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium text-white">Uploaded Files:</p>
-                        {uploadedFiles.map((file, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center justify-between p-3 bg-white/5 rounded-lg"
-                          >
-                            <div className="flex items-center gap-3">
-                              <FileText className="w-5 h-5 text-blue-400" />
-                              <div>
-                                <p className="text-white text-sm">{file.name}</p>
-                                <p className="text-gray-400 text-xs">
-                                  {(file.size / 1024).toFixed(2)} KB
-                                </p>
-                              </div>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => removeFile(index)}
-                              className="text-red-400 hover:text-red-300 transition-colors"
-                            >
-                              <X className="w-5 h-5" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Submit Button */}
-                <div className="flex gap-4 pt-4">
-                  <Link href="/resident/request-document" className="flex-1">
-                    <Button type="button" variant="outline" className="w-full">
-                      Cancel
-                    </Button>
-                  </Link>
-                  <Button type="submit" disabled={loading} className="flex-1">
-                    {loading ? 'Submitting...' : 'Submit Request'}
-                  </Button>
-                </div>
-              </form>
+            <CardContent className="p-10 text-center max-w-md">
+              <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-white mb-2">Request Submitted!</h2>
+              <p className="text-gray-400 mb-6">
+                Your <span className="text-white font-medium">{config.title}</span> request has been received.
+                You'll be notified once it's ready.
+              </p>
+              <div className="flex flex-col gap-3">
+                <Link href="/my-requests"><Button className="w-full">View My Requests</Button></Link>
+                <Link href="/request-document"><Button variant="outline" className="w-full">Request Another</Button></Link>
+              </div>
             </CardContent>
           </Card>
         </motion.div>
       </div>
+    );
+  }
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 text-blue-400 animate-spin" /></div>;
+  }
+
+  return (
+    <div className="min-h-screen p-4 lg:p-8">
+      <div className="max-w-2xl mx-auto">
+        <Link href="/request-document">
+          <Button variant="ghost" className="mb-6 gap-2"><ArrowLeft className="w-4 h-4" />Back</Button>
+        </Link>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+          <h1 className="text-3xl font-bold text-white mb-2">{config.title}</h1>
+          <p className="text-gray-400">{config.description}</p>
+        </motion.div>
+
+        {error && (
+          <div className="mb-6">
+            <Alert variant="error" title="Error" onClose={() => setError('')}>{error}</Alert>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Profile — read only */}
+          <Card>
+            <CardHeader><CardTitle>Your Information</CardTitle></CardHeader>
+            <CardContent>
+              <p className="text-xs text-gray-500 mb-4">
+                Pulled from your profile. If anything is wrong,{' '}
+                <Link href="/profile" className="text-blue-400 hover:underline">update your profile</Link> first.
+              </p>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                <InfoRow label="Name" value={`${profile?.firstName ?? ''} ${profile?.lastName ?? ''}`.trim()} />
+                <InfoRow label="Email" value={profile?.email ?? ''} />
+                <InfoRow label="Phone" value={profile?.phone ?? ''} />
+                <InfoRow label="Civil Status" value={profile?.civilStatus ?? ''} />
+                <div className="col-span-2"><InfoRow label="Address" value={profile?.address ?? ''} /></div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Barangay Clearance extras */}
+          {type === 'barangay-clearance' && (
+            <Card>
+              <CardHeader><CardTitle>Additional Details</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <FloatInput label="Purok / Zone" value={purok} onChange={setPurok} required />
+                <FloatInput label="CTC Number" value={ctcNo} onChange={setCtcNo} required />
+                <FloatInput label="CTC Date Issued" value={ctcDateIssued} onChange={setCtcDateIssued} type="date" required />
+                <FloatInput label="CTC Place Issued" value={ctcPlaceIssued} onChange={setCtcPlaceIssued} required />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Business Clearance extras */}
+          {type === 'business-clearance' && (
+            <Card>
+              <CardHeader><CardTitle>Business Details</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <FloatInput label="Business Name" value={businessName} onChange={setBusinessName} required />
+                <FloatInput label="Business Location / Purok" value={purok} onChange={setPurok} required />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Certification of Death extras */}
+          {type === 'certification-of-death' && (
+            <Card>
+              <CardHeader><CardTitle>Deceased Person's Information</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <FloatInput label="Full Name of Deceased" value={deceasedName} onChange={setDeceasedName} required />
+                <FloatInput label="Age at Time of Death" value={deceasedAge} onChange={setDeceasedAge} required />
+                <FloatInput label="Date of Death" value={dateOfDeath} onChange={setDateOfDeath} type="date" required />
+                <FloatInput label="Place of Death" value={placeOfDeath} onChange={setPlaceOfDeath} required />
+                <FloatInput label="Your Relationship to Deceased" value={relationship} onChange={setRelationship} required />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Job Seeker extras */}
+          {type === 'job-seeker' && (
+            <Card>
+              <CardHeader><CardTitle>Additional Details</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <FloatInput label="BCN Number" value={bcnNo} onChange={setBcnNo} required />
+                <FloatInput label="Purok / Zone" value={purok} onChange={setPurok} required />
+                <FloatInput label="Years of Residency in Barangay" value={yearsOfResidency} onChange={setYearsOfResidency} required />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Oath of Undertaking extras */}
+          {type === 'oath-of-undertaking' && (
+            <Card>
+              <CardHeader><CardTitle>Additional Details</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <FloatInput label="Purok / Zone" value={purok} onChange={setPurok} required />
+                <FloatInput label="Years of Residency in Barangay" value={yearsOfResidency} onChange={setYearsOfResidency} required />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Purpose & notes */}
+          <Card>
+            <CardHeader><CardTitle>Request Details</CardTitle></CardHeader>
+            <CardContent className="space-y-5">
+              <Select
+                label="Purpose *"
+                name="purpose"
+                value={purpose}
+                onChange={(e) => { setPurpose(e.target.value); setError(''); }}
+                options={[{ value: '', label: 'Select a purpose...' }, ...config.purposes]}
+                required
+              />
+              {purpose === 'others' && (
+                <FloatInput label="Specify Purpose" value={customPurpose} onChange={setCustomPurpose} required />
+              )}
+              <TextArea
+                label="Additional Information (Optional)"
+                name="additionalInfo"
+                value={additionalInfo}
+                onChange={(e) => setAdditionalInfo(e.target.value)}
+                rows={3}
+                placeholder="Any extra details that may help process your request..."
+              />
+              <div className="flex gap-3 pt-2">
+                <Link href="/request-document" className="flex-1">
+                  <Button type="button" variant="outline" className="w-full">Cancel</Button>
+                </Link>
+                <Button type="submit" disabled={submitting} className="flex-1 gap-2">
+                  {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {submitting ? 'Submitting...' : 'Submit Request'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-gray-500 text-xs mb-0.5">{label}</p>
+      <p className="text-white">{value || <span className="text-gray-600 italic text-xs">Not set</span>}</p>
     </div>
   );
 }
