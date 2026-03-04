@@ -12,37 +12,20 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 
 interface RequestDetail {
-  id: string;
-  type: string;
-  document_type: string;
-  status: string;
-  created_at: string;
-  processed_at: string | null;
-  purpose: string;
-  custom_purpose: string | null;
-  additional_info: string | null;
-  notes: string | null;
-  file_url: string | null;
-  purok: string | null;
-  ctc_no: string | null;
-  ctc_date_issued: string | null;
-  ctc_place_issued: string | null;
-  business_name: string | null;
-  deceased_name: string | null;
-  deceased_age: string | null;
-  date_of_death: string | null;
-  place_of_death: string | null;
-  relationship_to_deceased: string | null;
-  years_of_residency: string | null;
+  id: string; type: string; document_type: string; status: string;
+  created_at: string; processed_at: string | null; purpose: string;
+  custom_purpose: string | null; additional_info: string | null;
+  notes: string | null; file_url: string | null;
+  purok: string | null; ctc_no: string | null; ctc_date_issued: string | null;
+  ctc_place_issued: string | null; business_name: string | null;
+  deceased_name: string | null; deceased_age: string | null;
+  date_of_death: string | null; place_of_death: string | null;
+  relationship_to_deceased: string | null; years_of_residency: string | null;
   bcn_no: string | null;
 }
 
 interface Profile {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  address: string;
+  firstName: string; lastName: string; email: string; phone: string; address: string;
 }
 
 export default function RequestDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -59,33 +42,21 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { router.push('/login'); return; }
 
-        // Fetch request separately — no join
-        const { data: reqData, error: reqError } = await supabase
-          .from('requests')
-          .select('*')
-          .eq('id', id)
-          .eq('user_id', user.id)
-          .single();
+        // ✅ Fetch request via API route — decrypts sensitive fields
+        const reqRes = await fetch(`/api/requests?id=${id}&user_id=${user.id}`);
+        if (!reqRes.ok) { setNotFound(true); return; }
+        const reqJson = await reqRes.json();
+        if (!reqJson.data?.[0]) { setNotFound(true); return; }
+        setRequest(reqJson.data[0]);
 
-        if (reqError || !reqData) {
-          console.error('Request error:', reqError);
-          setNotFound(true);
-          return;
-        }
-        setRequest(reqData);
-
-        // Fetch profile separately
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('firstName, lastName, email, phone, address')
-          .eq('id', user.id)
-          .single();
-
-        if (!profileError && profileData) {
-          setProfile(profileData);
+        // ✅ Fetch profile via API route — decrypts phone, address, birthday
+        const profileRes = await fetch(`/api/profile?id=${user.id}`);
+        if (profileRes.ok) {
+          const profileJson = await profileRes.json();
+          setProfile(profileJson.data);
         }
       } catch (err) {
-        console.error('Caught error:', err);
+        console.error('Error:', err);
         setNotFound(true);
       } finally {
         setLoading(false);
@@ -94,32 +65,24 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
     load();
   }, [id, router]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
+    </div>
+  );
 
-  if (notFound || !request) {
-    return (
-      <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center">
-        <Card>
-          <CardContent className="p-8 text-center">
-            <p className="text-gray-400 mb-4">Request not found</p>
-            <Link href="/my-requests"><Button>Back to Requests</Button></Link>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  if (notFound || !request) return (
+    <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center">
+      <Card><CardContent className="p-8 text-center">
+        <p className="text-gray-400 mb-4">Request not found</p>
+        <Link href="/my-requests"><Button>Back to Requests</Button></Link>
+      </CardContent></Card>
+    </div>
+  );
 
   const displayPurpose = request.purpose === 'others' && request.custom_purpose
-    ? request.custom_purpose
-    : request.purpose;
+    ? request.custom_purpose : request.purpose;
 
-  // Build extra details based on document type
   const extraDetails: { label: string; value: string | null }[] = [];
   if (request.document_type === 'barangay-clearance') {
     extraDetails.push(
@@ -169,97 +132,59 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
           <div className="flex items-center justify-between mb-2">
-            <h1 className="text-3xl font-bold text-white">
-              {request.type ?? request.document_type}
-            </h1>
+            <h1 className="text-3xl font-bold text-white">{request.type ?? request.document_type}</h1>
             <Badge variant={request.status as any}>{request.status}</Badge>
           </div>
           <p className="text-gray-400 font-mono text-sm">ID: {request.id.toUpperCase()}</p>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left — main info */}
           <div className="lg:col-span-2 space-y-6">
-
-            {/* Request Details */}
             <Card>
               <CardHeader><CardTitle>Request Details</CardTitle></CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4">
                   <DetailRow label="Document Type" value={request.type ?? request.document_type} />
                   <DetailRow label="Purpose" value={displayPurpose ?? '—'} />
-                  <DetailRow
-                    label="Date Requested"
-                    value={new Date(request.created_at).toLocaleDateString()}
-                  />
-                  <DetailRow
-                    label="Date Processed"
-                    value={request.processed_at
-                      ? new Date(request.processed_at).toLocaleDateString()
-                      : 'Pending'}
-                  />
+                  <DetailRow label="Date Requested" value={new Date(request.created_at).toLocaleDateString()} />
+                  <DetailRow label="Date Processed" value={request.processed_at
+                    ? new Date(request.processed_at).toLocaleDateString() : 'Pending'} />
                   {request.additional_info && (
-                    <div className="col-span-2">
-                      <DetailRow label="Additional Info" value={request.additional_info} />
-                    </div>
+                    <div className="col-span-2"><DetailRow label="Additional Info" value={request.additional_info} /></div>
                   )}
                   {request.notes && (
-                    <div className="col-span-2">
-                      <DetailRow label="Admin Notes" value={request.notes} />
-                    </div>
+                    <div className="col-span-2"><DetailRow label="Admin Notes" value={request.notes} /></div>
                   )}
                 </div>
               </CardContent>
             </Card>
 
-            {/* Extra fields per document type */}
             {extraDetails.length > 0 && (
               <Card>
                 <CardHeader><CardTitle>Submitted Information</CardTitle></CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-4">
-                    {extraDetails.map(d => (
-                      <DetailRow key={d.label} label={d.label} value={d.value ?? '—'} />
-                    ))}
+                    {extraDetails.map(d => <DetailRow key={d.label} label={d.label} value={d.value ?? '—'} />)}
                   </div>
                 </CardContent>
               </Card>
             )}
 
-            {/* Applicant Info */}
             {profile && (
               <Card>
                 <CardHeader><CardTitle>Applicant Information</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
-                  <IconRow
-                    icon={<User className="w-5 h-5 text-gray-400" />}
-                    label="Name"
-                    value={`${profile.firstName} ${profile.lastName}`}
-                  />
-                  <IconRow
-                    icon={<Mail className="w-5 h-5 text-gray-400" />}
-                    label="Email"
-                    value={profile.email}
-                  />
-                  <IconRow
-                    icon={<Phone className="w-5 h-5 text-gray-400" />}
-                    label="Phone"
-                    value={profile.phone}
-                  />
-                  <IconRow
-                    icon={<MapPin className="w-5 h-5 text-gray-400" />}
-                    label="Address"
-                    value={profile.address}
-                  />
+                  <IconRow icon={<User className="w-5 h-5 text-gray-400" />} label="Name"
+                    value={`${profile.firstName} ${profile.lastName}`} />
+                  <IconRow icon={<Mail className="w-5 h-5 text-gray-400" />} label="Email" value={profile.email} />
+                  <IconRow icon={<Phone className="w-5 h-5 text-gray-400" />} label="Phone" value={profile.phone} />
+                  <IconRow icon={<MapPin className="w-5 h-5 text-gray-400" />} label="Address" value={profile.address} />
                 </CardContent>
               </Card>
             )}
           </div>
 
-          {/* Right — sidebar */}
           <div className="space-y-6">
-
-            {/* Status */}
             <Card>
               <CardHeader><CardTitle>Status</CardTitle></CardHeader>
               <CardContent>
@@ -279,15 +204,13 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
               </CardContent>
             </Card>
 
-            {/* Download if file is ready */}
             {request.status === 'approved' && request.file_url && (
               <Card>
                 <CardHeader><CardTitle>Your Document</CardTitle></CardHeader>
                 <CardContent>
                   <a href={request.file_url} target="_blank" rel="noopener noreferrer" download>
                     <Button className="w-full gap-2">
-                      <Download className="w-4 h-4" />
-                      Download Document
+                      <Download className="w-4 h-4" />Download Document
                     </Button>
                   </a>
                 </CardContent>
@@ -295,13 +218,11 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
             )}
 
             {request.status === 'approved' && !request.file_url && (
-              <Card>
-                <CardContent className="p-4">
-                  <p className="text-gray-400 text-sm text-center">
-                    Your request is approved. Please visit the barangay office to claim your document.
-                  </p>
-                </CardContent>
-              </Card>
+              <Card><CardContent className="p-4">
+                <p className="text-gray-400 text-sm text-center">
+                  Your request is approved. Please visit the barangay office to claim your document.
+                </p>
+              </CardContent></Card>
             )}
           </div>
         </div>

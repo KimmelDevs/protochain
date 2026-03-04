@@ -50,32 +50,22 @@ const documentConfig: Record<string, {
   'job-seeker': {
     title: 'First Time Jobseeker Certification',
     description: 'Certification for first-time job seekers under RA 11261.',
-    purposes: [
-      { value: 'job-application', label: 'Job Application' },
-    ],
+    purposes: [{ value: 'job-application', label: 'Job Application' }],
   },
   'oath-of-undertaking': {
     title: 'Oath of Undertaking',
     description: 'Oath of undertaking for first-time job seekers under RA 11261.',
-    purposes: [
-      { value: 'job-application', label: 'Job Application' },
-    ],
+    purposes: [{ value: 'job-application', label: 'Job Application' }],
   },
 };
 
-function FloatInput({
-  label, value, onChange, type = 'text', required = false,
-}: {
+function FloatInput({ label, value, onChange, type = 'text', required = false }: {
   label: string; value: string; onChange: (v: string) => void; type?: string; required?: boolean;
 }) {
   return (
     <div className="relative">
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder=" "
-        required={required}
+      <input type={type} value={value} onChange={(e) => onChange(e.target.value)}
+        placeholder=" " required={required}
         className={`peer w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border border-white/20 text-white
           focus:outline-none focus:ring-2 focus:ring-primary-500
           ${type === 'date' ? '[&::-webkit-calendar-picker-indicator]:invert' : ''}`}
@@ -95,33 +85,21 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
   const config = documentConfig[type];
 
   const [profile, setProfile] = useState<Record<string, string> | null>(null);
-
-  // Common
   const [purpose, setPurpose] = useState('');
   const [customPurpose, setCustomPurpose] = useState('');
   const [additionalInfo, setAdditionalInfo] = useState('');
-
-  // Barangay Clearance
   const [purok, setPurok] = useState('');
   const [ctcNo, setCtcNo] = useState('');
   const [ctcDateIssued, setCtcDateIssued] = useState('');
   const [ctcPlaceIssued, setCtcPlaceIssued] = useState('');
-
-  // Business Clearance
   const [businessName, setBusinessName] = useState('');
-
-  // Certification of Death
   const [deceasedName, setDeceasedName] = useState('');
   const [deceasedAge, setDeceasedAge] = useState('');
   const [dateOfDeath, setDateOfDeath] = useState('');
   const [placeOfDeath, setPlaceOfDeath] = useState('');
   const [relationship, setRelationship] = useState('');
-
-  // Job Seeker / Oath
   const [yearsOfResidency, setYearsOfResidency] = useState('');
   const [bcnNo, setBcnNo] = useState('');
-
-  // UI
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -132,13 +110,12 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { router.push('/login'); return; }
-        const { data, error: profileError } = await supabase
-          .from('profiles')
-          .select('firstName, lastName, email, phone, address, civilStatus, birthday')
-          .eq('id', user.id)
-          .single();
-        if (profileError) throw profileError;
-        setProfile({ ...data, id: user.id });
+
+        // ✅ Use API route — decrypts phone, address, birthday server-side
+        const res = await fetch(`/api/profile?id=${user.id}`);
+        if (!res.ok) throw new Error('Failed to load profile');
+        const json = await res.json();
+        setProfile({ ...json.data, id: user.id });
       } catch {
         setError('Failed to load your profile. Please refresh.');
       } finally {
@@ -151,30 +128,20 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
   const validate = (): boolean => {
     if (!purpose) { setError('Please select a purpose.'); return false; }
     if (purpose === 'others' && !customPurpose.trim()) { setError('Please specify your purpose.'); return false; }
-    if (type === 'barangay-clearance') {
-      if (!purok.trim() || !ctcNo.trim() || !ctcDateIssued || !ctcPlaceIssued.trim()) {
-        setError('Please fill in all required fields.'); return false;
-      }
+    if (type === 'barangay-clearance' && (!purok.trim() || !ctcNo.trim() || !ctcDateIssued || !ctcPlaceIssued.trim())) {
+      setError('Please fill in all required fields.'); return false;
     }
-    if (type === 'business-clearance') {
-      if (!businessName.trim() || !purok.trim()) {
-        setError('Please fill in all required fields.'); return false;
-      }
+    if (type === 'business-clearance' && (!businessName.trim() || !purok.trim())) {
+      setError('Please fill in all required fields.'); return false;
     }
-    if (type === 'certification-of-death') {
-      if (!deceasedName.trim() || !deceasedAge.trim() || !dateOfDeath || !placeOfDeath.trim() || !relationship.trim()) {
-        setError('Please fill in all deceased person details.'); return false;
-      }
+    if (type === 'certification-of-death' && (!deceasedName.trim() || !deceasedAge.trim() || !dateOfDeath || !placeOfDeath.trim() || !relationship.trim())) {
+      setError('Please fill in all deceased person details.'); return false;
     }
-    if (type === 'job-seeker') {
-      if (!purok.trim() || !yearsOfResidency.trim() || !bcnNo.trim()) {
-        setError('Please fill in all required fields.'); return false;
-      }
+    if (type === 'job-seeker' && (!purok.trim() || !yearsOfResidency.trim() || !bcnNo.trim())) {
+      setError('Please fill in all required fields.'); return false;
     }
-    if (type === 'oath-of-undertaking') {
-      if (!purok.trim() || !yearsOfResidency.trim()) {
-        setError('Please fill in all required fields.'); return false;
-      }
+    if (type === 'oath-of-undertaking' && (!purok.trim() || !yearsOfResidency.trim())) {
+      setError('Please fill in all required fields.'); return false;
     }
     return true;
   };
@@ -187,21 +154,27 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
 
     setSubmitting(true);
     try {
-      const { error: insertError } = await supabase.from('requests').insert({
-        user_id: profile.id,
-        document_type: type,
-        type: config.title,
-        purpose,
-        custom_purpose: customPurpose || null,
-        additional_info: additionalInfo || null,
-        status: 'pending',
-        ...(type === 'barangay-clearance' && { purok, ctc_no: ctcNo, ctc_date_issued: ctcDateIssued, ctc_place_issued: ctcPlaceIssued }),
-        ...(type === 'business-clearance' && { business_name: businessName, purok }),
-        ...(type === 'certification-of-death' && { deceased_name: deceasedName, deceased_age: deceasedAge, date_of_death: dateOfDeath, place_of_death: placeOfDeath, relationship_to_deceased: relationship }),
-        ...(type === 'job-seeker' && { purok, years_of_residency: yearsOfResidency, bcn_no: bcnNo }),
-        ...(type === 'oath-of-undertaking' && { purok, years_of_residency: yearsOfResidency }),
+      // ✅ Use API route — encrypts sensitive request fields server-side
+      const res = await fetch('/api/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: profile.id,
+          document_type: type,
+          type: config.title,
+          purpose,
+          custom_purpose: customPurpose || null,
+          additional_info: additionalInfo || null,
+          status: 'pending',
+          ...(type === 'barangay-clearance' && { purok, ctc_no: ctcNo, ctc_date_issued: ctcDateIssued, ctc_place_issued: ctcPlaceIssued }),
+          ...(type === 'business-clearance' && { business_name: businessName, purok }),
+          ...(type === 'certification-of-death' && { deceased_name: deceasedName, deceased_age: deceasedAge, date_of_death: dateOfDeath, place_of_death: placeOfDeath, relationship_to_deceased: relationship }),
+          ...(type === 'job-seeker' && { purok, years_of_residency: yearsOfResidency, bcn_no: bcnNo }),
+          ...(type === 'oath-of-undertaking' && { purok, years_of_residency: yearsOfResidency }),
+        }),
       });
-      if (insertError) throw insertError;
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to submit request.');
       setSubmitted(true);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to submit request.');
@@ -210,46 +183,40 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
     }
   };
 
-  if (!config) {
-    return (
-      <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center">
-        <Card>
-          <CardContent className="p-8 text-center">
-            <p className="text-lg font-semibold text-white mb-2">Not Found</p>
-            <p className="text-gray-400 mb-6">This document type does not exist.</p>
-            <Link href="/request-document"><Button>Back to Document Types</Button></Link>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  if (!config) return (
+    <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center">
+      <Card><CardContent className="p-8 text-center">
+        <p className="text-lg font-semibold text-white mb-2">Not Found</p>
+        <p className="text-gray-400 mb-6">This document type does not exist.</p>
+        <Link href="/request-document"><Button>Back to Document Types</Button></Link>
+      </CardContent></Card>
+    </div>
+  );
 
-  if (submitted) {
-    return (
-      <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center">
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
-          <Card>
-            <CardContent className="p-10 text-center max-w-md">
-              <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-white mb-2">Request Submitted!</h2>
-              <p className="text-gray-400 mb-6">
-                Your <span className="text-white font-medium">{config.title}</span> request has been received.
-                You'll be notified once it's ready.
-              </p>
-              <div className="flex flex-col gap-3">
-                <Link href="/my-requests"><Button className="w-full">View My Requests</Button></Link>
-                <Link href="/request-document"><Button variant="outline" className="w-full">Request Another</Button></Link>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
-    );
-  }
+  if (submitted) return (
+    <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center">
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
+        <Card><CardContent className="p-10 text-center max-w-md">
+          <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-white mb-2">Request Submitted!</h2>
+          <p className="text-gray-400 mb-6">
+            Your <span className="text-white font-medium">{config.title}</span> request has been received.
+            You'll be notified once it's ready.
+          </p>
+          <div className="flex flex-col gap-3">
+            <Link href="/my-requests"><Button className="w-full">View My Requests</Button></Link>
+            <Link href="/request-document"><Button variant="outline" className="w-full">Request Another</Button></Link>
+          </div>
+        </CardContent></Card>
+      </motion.div>
+    </div>
+  );
 
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 text-blue-400 animate-spin" /></div>;
-  }
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
+    </div>
+  );
 
   return (
     <div className="min-h-screen p-4 lg:p-8">
@@ -270,7 +237,6 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Profile — read only */}
           <Card>
             <CardHeader><CardTitle>Your Information</CardTitle></CardHeader>
             <CardContent>
@@ -288,7 +254,6 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
             </CardContent>
           </Card>
 
-          {/* Barangay Clearance extras */}
           {type === 'barangay-clearance' && (
             <Card>
               <CardHeader><CardTitle>Additional Details</CardTitle></CardHeader>
@@ -301,7 +266,6 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
             </Card>
           )}
 
-          {/* Business Clearance extras */}
           {type === 'business-clearance' && (
             <Card>
               <CardHeader><CardTitle>Business Details</CardTitle></CardHeader>
@@ -312,7 +276,6 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
             </Card>
           )}
 
-          {/* Certification of Death extras */}
           {type === 'certification-of-death' && (
             <Card>
               <CardHeader><CardTitle>Deceased Person's Information</CardTitle></CardHeader>
@@ -326,7 +289,6 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
             </Card>
           )}
 
-          {/* Job Seeker extras */}
           {type === 'job-seeker' && (
             <Card>
               <CardHeader><CardTitle>Additional Details</CardTitle></CardHeader>
@@ -338,7 +300,6 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
             </Card>
           )}
 
-          {/* Oath of Undertaking extras */}
           {type === 'oath-of-undertaking' && (
             <Card>
               <CardHeader><CardTitle>Additional Details</CardTitle></CardHeader>
@@ -349,28 +310,19 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
             </Card>
           )}
 
-          {/* Purpose & notes */}
           <Card>
             <CardHeader><CardTitle>Request Details</CardTitle></CardHeader>
             <CardContent className="space-y-5">
-              <Select
-                label="Purpose *"
-                name="purpose"
-                value={purpose}
+              <Select label="Purpose *" name="purpose" value={purpose}
                 onChange={(e) => { setPurpose(e.target.value); setError(''); }}
-                options={[{ value: '', label: 'Select a purpose...' }, ...config.purposes]}
-                required
+                options={[{ value: '', label: 'Select a purpose...' }, ...config.purposes]} required
               />
               {purpose === 'others' && (
                 <FloatInput label="Specify Purpose" value={customPurpose} onChange={setCustomPurpose} required />
               )}
-              <TextArea
-                label="Additional Information (Optional)"
-                name="additionalInfo"
-                value={additionalInfo}
-                onChange={(e) => setAdditionalInfo(e.target.value)}
-                rows={3}
-                placeholder="Any extra details that may help process your request..."
+              <TextArea label="Additional Information (Optional)" name="additionalInfo"
+                value={additionalInfo} onChange={(e) => setAdditionalInfo(e.target.value)}
+                rows={3} placeholder="Any extra details that may help process your request..."
               />
               <div className="flex gap-3 pt-2">
                 <Link href="/request-document" className="flex-1">
