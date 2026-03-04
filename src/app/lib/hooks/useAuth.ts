@@ -18,57 +18,54 @@ export function useAuthActions() {
       civilStatus: string;
     }
   ) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: metadata }
-    });
-
-    if (error) return { success: false, error: error.message };
-
-    if (data.user) {
-      const { error: profileError } = await supabase.from('profiles').insert({
-        id: data.user.id,
-        email,
-        firstName: metadata.firstName,
-        lastName: metadata.lastName,
-        phone: metadata.phone,
-        address: metadata.address,
-        role: metadata.role,
-        username: metadata.username,
-        birthday: metadata.birthday,
-        civilStatus: metadata.civilStatus,
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, profile: metadata }),
       });
 
-      if (profileError) return { success: false, error: profileError.message };
+      const json = await res.json();
+      if (!res.ok) return { success: false, error: json.error || 'Registration failed.' };
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) {
+        router.push('/login?registered=true');
+        return { success: true };
+      }
+
+      router.push(metadata.role === 'admin' ? '/admin/dashboard' : '/resident/dashboard');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'An unexpected error occurred.' };
+    }
+  };
+
+  // Login: no PII involved, safe to use Supabase directly
+  const login = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return { success: false, error: error.message };
+
+    // Fetch role — role is not encrypted
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', data.user.id)
+      .single();
+
+    if (profile?.role === 'admin') {
+      router.push('/admindashboard');
+    } else {
+      router.push('/dashboard');
     }
 
-    router.push('/dashboard');
     return { success: true };
   };
-const login = async (email: string, password: string) => {
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return { success: false, error: error.message };
 
-  // Fetch role from profiles
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', data.user.id)
-    .single();
-
-  if (profile?.role === 'admin') {
-    router.push('/admindashboard');
-  } else {
-    router.push('/dashboard');
-  }
-
-  return { success: true };
-};
   const logout = async () => {
     await supabase.auth.signOut();
     router.push('/login');
   };
 
-  return { register, login, logout }; // ✅ make sure all 3 are here
+  return { register, login, logout };
 }
