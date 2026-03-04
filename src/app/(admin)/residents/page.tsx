@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/Card';
-import Badge from '@/app/components/ui/Badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/app/components/ui/Table';
 import Input from '@/app/components/ui/Input';
 import Select from '@/app/components/ui/Select';
@@ -39,10 +38,10 @@ export default function ResidentsPage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { router.push('/login'); return; }
 
-        // Fetch all profiles that are residents
+        // Fetch all resident profiles (non-sensitive fields only — no need to decrypt these)
         const { data: profilesData, error } = await supabase
           .from('profiles')
-          .select('*')
+          .select('id, firstName, lastName, email, role, avatar_base64, created_at')
           .eq('role', 'resident')
           .order('created_at', { ascending: false });
 
@@ -61,10 +60,26 @@ export default function ResidentsPage() {
           countMap[r.user_id] = (countMap[r.user_id] ?? 0) + 1;
         });
 
-        setResidents(profilesData.map((p: any) => ({
-          ...p,
-          totalRequests: countMap[p.id] ?? 0,
-        })));
+        // ✅ Fetch decrypted phone & address for each resident via API route
+        const residentsWithDecrypted = await Promise.all(
+          profilesData.map(async (p: any) => {
+            try {
+              const res = await fetch(`/api/profile?id=${p.id}`);
+              if (res.ok) {
+                const json = await res.json();
+                return {
+                  ...p,
+                  phone: json.data?.phone ?? '',
+                  address: json.data?.address ?? '',
+                  totalRequests: countMap[p.id] ?? 0,
+                };
+              }
+            } catch {}
+            return { ...p, phone: '', address: '', totalRequests: countMap[p.id] ?? 0 };
+          })
+        );
+
+        setResidents(residentsWithDecrypted);
       } catch (err) {
         console.error('Error loading residents:', err);
       } finally {
@@ -234,8 +249,7 @@ export default function ResidentsPage() {
                           <TableCell>
                             <Link href={`/residents/${resident.id}`}>
                               <Button size="sm" className="gap-2">
-                                <Eye className="w-4 h-4" />
-                                View
+                                <Eye className="w-4 h-4" />View
                               </Button>
                             </Link>
                           </TableCell>

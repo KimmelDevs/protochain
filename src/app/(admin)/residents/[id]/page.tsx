@@ -50,18 +50,32 @@ export default function ResidentDetailPage({ params }: { params: Promise<{ id: s
   useEffect(() => {
     const load = async () => {
       try {
-        const { data: profileData, error: profileError } = await supabase
+        // ✅ Fetch profile via API route — decrypts phone, address, birthday
+        const profileRes = await fetch(`/api/profile?id=${id}`);
+        if (!profileRes.ok) { setNotFound(true); return; }
+        const profileJson = await profileRes.json();
+        if (!profileJson.data) { setNotFound(true); return; }
+
+        // Also fetch non-encrypted fields not in the API response (avatar, username, role, created_at)
+        const { data: extraData } = await supabase
           .from('profiles')
-          .select('*')
+          .select('id, username, role, avatar_base64, created_at')
           .eq('id', id)
           .single();
 
-        if (profileError || !profileData) { setNotFound(true); return; }
-        setProfile(profileData);
+        setProfile({
+          ...profileJson.data,
+          id,
+          username: extraData?.username ?? null,
+          role: extraData?.role ?? null,
+          avatar_base64: extraData?.avatar_base64 ?? null,
+          created_at: extraData?.created_at ?? '',
+        });
 
+        // Requests don't need decryption for the list view (no sensitive fields displayed here)
         const { data: requestsData } = await supabase
           .from('requests')
-          .select('*')
+          .select('id, type, document_type, status, purpose, custom_purpose, created_at, file_url')
           .eq('user_id', id)
           .order('created_at', { ascending: false });
 
@@ -75,31 +89,27 @@ export default function ResidentDetailPage({ params }: { params: Promise<{ id: s
     load();
   }, [id]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
+    </div>
+  );
 
-  if (notFound || !profile) {
-    return (
-      <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center">
-        <Card><CardContent className="p-8 text-center">
-          <p className="text-gray-400 mb-4">Resident not found</p>
-          <Link href="/residents"><Button>Back to Residents</Button></Link>
-        </CardContent></Card>
-      </div>
-    );
-  }
+  if (notFound || !profile) return (
+    <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center">
+      <Card><CardContent className="p-8 text-center">
+        <p className="text-gray-400 mb-4">Resident not found</p>
+        <Link href="/residents"><Button>Back to Residents</Button></Link>
+      </CardContent></Card>
+    </div>
+  );
 
   const getInitials = (first: string, last: string) =>
     `${first?.[0] ?? ''}${last?.[0] ?? ''}`.toUpperCase() || '?';
 
-  const memberSince = new Date(profile.created_at).toLocaleDateString('en-US', {
-    month: 'long', day: 'numeric', year: 'numeric',
-  });
+  const memberSince = profile.created_at
+    ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    : '—';
 
   const stats = {
     total: requests.length,
@@ -137,42 +147,30 @@ export default function ResidentDetailPage({ params }: { params: Promise<{ id: s
           <h1 className="text-3xl font-bold text-white mb-1">
             {profile.firstName} {profile.lastName}
           </h1>
-          <p className="text-gray-400 font-mono text-sm">ID: {profile.id.toUpperCase()}</p>
+          <p className="text-gray-400 font-mono text-sm">ID: {id.toUpperCase()}</p>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          {/* ── Left sidebar ── */}
+          {/* Left sidebar */}
           <div className="space-y-6">
-
-            {/* Avatar & name */}
             <Card>
               <CardContent className="p-6 text-center">
                 {profile.avatar_base64 ? (
-                  <img
-                    src={profile.avatar_base64}
-                    alt="Profile"
-                    className="w-28 h-28 rounded-full object-cover border-4 border-white/10 mx-auto mb-4"
-                  />
+                  <img src={profile.avatar_base64} alt="Profile"
+                    className="w-28 h-28 rounded-full object-cover border-4 border-white/10 mx-auto mb-4" />
                 ) : (
                   <div className="w-28 h-28 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-4xl font-bold mx-auto mb-4">
                     {getInitials(profile.firstName, profile.lastName)}
                   </div>
                 )}
-                <h2 className="text-xl font-bold text-white">
-                  {profile.firstName} {profile.lastName}
-                </h2>
-                {profile.username && (
-                  <p className="text-sm text-gray-500 mt-1">@{profile.username}</p>
-                )}
-                <div className="mt-3">
-                  <Badge variant="approved">resident</Badge>
-                </div>
+                <h2 className="text-xl font-bold text-white">{profile.firstName} {profile.lastName}</h2>
+                {profile.username && <p className="text-sm text-gray-500 mt-1">@{profile.username}</p>}
+                <div className="mt-3"><Badge variant="approved">resident</Badge></div>
                 <p className="text-xs text-gray-400 mt-3">Member since {memberSince}</p>
               </CardContent>
             </Card>
 
-            {/* Stats */}
             <Card>
               <CardHeader><CardTitle>Request Summary</CardTitle></CardHeader>
               <CardContent className="space-y-3">
@@ -191,7 +189,7 @@ export default function ResidentDetailPage({ params }: { params: Promise<{ id: s
             </Card>
           </div>
 
-          {/* ── Main content ── */}
+          {/* Main content */}
           <div className="lg:col-span-2 space-y-6">
 
             {/* Personal Info */}
@@ -205,9 +203,7 @@ export default function ResidentDetailPage({ params }: { params: Promise<{ id: s
                   <IconRow icon={<Calendar className="w-4 h-4 text-gray-400" />} label="Birthday"
                     value={profile.birthday ? new Date(profile.birthday).toLocaleDateString() : '—'} />
                 </div>
-                {profile.civilStatus && (
-                  <DetailRow label="Civil Status" value={profile.civilStatus} />
-                )}
+                {profile.civilStatus && <DetailRow label="Civil Status" value={profile.civilStatus} />}
               </CardContent>
             </Card>
 
@@ -245,12 +241,8 @@ export default function ResidentDetailPage({ params }: { params: Promise<{ id: s
                               <span className="text-white text-sm">{req.type ?? req.document_type ?? '—'}</span>
                             </div>
                           </TableCell>
-                          <TableCell className="text-sm text-gray-400 capitalize">
-                            {displayPurpose(req)}
-                          </TableCell>
-                          <TableCell className="text-sm text-gray-400">
-                            {new Date(req.created_at).toLocaleDateString()}
-                          </TableCell>
+                          <TableCell className="text-sm text-gray-400 capitalize">{displayPurpose(req)}</TableCell>
+                          <TableCell className="text-sm text-gray-400">{new Date(req.created_at).toLocaleDateString()}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
                               {statusIcon(req.status)}
@@ -260,8 +252,7 @@ export default function ResidentDetailPage({ params }: { params: Promise<{ id: s
                           <TableCell>
                             <Link href={requestLink(req)}>
                               <Button variant="ghost" size="sm" className="gap-1">
-                                <Eye className="w-4 h-4" />
-                                View
+                                <Eye className="w-4 h-4" />View
                               </Button>
                             </Link>
                           </TableCell>
@@ -272,7 +263,6 @@ export default function ResidentDetailPage({ params }: { params: Promise<{ id: s
                 )}
               </CardContent>
             </Card>
-
           </div>
         </div>
       </div>

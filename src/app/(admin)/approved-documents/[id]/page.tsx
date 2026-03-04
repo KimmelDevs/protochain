@@ -13,46 +13,23 @@ import {
 import Link from 'next/link';
 import { supabase } from '@/app/lib/supabase';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 interface RequestDetail {
-  id: string;
-  type: string;
-  document_type: string;
-  status: string;
-  created_at: string;
-  processed_at: string | null;
-  purpose: string;
-  custom_purpose: string | null;
-  additional_info: string | null;
-  file_url: string | null;
-  notes: string | null;
-  purok: string | null;
-  ctc_no: string | null;
-  ctc_date_issued: string | null;
-  ctc_place_issued: string | null;
-  business_name: string | null;
-  deceased_name: string | null;
-  deceased_age: string | null;
-  date_of_death: string | null;
-  place_of_death: string | null;
-  relationship_to_deceased: string | null;
-  years_of_residency: string | null;
-  bcn_no: string | null;
-  user_id: string;
+  id: string; type: string; document_type: string; status: string;
+  created_at: string; processed_at: string | null; purpose: string;
+  custom_purpose: string | null; additional_info: string | null;
+  file_url: string | null; notes: string | null;
+  purok: string | null; ctc_no: string | null; ctc_date_issued: string | null;
+  ctc_place_issued: string | null; business_name: string | null;
+  deceased_name: string | null; deceased_age: string | null;
+  date_of_death: string | null; place_of_death: string | null;
+  relationship_to_deceased: string | null; years_of_residency: string | null;
+  bcn_no: string | null; user_id: string;
 }
 
 interface Profile {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  address: string;
-  birthday: string | null;
-  civilStatus: string | null;
+  firstName: string; lastName: string; email: string;
+  phone: string; address: string; birthday: string | null; civilStatus: string | null;
 }
-
-// ─── JSZip loader ─────────────────────────────────────────────────────────────
 
 async function loadJSZip() {
   // @ts-ignore
@@ -73,8 +50,6 @@ const xmlEscape = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
    .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 
-// ─── Document Generators ──────────────────────────────────────────────────────
-
 async function generateBrgyClearance(req: RequestDetail, profile: Profile): Promise<Blob> {
   const JSZip = await loadJSZip();
   const response = await fetch('/files/BRGY-CLEARANCE-TEMPLATE.docx');
@@ -89,20 +64,15 @@ async function generateBrgyClearance(req: RequestDetail, profile: Profile): Prom
     /_____________________ of legal age, male\/female, single\/married\/widow\/ widower, Filipino citizen, whose name and signature\/right thumb mark appears below is a BONAFIDE and permanent resident of BRGY\. GUIN-ON, Calbayog City, /g,
     `${xmlEscape(name)} of legal age, ${xmlEscape(sex)}, ${xmlEscape(profile.civilStatus ?? '')}, Filipino citizen, whose name and signature/right thumb mark appears below is a BONAFIDE and permanent resident of ${xmlEscape(req.purok ?? '')}, BRGY. GUIN-ON, Calbayog City, `
   );
-  content = content.replace(
-    /Issued this ___ day of JANUARY, 2024 at Brgy\. Guin-on, Calbayog City, Samar, Philippines\./g,
-    `Issued this ${xmlEscape(today)} at Brgy. Guin-on, Calbayog City, Samar, Philippines.`
-  );
+  content = content.replace(/Issued this ___ day of JANUARY, 2024 at Brgy\. Guin-on, Calbayog City, Samar, Philippines\./g,
+    `Issued this ${xmlEscape(today)} at Brgy. Guin-on, Calbayog City, Samar, Philippines.`);
   content = content.replace(/CTC #: __________________ /g, `CTC #: ${xmlEscape(req.ctc_no ?? '')} `);
   content = content.replace(/Date Issued: ______________ /g, `Date Issued: ${xmlEscape(req.ctc_date_issued ?? '')} `);
   content = content.replace(/Place Issued: ______________/g, `Place Issued: ${xmlEscape(req.ctc_place_issued ?? '')}`);
-  content = content.replace(
-    /Further certifies that he\/ she has no derogatory record and has good moral character as per our Barangay record in connected\. /g,
-    `Further certifies that he/ she has no derogatory record and has good moral character as per our Barangay record in connected. This clearance is issued upon request for ${xmlEscape(purpose ?? '')} and for whatever legal purpose it may serve. `
-  );
+  content = content.replace(/Further certifies that he\/ she has no derogatory record and has good moral character as per our Barangay record in connected\. /g,
+    `Further certifies that he/ she has no derogatory record and has good moral character as per our Barangay record in connected. This clearance is issued upon request for ${xmlEscape(purpose ?? '')} and for whatever legal purpose it may serve. `);
   zip.file('word/document.xml', content);
-  const out = await zip.generateAsync({ type: 'arraybuffer' });
-  return new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  return new Blob([await zip.generateAsync({ type: 'arraybuffer' })], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
 }
 
 async function generateBusinessClearance(req: RequestDetail, profile: Profile): Promise<Blob> {
@@ -126,8 +96,7 @@ async function generateBusinessClearance(req: RequestDetail, profile: Profile): 
   content = content.replace(/of DECEMBER /g, `of ${xmlEscape(month)} `);
   content = content.replace(/(<w:t[^>]*>)2025(<\/w:t>)/g, `$1${xmlEscape(year)}$2`);
   zip.file('word/document.xml', content);
-  const out = await zip.generateAsync({ type: 'arraybuffer' });
-  return new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  return new Blob([await zip.generateAsync({ type: 'arraybuffer' })], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
 }
 
 async function generateDeathCert(req: RequestDetail, profile: Profile): Promise<Blob> {
@@ -145,8 +114,7 @@ async function generateDeathCert(req: RequestDetail, profile: Profile): Promise<
   content = content.replace(/ERNESTO VALENZUELA ,/g, `${xmlEscape(req.deceased_name ?? '')},`);
   content = content.replace(/ 72 /g, ` ${xmlEscape(req.deceased_age ?? '')} `);
   content = content.replace(/Purok 5, Brgy\. Guin- on, Calbayog City/g, xmlEscape(req.purok ?? ''));
-  content = content.replace(/\. The said aforementioned name died on MAY 8 2025/g,
-    `. The said aforementioned name died on ${xmlEscape(req.date_of_death ?? '')}`);
+  content = content.replace(/\. The said aforementioned name died on MAY 8 2025/g, `. The said aforementioned name died on ${xmlEscape(req.date_of_death ?? '')}`);
   content = content.replace(/PUROK 5 BRGY\. GUIN- ON  CALBAYOG CITY\./g, `${xmlEscape(req.place_of_death ?? '')}.`);
   content = content.replace(/ ISAGANI ROJAS CANETE/g, ` ${xmlEscape(requestor)}`);
   content = content.replace(/ \(son\) of the deceased/g, ` (${xmlEscape(req.relationship_to_deceased ?? '')}) of the deceased`);
@@ -155,8 +123,7 @@ async function generateDeathCert(req: RequestDetail, profile: Profile): Promise<
   content = content.replace(/(<w:t[^>]*>)MAY(<\/w:t>)/g, `$1${xmlEscape(month)}$2`);
   content = content.replace(/(<w:t[^>]*>), 2025 (<\/w:t>)/g, `$1, ${xmlEscape(year)} $2`);
   zip.file('word/document.xml', content);
-  const out = await zip.generateAsync({ type: 'arraybuffer' });
-  return new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  return new Blob([await zip.generateAsync({ type: 'arraybuffer' })], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
 }
 
 async function generateJobSeeker(req: RequestDetail, profile: Profile): Promise<Blob> {
@@ -183,8 +150,7 @@ async function generateJobSeeker(req: RequestDetail, profile: Profile): Promise<
   content = content.replace(/(<w:t[^>]*>)OCTOBER 06(<\/w:t>)/g, `$1${xmlEscape(month)} ${xmlEscape(day)}$2`);
   content = content.replace(/(<w:t[^>]*>), 2025(<\/w:t>)/g, `$1, ${xmlEscape(year)}$2`);
   zip.file('word/document.xml', content);
-  const out = await zip.generateAsync({ type: 'arraybuffer' });
-  return new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  return new Blob([await zip.generateAsync({ type: 'arraybuffer' })], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
 }
 
 async function generateOath(req: RequestDetail, profile: Profile): Promise<Blob> {
@@ -201,24 +167,16 @@ async function generateOath(req: RequestDetail, profile: Profile): Promise<Blob>
   let content: string = await zip.file('word/document.xml').async('string');
   content = content.replace(/EGBERT KIA DELA CRUZ/g, xmlEscape(name));
   content = content.replace(/Samar for 5 years,/g, `Samar for ${xmlEscape(req.years_of_residency ?? '')} years,`);
-  content = content.replace(
-    /(Signed, this<\/w:t><\/w:r><w:r[^>]*><w:rPr>[^<]*(?:<[^<]*>)*<\/w:rPr><w:t xml:space="preserve">) 2(<\/w:t>)/,
-    `$1 ${xmlEscape(day)}$2`
-  );
+  content = content.replace(/(Signed, this<\/w:t><\/w:r><w:r[^>]*><w:rPr>[^<]*(?:<[^<]*>)*<\/w:rPr><w:t xml:space="preserve">) 2(<\/w:t>)/, `$1 ${xmlEscape(day)}$2`);
   content = content.replace(/(<w:t[^>]*>) SEPTEMBER (<\/w:t>)/g, `$1 ${xmlEscape(month)} $2`);
-  content = content.replace(/ 2024, in Barangay Guin-on, Calbayog City, Samar\./g,
-    ` ${xmlEscape(year)}, in Barangay Guin-on, Calbayog City, Samar.`);
+  content = content.replace(/ 2024, in Barangay Guin-on, Calbayog City, Samar\./g, ` ${xmlEscape(year)}, in Barangay Guin-on, Calbayog City, Samar.`);
   zip.file('word/document.xml', content);
-  const out = await zip.generateAsync({ type: 'arraybuffer' });
-  return new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  return new Blob([await zip.generateAsync({ type: 'arraybuffer' })], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
 }
-
-// ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function ApprovedDocumentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const uploadRef = useRef<HTMLInputElement>(null);
-
   const [request, setRequest] = useState<RequestDetail | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -233,23 +191,19 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
   useEffect(() => {
     const load = async () => {
       try {
-        const { data: reqData, error: reqError } = await supabase
-          .from('requests')
-          .select('*')
-          .eq('id', id)
-          .eq('status', 'approved')
-          .single();
+        // ✅ Fetch request via API route — decrypts sensitive fields
+        const reqRes = await fetch(`/api/requests?id=${id}&status=approved`);
+        if (!reqRes.ok) { setNotFound(true); return; }
+        const reqJson = await reqRes.json();
+        if (!reqJson.data?.[0]) { setNotFound(true); return; }
+        setRequest(reqJson.data[0]);
 
-        if (reqError || !reqData) { setNotFound(true); return; }
-        setRequest(reqData);
-
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('firstName, lastName, email, phone, address, birthday, civilStatus')
-          .eq('id', reqData.user_id)
-          .single();
-
-        if (profileData) setProfile(profileData);
+        // ✅ Fetch profile via API route — decrypts phone, address, birthday
+        const profileRes = await fetch(`/api/profile?id=${reqJson.data[0].user_id}`);
+        if (profileRes.ok) {
+          const profileJson = await profileRes.json();
+          setProfile(profileJson.data);
+        }
       } catch {
         setNotFound(true);
       } finally {
@@ -261,161 +215,90 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
 
   const handleGenerate = async () => {
     if (!request || !profile) return;
-    setGenerating(true);
-    setError('');
+    setGenerating(true); setError('');
     try {
       let blob: Blob;
       const name = `${profile.firstName}_${profile.lastName}`.replace(/\s+/g, '_');
       let fileName = '';
       switch (request.document_type) {
-        case 'barangay-clearance':
-          blob = await generateBrgyClearance(request, profile);
-          fileName = `Barangay_Clearance_${name}.docx`;
-          break;
-        case 'business-clearance':
-          blob = await generateBusinessClearance(request, profile);
-          fileName = `Business_Clearance_${name}.docx`;
-          break;
-        case 'certification-of-death':
-          blob = await generateDeathCert(request, profile);
-          fileName = `Certification_of_Death_${name}.docx`;
-          break;
-        case 'job-seeker':
-          blob = await generateJobSeeker(request, profile);
-          fileName = `FTJ_Certification_${name}.docx`;
-          break;
-        case 'oath-of-undertaking':
-          blob = await generateOath(request, profile);
-          fileName = `Oath_of_Undertaking_${name}.docx`;
-          break;
-        default:
-          throw new Error('No template for this document type.');
+        case 'barangay-clearance': blob = await generateBrgyClearance(request, profile); fileName = `Barangay_Clearance_${name}.docx`; break;
+        case 'business-clearance': blob = await generateBusinessClearance(request, profile); fileName = `Business_Clearance_${name}.docx`; break;
+        case 'certification-of-death': blob = await generateDeathCert(request, profile); fileName = `Certification_of_Death_${name}.docx`; break;
+        case 'job-seeker': blob = await generateJobSeeker(request, profile); fileName = `FTJ_Certification_${name}.docx`; break;
+        case 'oath-of-undertaking': blob = await generateOath(request, profile); fileName = `Oath_of_Undertaking_${name}.docx`; break;
+        default: throw new Error('No template for this document type.');
       }
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      a.click();
+      a.href = url; a.download = fileName; a.click();
       URL.revokeObjectURL(url);
-      setGeneratedBlob(blob);
-      setGeneratedFileName(fileName);
+      setGeneratedBlob(blob); setGeneratedFileName(fileName);
       setSuccess('Document generated and downloaded! Review it, then upload it to make it available to the resident.');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to generate document.');
-    } finally {
-      setGenerating(false);
-    }
+    } finally { setGenerating(false); }
   };
 
-  const handleUploadGenerated = async () => {
-    if (!generatedBlob || !generatedFileName) return;
-    await uploadFile(generatedBlob, generatedFileName);
-  };
-
-  const handleManualUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    await uploadFile(file, file.name);
-  };
+  const handleUploadGenerated = async () => { if (generatedBlob && generatedFileName) await uploadFile(generatedBlob, generatedFileName); };
+  const handleManualUpload = async (e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0]; if (file) await uploadFile(file, file.name); };
 
   const uploadFile = async (file: Blob, fileName: string) => {
-    setUploading(true);
-    setError('');
+    setUploading(true); setError('');
     try {
       const path = `documents/${id}/${fileName}`;
-      const { error: uploadError } = await supabase.storage
-        .from('documents')
-        .upload(path, file, { upsert: true });
+      const { error: uploadError } = await supabase.storage.from('documents').upload(path, file, { upsert: true });
       if (uploadError) throw uploadError;
-
       const { data: urlData } = supabase.storage.from('documents').getPublicUrl(path);
-
-      const { error: updateError } = await supabase
-        .from('requests')
-        .update({ file_url: urlData.publicUrl })
-        .eq('id', id);
+      const { error: updateError } = await supabase.from('requests').update({ file_url: urlData.publicUrl }).eq('id', id);
       if (updateError) throw updateError;
-
       setRequest(prev => prev ? { ...prev, file_url: urlData.publicUrl } : prev);
       setSuccess('Document uploaded! The resident can now download it from their requests page.');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to upload document.');
-    } finally {
-      setUploading(false);
-    }
+    } finally { setUploading(false); }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
-      </div>
-    );
-  }
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 text-blue-400 animate-spin" /></div>;
+  if (notFound || !request) return (
+    <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center">
+      <Card><CardContent className="p-8 text-center">
+        <p className="text-gray-400 mb-4">Document not found</p>
+        <Link href="/approved-documents"><Button>Back to Approved Documents</Button></Link>
+      </CardContent></Card>
+    </div>
+  );
 
-  if (notFound || !request) {
-    return (
-      <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center">
-        <Card><CardContent className="p-8 text-center">
-          <p className="text-gray-400 mb-4">Document not found</p>
-          <Link href="/approved-documents"><Button>Back to Approved Documents</Button></Link>
-        </CardContent></Card>
-      </div>
-    );
-  }
-
-  const displayPurpose = request.purpose === 'others' && request.custom_purpose
-    ? request.custom_purpose : request.purpose;
+  const displayPurpose = request.purpose === 'others' && request.custom_purpose ? request.custom_purpose : request.purpose;
   const approvedDate = request.processed_at ?? request.created_at;
 
   const extraDetails: { label: string; value: string | null }[] = [];
-  if (request.document_type === 'barangay-clearance') {
-    extraDetails.push(
-      { label: 'Purok / Zone', value: request.purok },
-      { label: 'CTC Number', value: request.ctc_no },
-      { label: 'CTC Date Issued', value: request.ctc_date_issued },
-      { label: 'CTC Place Issued', value: request.ctc_place_issued },
-    );
-  }
-  if (request.document_type === 'business-clearance') {
-    extraDetails.push(
-      { label: 'Business Name', value: request.business_name },
-      { label: 'Location / Purok', value: request.purok },
-    );
-  }
-  if (request.document_type === 'certification-of-death') {
-    extraDetails.push(
-      { label: 'Deceased Name', value: request.deceased_name },
-      { label: 'Age at Death', value: request.deceased_age },
-      { label: 'Date of Death', value: request.date_of_death },
-      { label: 'Place of Death', value: request.place_of_death },
-      { label: 'Relationship', value: request.relationship_to_deceased },
-    );
-  }
-  if (request.document_type === 'job-seeker') {
-    extraDetails.push(
-      { label: 'BCN Number', value: request.bcn_no },
-      { label: 'Purok / Zone', value: request.purok },
-      { label: 'Years of Residency', value: request.years_of_residency },
-    );
-  }
-  if (request.document_type === 'oath-of-undertaking') {
-    extraDetails.push(
-      { label: 'Purok / Zone', value: request.purok },
-      { label: 'Years of Residency', value: request.years_of_residency },
-    );
-  }
+  if (request.document_type === 'barangay-clearance') extraDetails.push(
+    { label: 'Purok / Zone', value: request.purok }, { label: 'CTC Number', value: request.ctc_no },
+    { label: 'CTC Date Issued', value: request.ctc_date_issued }, { label: 'CTC Place Issued', value: request.ctc_place_issued },
+  );
+  if (request.document_type === 'business-clearance') extraDetails.push(
+    { label: 'Business Name', value: request.business_name }, { label: 'Location / Purok', value: request.purok },
+  );
+  if (request.document_type === 'certification-of-death') extraDetails.push(
+    { label: 'Deceased Name', value: request.deceased_name }, { label: 'Age at Death', value: request.deceased_age },
+    { label: 'Date of Death', value: request.date_of_death }, { label: 'Place of Death', value: request.place_of_death },
+    { label: 'Relationship', value: request.relationship_to_deceased },
+  );
+  if (request.document_type === 'job-seeker') extraDetails.push(
+    { label: 'BCN Number', value: request.bcn_no }, { label: 'Purok / Zone', value: request.purok },
+    { label: 'Years of Residency', value: request.years_of_residency },
+  );
+  if (request.document_type === 'oath-of-undertaking') extraDetails.push(
+    { label: 'Purok / Zone', value: request.purok }, { label: 'Years of Residency', value: request.years_of_residency },
+  );
 
   return (
     <div className="min-h-screen p-4 lg:p-8">
       <div className="max-w-5xl mx-auto">
-
         <input ref={uploadRef} type="file" accept=".docx,.pdf" className="hidden" onChange={handleManualUpload} />
 
         <Link href="/approved-documents">
-          <Button variant="ghost" className="mb-6 gap-2">
-            <ArrowLeft className="w-4 h-4" />Back to Approved Documents
-          </Button>
+          <Button variant="ghost" className="mb-6 gap-2"><ArrowLeft className="w-4 h-4" />Back to Approved Documents</Button>
         </Link>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
@@ -431,8 +314,6 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-
-            {/* Request Info */}
             <Card>
               <CardHeader><CardTitle>Request Information</CardTitle></CardHeader>
               <CardContent>
@@ -457,21 +338,17 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
               </CardContent>
             </Card>
 
-            {/* Extra fields */}
             {extraDetails.length > 0 && (
               <Card>
                 <CardHeader><CardTitle>Submitted Information</CardTitle></CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-4">
-                    {extraDetails.map(d => (
-                      <DetailRow key={d.label} label={d.label} value={d.value ?? '—'} />
-                    ))}
+                    {extraDetails.map(d => <DetailRow key={d.label} label={d.label} value={d.value ?? '—'} />)}
                   </div>
                 </CardContent>
               </Card>
             )}
 
-            {/* Applicant Info */}
             {profile && (
               <Card>
                 <CardHeader><CardTitle>Applicant Information</CardTitle></CardHeader>
@@ -490,21 +367,14 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
               </Card>
             )}
 
-            {/* Generate & Upload */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-blue-400" />Document Generation
-                </CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle className="flex items-center gap-2"><FileText className="w-5 h-5 text-blue-400" />Document Generation</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 {request.file_url ? (
                   <div className="space-y-3">
                     <Alert variant="success">Document has been uploaded. The resident can now download it.</Alert>
                     <a href={request.file_url} target="_blank" rel="noopener noreferrer" download>
-                      <Button variant="outline" className="w-full gap-2">
-                        <Download className="w-4 h-4" />Download Uploaded Document
-                      </Button>
+                      <Button variant="outline" className="w-full gap-2"><Download className="w-4 h-4" />Download Uploaded Document</Button>
                     </a>
                     <div className="relative">
                       <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10" /></div>
@@ -548,31 +418,19 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
                 )}
               </CardContent>
             </Card>
-
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-6">
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-400" />Status
-                </CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle className="flex items-center gap-2"><CheckCircle className="w-5 h-5 text-green-400" />Status</CardTitle></CardHeader>
               <CardContent>
                 <div className="flex items-center gap-2 text-green-400">
-                  <CheckCircle className="w-5 h-5" />
-                  <span className="font-medium">Approved</span>
+                  <CheckCircle className="w-5 h-5" /><span className="font-medium">Approved</span>
                 </div>
               </CardContent>
             </Card>
-
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-blue-400" />Processing Info
-                </CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle className="flex items-center gap-2"><Clock className="w-5 h-5 text-blue-400" />Processing Info</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <DetailRow label="Date Submitted" value={new Date(request.created_at).toLocaleString()} />
                 <DetailRow label="Date Approved" value={new Date(approvedDate).toLocaleString()} />

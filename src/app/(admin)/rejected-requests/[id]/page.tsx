@@ -5,53 +5,31 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/Card';
 import Badge from '@/app/components/ui/Badge';
 import Button from '@/app/components/ui/Button';
-import Alert from '@/app/components/ui/Alert';
 import {
   ArrowLeft, XCircle, User, Mail, Phone,
-  MapPin, Clock, Loader2, FileText,
+  MapPin, Clock, Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
-import { supabase } from '@/app/lib/supabase';
 
 interface RequestDetail {
-  id: string;
-  type: string;
-  document_type: string;
-  status: string;
-  created_at: string;
-  purpose: string;
-  custom_purpose: string | null;
-  additional_info: string | null;
-  file_url: string | null;
-  notes: string | null;
-  purok: string | null;
-  ctc_no: string | null;
-  ctc_date_issued: string | null;
-  ctc_place_issued: string | null;
-  business_name: string | null;
-  deceased_name: string | null;
-  deceased_age: string | null;
-  date_of_death: string | null;
-  place_of_death: string | null;
-  relationship_to_deceased: string | null;
-  years_of_residency: string | null;
-  bcn_no: string | null;
-  user_id: string;
+  id: string; type: string; document_type: string; status: string;
+  created_at: string; purpose: string; custom_purpose: string | null;
+  additional_info: string | null; file_url: string | null; notes: string | null;
+  purok: string | null; ctc_no: string | null; ctc_date_issued: string | null;
+  ctc_place_issued: string | null; business_name: string | null;
+  deceased_name: string | null; deceased_age: string | null;
+  date_of_death: string | null; place_of_death: string | null;
+  relationship_to_deceased: string | null; years_of_residency: string | null;
+  bcn_no: string | null; user_id: string;
 }
 
 interface Profile {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  address: string;
-  birthday: string | null;
-  civilStatus: string | null;
+  firstName: string; lastName: string; email: string;
+  phone: string; address: string; birthday: string | null; civilStatus: string | null;
 }
 
 export default function RejectedRequestDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-
   const [request, setRequest] = useState<RequestDetail | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -60,23 +38,19 @@ export default function RejectedRequestDetailPage({ params }: { params: Promise<
   useEffect(() => {
     const load = async () => {
       try {
-        const { data: reqData, error: reqError } = await supabase
-          .from('requests')
-          .select('*')
-          .eq('id', id)
-          .eq('status', 'rejected')
-          .single();
+        // ✅ Fetch request via API route — decrypts sensitive fields
+        const reqRes = await fetch(`/api/requests?id=${id}&status=rejected`);
+        if (!reqRes.ok) { setNotFound(true); return; }
+        const reqJson = await reqRes.json();
+        if (!reqJson.data?.[0]) { setNotFound(true); return; }
+        setRequest(reqJson.data[0]);
 
-        if (reqError || !reqData) { setNotFound(true); return; }
-        setRequest(reqData);
-
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('firstName, lastName, email, phone, address, birthday, civilStatus')
-          .eq('id', reqData.user_id)
-          .single();
-
-        if (profileData) setProfile(profileData);
+        // ✅ Fetch profile via API route — decrypts phone, address, birthday
+        const profileRes = await fetch(`/api/profile?id=${reqJson.data[0].user_id}`);
+        if (profileRes.ok) {
+          const profileJson = await profileRes.json();
+          setProfile(profileJson.data);
+        }
       } catch {
         setNotFound(true);
       } finally {
@@ -86,74 +60,50 @@ export default function RejectedRequestDetailPage({ params }: { params: Promise<
     load();
   }, [id]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
+    </div>
+  );
 
-  if (notFound || !request) {
-    return (
-      <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center">
-        <Card><CardContent className="p-8 text-center">
-          <p className="text-gray-400 mb-4">Request not found</p>
-          <Link href="/rejected-requests"><Button>Back to Rejected Requests</Button></Link>
-        </CardContent></Card>
-      </div>
-    );
-  }
+  if (notFound || !request) return (
+    <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center">
+      <Card><CardContent className="p-8 text-center">
+        <p className="text-gray-400 mb-4">Request not found</p>
+        <Link href="/rejected-requests"><Button>Back to Rejected Requests</Button></Link>
+      </CardContent></Card>
+    </div>
+  );
 
-  const displayPurpose = request.purpose === 'others' && request.custom_purpose
-    ? request.custom_purpose : request.purpose;
+  const displayPurpose = request.purpose === 'others' && request.custom_purpose ? request.custom_purpose : request.purpose;
 
   const extraDetails: { label: string; value: string | null }[] = [];
-  if (request.document_type === 'barangay-clearance') {
-    extraDetails.push(
-      { label: 'Purok / Zone', value: request.purok },
-      { label: 'CTC Number', value: request.ctc_no },
-      { label: 'CTC Date Issued', value: request.ctc_date_issued },
-      { label: 'CTC Place Issued', value: request.ctc_place_issued },
-    );
-  }
-  if (request.document_type === 'business-clearance') {
-    extraDetails.push(
-      { label: 'Business Name', value: request.business_name },
-      { label: 'Location / Purok', value: request.purok },
-    );
-  }
-  if (request.document_type === 'certification-of-death') {
-    extraDetails.push(
-      { label: 'Deceased Name', value: request.deceased_name },
-      { label: 'Age at Death', value: request.deceased_age },
-      { label: 'Date of Death', value: request.date_of_death },
-      { label: 'Place of Death', value: request.place_of_death },
-      { label: 'Relationship', value: request.relationship_to_deceased },
-    );
-  }
-  if (request.document_type === 'job-seeker') {
-    extraDetails.push(
-      { label: 'BCN Number', value: request.bcn_no },
-      { label: 'Purok / Zone', value: request.purok },
-      { label: 'Years of Residency', value: request.years_of_residency },
-    );
-  }
-  if (request.document_type === 'oath-of-undertaking') {
-    extraDetails.push(
-      { label: 'Purok / Zone', value: request.purok },
-      { label: 'Years of Residency', value: request.years_of_residency },
-    );
-  }
+  if (request.document_type === 'barangay-clearance') extraDetails.push(
+    { label: 'Purok / Zone', value: request.purok }, { label: 'CTC Number', value: request.ctc_no },
+    { label: 'CTC Date Issued', value: request.ctc_date_issued }, { label: 'CTC Place Issued', value: request.ctc_place_issued },
+  );
+  if (request.document_type === 'business-clearance') extraDetails.push(
+    { label: 'Business Name', value: request.business_name }, { label: 'Location / Purok', value: request.purok },
+  );
+  if (request.document_type === 'certification-of-death') extraDetails.push(
+    { label: 'Deceased Name', value: request.deceased_name }, { label: 'Age at Death', value: request.deceased_age },
+    { label: 'Date of Death', value: request.date_of_death }, { label: 'Place of Death', value: request.place_of_death },
+    { label: 'Relationship', value: request.relationship_to_deceased },
+  );
+  if (request.document_type === 'job-seeker') extraDetails.push(
+    { label: 'BCN Number', value: request.bcn_no }, { label: 'Purok / Zone', value: request.purok },
+    { label: 'Years of Residency', value: request.years_of_residency },
+  );
+  if (request.document_type === 'oath-of-undertaking') extraDetails.push(
+    { label: 'Purok / Zone', value: request.purok }, { label: 'Years of Residency', value: request.years_of_residency },
+  );
 
   return (
     <div className="min-h-screen p-4 lg:p-8">
       <div className="max-w-5xl mx-auto">
 
         <Link href="/rejected-requests">
-          <Button variant="ghost" className="mb-6 gap-2">
-            <ArrowLeft className="w-4 h-4" />Back to Rejected Requests
-          </Button>
+          <Button variant="ghost" className="mb-6 gap-2"><ArrowLeft className="w-4 h-4" />Back to Rejected Requests</Button>
         </Link>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
@@ -167,12 +117,11 @@ export default function RejectedRequestDetailPage({ params }: { params: Promise<
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
 
-            {/* Rejection Reason — prominent at top */}
+            {/* Rejection Reason */}
             <Card className="border border-red-500/30">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-red-400">
-                  <XCircle className="w-5 h-5" />
-                  Reason for Rejection
+                  <XCircle className="w-5 h-5" />Reason for Rejection
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -182,7 +131,6 @@ export default function RejectedRequestDetailPage({ params }: { params: Promise<
               </CardContent>
             </Card>
 
-            {/* Request Info */}
             <Card>
               <CardHeader><CardTitle>Request Information</CardTitle></CardHeader>
               <CardContent>
@@ -200,21 +148,17 @@ export default function RejectedRequestDetailPage({ params }: { params: Promise<
               </CardContent>
             </Card>
 
-            {/* Extra fields */}
             {extraDetails.length > 0 && (
               <Card>
                 <CardHeader><CardTitle>Submitted Information</CardTitle></CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-4">
-                    {extraDetails.map(d => (
-                      <DetailRow key={d.label} label={d.label} value={d.value ?? '—'} />
-                    ))}
+                    {extraDetails.map(d => <DetailRow key={d.label} label={d.label} value={d.value ?? '—'} />)}
                   </div>
                 </CardContent>
               </Card>
             )}
 
-            {/* Applicant Info */}
             {profile && (
               <Card>
                 <CardHeader><CardTitle>Applicant Information</CardTitle></CardHeader>
@@ -234,35 +178,22 @@ export default function RejectedRequestDetailPage({ params }: { params: Promise<
             )}
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-6">
-
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <XCircle className="w-5 h-5 text-red-400" />Status
-                </CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle className="flex items-center gap-2"><XCircle className="w-5 h-5 text-red-400" />Status</CardTitle></CardHeader>
               <CardContent>
                 <div className="flex items-center gap-2 text-red-400">
-                  <XCircle className="w-5 h-5" />
-                  <span className="font-medium">Rejected</span>
+                  <XCircle className="w-5 h-5" /><span className="font-medium">Rejected</span>
                 </div>
               </CardContent>
             </Card>
-
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-blue-400" />Timeline
-                </CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle className="flex items-center gap-2"><Clock className="w-5 h-5 text-blue-400" />Timeline</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <DetailRow label="Date Submitted" value={new Date(request.created_at).toLocaleString()} />
                 <DetailRow label="Date Rejected" value={new Date(request.created_at).toLocaleString()} />
               </CardContent>
             </Card>
-
           </div>
         </div>
       </div>
