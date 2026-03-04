@@ -11,16 +11,19 @@ import Alert from '@/app/components/ui/Alert';
 import {
   ArrowLeft, CheckCircle, XCircle, User, Mail, Phone,
   MapPin, Clock, AlertCircle, Loader2,
-  FileText, Download, Upload, Wand2
+  FileText, Download, Upload, Wand2, ShieldCheck,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 interface RequestDetail {
   id: string; type: string; document_type: string; status: string;
   created_at: string; purpose: string; custom_purpose: string | null;
   additional_info: string | null; file_url: string | null; notes: string | null;
+  file_hash: string | null;
   purok: string | null; ctc_no: string | null; ctc_date_issued: string | null;
   ctc_place_issued: string | null; business_name: string | null;
   deceased_name: string | null; deceased_age: string | null;
@@ -33,6 +36,18 @@ interface Profile {
   firstName: string; lastName: string; email: string;
   phone: string; address: string; birthday: string | null; civilStatus: string | null;
 }
+
+// ─── SHA-256 Hasher ───────────────────────────────────────────────────────────
+
+async function sha256Hex(blob: Blob): Promise<string> {
+  const buffer = await blob.arrayBuffer();
+  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+// ─── JSZip loader ─────────────────────────────────────────────────────────────
 
 async function loadJSZip() {
   // @ts-ignore
@@ -53,6 +68,8 @@ const xmlEscape = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
    .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 
+// ─── Document Generators ──────────────────────────────────────────────────────
+
 async function generateBrgyClearance(req: RequestDetail, profile: Profile): Promise<Blob> {
   const JSZip = await loadJSZip();
   const response = await fetch('/files/BRGY-CLEARANCE-TEMPLATE.docx');
@@ -67,20 +84,15 @@ async function generateBrgyClearance(req: RequestDetail, profile: Profile): Prom
     /_____________________ of legal age, male\/female, single\/married\/widow\/ widower, Filipino citizen, whose name and signature\/right thumb mark appears below is a BONAFIDE and permanent resident of BRGY\. GUIN-ON, Calbayog City, /g,
     `${xmlEscape(name)} of legal age, ${xmlEscape(sex)}, ${xmlEscape(profile.civilStatus ?? '')}, Filipino citizen, whose name and signature/right thumb mark appears below is a BONAFIDE and permanent resident of ${xmlEscape(req.purok ?? '')}, BRGY. GUIN-ON, Calbayog City, `
   );
-  content = content.replace(
-    /Issued this ___ day of JANUARY, 2024 at Brgy\. Guin-on, Calbayog City, Samar, Philippines\./g,
-    `Issued this ${xmlEscape(today)} at Brgy. Guin-on, Calbayog City, Samar, Philippines.`
-  );
+  content = content.replace(/Issued this ___ day of JANUARY, 2024 at Brgy\. Guin-on, Calbayog City, Samar, Philippines\./g,
+    `Issued this ${xmlEscape(today)} at Brgy. Guin-on, Calbayog City, Samar, Philippines.`);
   content = content.replace(/CTC #: __________________ /g, `CTC #: ${xmlEscape(req.ctc_no ?? '')} `);
   content = content.replace(/Date Issued: ______________ /g, `Date Issued: ${xmlEscape(req.ctc_date_issued ?? '')} `);
   content = content.replace(/Place Issued: ______________/g, `Place Issued: ${xmlEscape(req.ctc_place_issued ?? '')}`);
-  content = content.replace(
-    /Further certifies that he\/ she has no derogatory record and has good moral character as per our Barangay record in connected\. /g,
-    `Further certifies that he/ she has no derogatory record and has good moral character as per our Barangay record in connected. This clearance is issued upon request for ${xmlEscape(purpose ?? '')} and for whatever legal purpose it may serve. `
-  );
+  content = content.replace(/Further certifies that he\/ she has no derogatory record and has good moral character as per our Barangay record in connected\. /g,
+    `Further certifies that he/ she has no derogatory record and has good moral character as per our Barangay record in connected. This clearance is issued upon request for ${xmlEscape(purpose ?? '')} and for whatever legal purpose it may serve. `);
   zip.file('word/document.xml', content);
-  const out = await zip.generateAsync({ type: 'arraybuffer' });
-  return new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  return new Blob([await zip.generateAsync({ type: 'arraybuffer' })], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
 }
 
 async function generateBusinessClearance(req: RequestDetail, profile: Profile): Promise<Blob> {
@@ -104,8 +116,7 @@ async function generateBusinessClearance(req: RequestDetail, profile: Profile): 
   content = content.replace(/of DECEMBER /g, `of ${xmlEscape(month)} `);
   content = content.replace(/(<w:t[^>]*>)2025(<\/w:t>)/g, `$1${xmlEscape(year)}$2`);
   zip.file('word/document.xml', content);
-  const out = await zip.generateAsync({ type: 'arraybuffer' });
-  return new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  return new Blob([await zip.generateAsync({ type: 'arraybuffer' })], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
 }
 
 async function generateDeathCert(req: RequestDetail, profile: Profile): Promise<Blob> {
@@ -123,8 +134,7 @@ async function generateDeathCert(req: RequestDetail, profile: Profile): Promise<
   content = content.replace(/ERNESTO VALENZUELA ,/g, `${xmlEscape(req.deceased_name ?? '')},`);
   content = content.replace(/ 72 /g, ` ${xmlEscape(req.deceased_age ?? '')} `);
   content = content.replace(/Purok 5, Brgy\. Guin- on, Calbayog City/g, xmlEscape(req.purok ?? ''));
-  content = content.replace(/\. The said aforementioned name died on MAY 8 2025/g,
-    `. The said aforementioned name died on ${xmlEscape(req.date_of_death ?? '')}`);
+  content = content.replace(/\. The said aforementioned name died on MAY 8 2025/g, `. The said aforementioned name died on ${xmlEscape(req.date_of_death ?? '')}`);
   content = content.replace(/PUROK 5 BRGY\. GUIN- ON  CALBAYOG CITY\./g, `${xmlEscape(req.place_of_death ?? '')}.`);
   content = content.replace(/ ISAGANI ROJAS CANETE/g, ` ${xmlEscape(requestor)}`);
   content = content.replace(/ \(son\) of the deceased/g, ` (${xmlEscape(req.relationship_to_deceased ?? '')}) of the deceased`);
@@ -133,8 +143,7 @@ async function generateDeathCert(req: RequestDetail, profile: Profile): Promise<
   content = content.replace(/(<w:t[^>]*>)MAY(<\/w:t>)/g, `$1${xmlEscape(month)}$2`);
   content = content.replace(/(<w:t[^>]*>), 2025 (<\/w:t>)/g, `$1, ${xmlEscape(year)} $2`);
   zip.file('word/document.xml', content);
-  const out = await zip.generateAsync({ type: 'arraybuffer' });
-  return new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  return new Blob([await zip.generateAsync({ type: 'arraybuffer' })], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
 }
 
 async function generateJobSeeker(req: RequestDetail, profile: Profile): Promise<Blob> {
@@ -161,8 +170,7 @@ async function generateJobSeeker(req: RequestDetail, profile: Profile): Promise<
   content = content.replace(/(<w:t[^>]*>)OCTOBER 06(<\/w:t>)/g, `$1${xmlEscape(month)} ${xmlEscape(day)}$2`);
   content = content.replace(/(<w:t[^>]*>), 2025(<\/w:t>)/g, `$1, ${xmlEscape(year)}$2`);
   zip.file('word/document.xml', content);
-  const out = await zip.generateAsync({ type: 'arraybuffer' });
-  return new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  return new Blob([await zip.generateAsync({ type: 'arraybuffer' })], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
 }
 
 async function generateOath(req: RequestDetail, profile: Profile): Promise<Blob> {
@@ -179,17 +187,14 @@ async function generateOath(req: RequestDetail, profile: Profile): Promise<Blob>
   let content: string = await zip.file('word/document.xml').async('string');
   content = content.replace(/EGBERT KIA DELA CRUZ/g, xmlEscape(name));
   content = content.replace(/Samar for 5 years,/g, `Samar for ${xmlEscape(req.years_of_residency ?? '')} years,`);
-  content = content.replace(
-    /(Signed, this<\/w:t><\/w:r><w:r[^>]*><w:rPr>[^<]*(?:<[^<]*>)*<\/w:rPr><w:t xml:space="preserve">) 2(<\/w:t>)/,
-    `$1 ${xmlEscape(day)}$2`
-  );
+  content = content.replace(/(Signed, this<\/w:t><\/w:r><w:r[^>]*><w:rPr>[^<]*(?:<[^<]*>)*<\/w:rPr><w:t xml:space="preserve">) 2(<\/w:t>)/, `$1 ${xmlEscape(day)}$2`);
   content = content.replace(/(<w:t[^>]*>) SEPTEMBER (<\/w:t>)/g, `$1 ${xmlEscape(month)} $2`);
-  content = content.replace(/ 2024, in Barangay Guin-on, Calbayog City, Samar\./g,
-    ` ${xmlEscape(year)}, in Barangay Guin-on, Calbayog City, Samar.`);
+  content = content.replace(/ 2024, in Barangay Guin-on, Calbayog City, Samar\./g, ` ${xmlEscape(year)}, in Barangay Guin-on, Calbayog City, Samar.`);
   zip.file('word/document.xml', content);
-  const out = await zip.generateAsync({ type: 'arraybuffer' });
-  return new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  return new Blob([await zip.generateAsync({ type: 'arraybuffer' })], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
 }
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function ReviewRequestPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -211,19 +216,21 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
   const [uploading, setUploading] = useState(false);
   const [generatedBlob, setGeneratedBlob] = useState<Blob | null>(null);
   const [generatedFileName, setGeneratedFileName] = useState('');
+  const [uploadedHash, setUploadedHash] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
       try {
-        // ✅ Fetch request via API route — decrypts sensitive fields
         const reqRes = await fetch(`/api/requests?id=${id}`);
         if (!reqRes.ok) { setNotFound(true); return; }
         const reqJson = await reqRes.json();
         if (!reqJson.data?.[0]) { setNotFound(true); return; }
-        setRequest(reqJson.data[0]);
+        const reqData = reqJson.data[0];
+        setRequest(reqData);
+        // Load existing hash if already uploaded before
+        if (reqData.file_hash) setUploadedHash(reqData.file_hash);
 
-        // ✅ Fetch profile via API route — decrypts phone, address, birthday
-        const profileRes = await fetch(`/api/profile?id=${reqJson.data[0].user_id}`);
+        const profileRes = await fetch(`/api/profile?id=${reqData.user_id}`);
         if (profileRes.ok) {
           const profileJson = await profileRes.json();
           setProfile(profileJson.data);
@@ -238,8 +245,7 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
   }, [id]);
 
   const handleApprove = async () => {
-    setProcessing(true);
-    setError('');
+    setProcessing(true); setError('');
     try {
       const { error: updateError } = await supabase
         .from('requests')
@@ -251,15 +257,12 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
       setSuccess('Request approved! Now generate and upload the document below.');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to approve request.');
-    } finally {
-      setProcessing(false);
-    }
+    } finally { setProcessing(false); }
   };
 
   const handleReject = async () => {
     if (!rejectReason.trim()) { setError('Please provide a reason for rejection.'); return; }
-    setProcessing(true);
-    setError('');
+    setProcessing(true); setError('');
     try {
       const { error: updateError } = await supabase
         .from('requests')
@@ -270,15 +273,12 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
       router.push('/pending-requests');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to reject request.');
-    } finally {
-      setProcessing(false);
-    }
+    } finally { setProcessing(false); }
   };
 
   const handleGenerate = async () => {
     if (!request || !profile) return;
-    setGenerating(true);
-    setError('');
+    setGenerating(true); setError('');
     try {
       let blob: Blob;
       const name = `${profile.firstName}_${profile.lastName}`.replace(/\s+/g, '_');
@@ -295,48 +295,45 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
       const a = document.createElement('a');
       a.href = url; a.download = fileName; a.click();
       URL.revokeObjectURL(url);
-      setGeneratedBlob(blob);
-      setGeneratedFileName(fileName);
+      setGeneratedBlob(blob); setGeneratedFileName(fileName);
       setSuccess('Document generated and downloaded! Review it, then click "Upload to Supabase" to make it available to the resident.');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to generate document.');
-    } finally {
-      setGenerating(false);
-    }
+    } finally { setGenerating(false); }
   };
 
-  const handleUploadGenerated = async () => {
-    if (!generatedBlob || !generatedFileName) return;
-    await uploadFile(generatedBlob, generatedFileName);
-  };
-
-  const handleManualUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    await uploadFile(file, file.name);
-  };
+  const handleUploadGenerated = async () => { if (generatedBlob && generatedFileName) await uploadFile(generatedBlob, generatedFileName); };
+  const handleManualUpload = async (e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0]; if (file) await uploadFile(file, file.name); };
 
   const uploadFile = async (file: Blob, fileName: string) => {
-    setUploading(true);
-    setError('');
+    setUploading(true); setError('');
     try {
+      // ── Step 1: Compute SHA-256 hash ──────────────────────────────────────
+      const hash = await sha256Hex(file);
+
+      // ── Step 2: Upload file to Supabase Storage ───────────────────────────
       const path = `documents/${id}/${fileName}`;
       const { error: uploadError } = await supabase.storage.from('documents').upload(path, file, { upsert: true });
       if (uploadError) throw uploadError;
+
       const { data: urlData } = supabase.storage.from('documents').getPublicUrl(path);
-      const { error: updateError } = await supabase.from('requests').update({ file_url: urlData.publicUrl }).eq('id', id);
+
+      // ── Step 3: Save file_url + file_hash to DB ───────────────────────────
+      const { error: updateError } = await supabase
+        .from('requests')
+        .update({ file_url: urlData.publicUrl, file_hash: hash })
+        .eq('id', id);
       if (updateError) throw updateError;
-      setRequest(prev => prev ? { ...prev, file_url: urlData.publicUrl } : prev);
-      setSuccess('Document uploaded! The resident can now download it from their requests page.');
+
+      setRequest(prev => prev ? { ...prev, file_url: urlData.publicUrl, file_hash: hash } : prev);
+      setUploadedHash(hash);
+      setSuccess('Document uploaded and hashed! The resident can now download it.');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to upload document.');
-    } finally {
-      setUploading(false);
-    }
+    } finally { setUploading(false); }
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 text-blue-400 animate-spin" /></div>;
-
   if (notFound || !request) return (
     <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center">
       <Card><CardContent className="p-8 text-center">
@@ -399,6 +396,7 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
+
             <Card>
               <CardHeader><CardTitle>Request Information</CardTitle></CardHeader>
               <CardContent>
@@ -448,7 +446,11 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
 
             {request.status === 'approved' && (
               <Card>
-                <CardHeader><CardTitle className="flex items-center gap-2"><FileText className="w-5 h-5 text-blue-400" />Document Generation</CardTitle></CardHeader>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-blue-400" />Document Generation
+                  </CardTitle>
+                </CardHeader>
                 <CardContent className="space-y-4">
                   {request.file_url ? (
                     <div className="space-y-3">
@@ -456,6 +458,24 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
                       <a href={request.file_url} target="_blank" rel="noopener noreferrer" download>
                         <Button variant="outline" className="w-full gap-2"><Download className="w-4 h-4" />Download Uploaded Document</Button>
                       </a>
+                      {uploadedHash && <HashDisplay hash={uploadedHash} />}
+                      <div className="relative">
+                        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10" /></div>
+                        <div className="relative flex justify-center text-xs"><span className="bg-[#0f0f23] px-2 text-gray-500">or replace document</span></div>
+                      </div>
+                      <Button className="w-full gap-2" onClick={handleGenerate} disabled={generating}>
+                        {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+                        {generating ? 'Generating...' : 'Re-generate & Download .docx'}
+                      </Button>
+                      {generatedBlob && (
+                        <Button variant="outline" className="w-full gap-2" onClick={handleUploadGenerated} disabled={uploading}>
+                          {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                          {uploading ? 'Uploading...' : `Upload "${generatedFileName}"`}
+                        </Button>
+                      )}
+                      <Button variant="outline" className="w-full gap-2" onClick={() => uploadRef.current?.click()} disabled={uploading}>
+                        <Upload className="w-4 h-4" />Upload Existing File (.docx or .pdf)
+                      </Button>
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -477,6 +497,7 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
                       <Button variant="outline" className="w-full gap-2" onClick={() => uploadRef.current?.click()} disabled={uploading}>
                         <Upload className="w-4 h-4" />Upload Existing File (.docx or .pdf)
                       </Button>
+                      {uploadedHash && <HashDisplay hash={uploadedHash} />}
                     </div>
                   )}
                 </CardContent>
@@ -560,6 +581,31 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
     </div>
   );
 }
+
+// ─── Hash Display ─────────────────────────────────────────────────────────────
+
+function HashDisplay({ hash }: { hash: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard.writeText(hash);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <div className="rounded-lg border border-green-500/30 bg-green-500/5 p-3 space-y-2">
+      <div className="flex items-center gap-2">
+        <ShieldCheck className="w-4 h-4 text-green-400 shrink-0" />
+        <span className="text-xs font-medium text-green-400">SHA-256 Document Hash</span>
+      </div>
+      <p className="font-mono text-xs text-gray-300 break-all leading-relaxed">{hash}</p>
+      <button onClick={copy} className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
+        {copied ? '✓ Copied!' : 'Copy hash'}
+      </button>
+    </div>
+  );
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (

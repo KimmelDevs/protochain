@@ -8,16 +8,18 @@ import Button from '@/app/components/ui/Button';
 import Alert from '@/app/components/ui/Alert';
 import {
   ArrowLeft, CheckCircle, User, Mail, Phone,
-  MapPin, Clock, Loader2, FileText, Download, Upload, Wand2,
+  MapPin, Clock, Loader2, FileText, Download, Upload, Wand2, ShieldCheck,
 } from 'lucide-react';
 import Link from 'next/link';
 import { supabase } from '@/app/lib/supabase';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface RequestDetail {
   id: string; type: string; document_type: string; status: string;
   created_at: string; processed_at: string | null; purpose: string;
   custom_purpose: string | null; additional_info: string | null;
-  file_url: string | null; notes: string | null;
+  file_url: string | null; notes: string | null; file_hash: string | null;
   purok: string | null; ctc_no: string | null; ctc_date_issued: string | null;
   ctc_place_issued: string | null; business_name: string | null;
   deceased_name: string | null; deceased_age: string | null;
@@ -30,6 +32,18 @@ interface Profile {
   firstName: string; lastName: string; email: string;
   phone: string; address: string; birthday: string | null; civilStatus: string | null;
 }
+
+// ─── SHA-256 Hasher ───────────────────────────────────────────────────────────
+
+async function sha256Hex(blob: Blob): Promise<string> {
+  const buffer = await blob.arrayBuffer();
+  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+// ─── JSZip loader ─────────────────────────────────────────────────────────────
 
 async function loadJSZip() {
   // @ts-ignore
@@ -49,6 +63,8 @@ async function loadJSZip() {
 const xmlEscape = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
    .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+
+// ─── Document Generators ──────────────────────────────────────────────────────
 
 async function generateBrgyClearance(req: RequestDetail, profile: Profile): Promise<Blob> {
   const JSZip = await loadJSZip();
@@ -174,9 +190,12 @@ async function generateOath(req: RequestDetail, profile: Profile): Promise<Blob>
   return new Blob([await zip.generateAsync({ type: 'arraybuffer' })], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
 }
 
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
 export default function ApprovedDocumentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const uploadRef = useRef<HTMLInputElement>(null);
+
   const [request, setRequest] = useState<RequestDetail | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -187,19 +206,20 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
   const [uploading, setUploading] = useState(false);
   const [generatedBlob, setGeneratedBlob] = useState<Blob | null>(null);
   const [generatedFileName, setGeneratedFileName] = useState('');
+  const [uploadedHash, setUploadedHash] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
       try {
-        // ✅ Fetch request via API route — decrypts sensitive fields
         const reqRes = await fetch(`/api/requests?id=${id}&status=approved`);
         if (!reqRes.ok) { setNotFound(true); return; }
         const reqJson = await reqRes.json();
         if (!reqJson.data?.[0]) { setNotFound(true); return; }
-        setRequest(reqJson.data[0]);
+        const reqData = reqJson.data[0];
+        setRequest(reqData);
+        if (reqData.file_hash) setUploadedHash(reqData.file_hash);
 
-        // ✅ Fetch profile via API route — decrypts phone, address, birthday
-        const profileRes = await fetch(`/api/profile?id=${reqJson.data[0].user_id}`);
+        const profileRes = await fetch(`/api/profile?id=${reqData.user_id}`);
         if (profileRes.ok) {
           const profileJson = await profileRes.json();
           setProfile(profileJson.data);
@@ -245,14 +265,26 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
   const uploadFile = async (file: Blob, fileName: string) => {
     setUploading(true); setError('');
     try {
+      // ── Step 1: Compute SHA-256 hash ──────────────────────────────────────
+      const hash = await sha256Hex(file);
+
+      // ── Step 2: Upload file to Supabase Storage ───────────────────────────
       const path = `documents/${id}/${fileName}`;
       const { error: uploadError } = await supabase.storage.from('documents').upload(path, file, { upsert: true });
       if (uploadError) throw uploadError;
+
       const { data: urlData } = supabase.storage.from('documents').getPublicUrl(path);
-      const { error: updateError } = await supabase.from('requests').update({ file_url: urlData.publicUrl }).eq('id', id);
+
+      // ── Step 3: Save file_url + file_hash to DB ───────────────────────────
+      const { error: updateError } = await supabase
+        .from('requests')
+        .update({ file_url: urlData.publicUrl, file_hash: hash })
+        .eq('id', id);
       if (updateError) throw updateError;
-      setRequest(prev => prev ? { ...prev, file_url: urlData.publicUrl } : prev);
-      setSuccess('Document uploaded! The resident can now download it from their requests page.');
+
+      setRequest(prev => prev ? { ...prev, file_url: urlData.publicUrl, file_hash: hash } : prev);
+      setUploadedHash(hash);
+      setSuccess('Document uploaded and hashed! The resident can now download it.');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to upload document.');
     } finally { setUploading(false); }
@@ -314,6 +346,7 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
+
             <Card>
               <CardHeader><CardTitle>Request Information</CardTitle></CardHeader>
               <CardContent>
@@ -368,7 +401,11 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
             )}
 
             <Card>
-              <CardHeader><CardTitle className="flex items-center gap-2"><FileText className="w-5 h-5 text-blue-400" />Document Generation</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-blue-400" />Document Generation
+                </CardTitle>
+              </CardHeader>
               <CardContent className="space-y-4">
                 {request.file_url ? (
                   <div className="space-y-3">
@@ -376,6 +413,7 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
                     <a href={request.file_url} target="_blank" rel="noopener noreferrer" download>
                       <Button variant="outline" className="w-full gap-2"><Download className="w-4 h-4" />Download Uploaded Document</Button>
                     </a>
+                    {uploadedHash && <HashDisplay hash={uploadedHash} />}
                     <div className="relative">
                       <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10" /></div>
                       <div className="relative flex justify-center text-xs"><span className="bg-[#0f0f23] px-2 text-gray-500">or replace document</span></div>
@@ -414,6 +452,7 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
                     <Button variant="outline" className="w-full gap-2" onClick={() => uploadRef.current?.click()} disabled={uploading}>
                       <Upload className="w-4 h-4" />Upload Existing File (.docx or .pdf)
                     </Button>
+                    {uploadedHash && <HashDisplay hash={uploadedHash} />}
                   </div>
                 )}
               </CardContent>
@@ -442,6 +481,31 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
     </div>
   );
 }
+
+// ─── Hash Display ─────────────────────────────────────────────────────────────
+
+function HashDisplay({ hash }: { hash: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard.writeText(hash);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <div className="rounded-lg border border-green-500/30 bg-green-500/5 p-3 space-y-2">
+      <div className="flex items-center gap-2">
+        <ShieldCheck className="w-4 h-4 text-green-400 shrink-0" />
+        <span className="text-xs font-medium text-green-400">SHA-256 Document Hash</span>
+      </div>
+      <p className="font-mono text-xs text-gray-300 break-all leading-relaxed">{hash}</p>
+      <button onClick={copy} className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
+        {copied ? '✓ Copied!' : 'Copy hash'}
+      </button>
+    </div>
+  );
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
