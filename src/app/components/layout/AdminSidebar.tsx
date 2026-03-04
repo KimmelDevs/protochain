@@ -21,7 +21,6 @@ const menuItems = [
   { label: 'Pending Requests', href: '/pending-requests', icon: Clock },
   { label: 'Approved Documents', href: '/approved-documents', icon: CheckCircle },
   { label: 'Rejected Requests', href: '/rejected-requests', icon: XCircle },
-  { label: 'All Documents', href: '/all-documents', icon: FileText },
   { label: 'Residents', href: '/residents', icon: Users },
   { label: 'Reports', href: '/reports', icon: BarChart3 },
   { label: 'Settings', href: '/settings', icon: Settings },

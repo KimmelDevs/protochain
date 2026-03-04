@@ -5,283 +5,299 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/Card';
 import Badge from '@/app/components/ui/Badge';
 import Button from '@/app/components/ui/Button';
-import { 
-  ArrowLeft, 
-  Download, 
-  Share2, 
-  QrCode,
-  FileText,
-  Shield,
-  CheckCircle,
-  Printer
+import {
+  ArrowLeft, Download, FileText, CheckCircle, Loader2, Calendar, User, MapPin,
 } from 'lucide-react';
 import Link from 'next/link';
-import { getDocumentById } from '@/app/firebase/firestore';
-import { formatDate } from '@/app/lib/utils/helpers';
+import { supabase } from '@/app/lib/supabase';
+import { useRouter } from 'next/navigation';
+
+interface RequestDoc {
+  id: string;
+  type: string;
+  document_type: string;
+  status: string;
+  created_at: string;
+  file_url: string | null;
+  purpose: string;
+  custom_purpose: string | null;
+  additional_info: string | null;
+  notes: string | null;
+  purok: string | null;
+  ctc_no: string | null;
+  ctc_date_issued: string | null;
+  ctc_place_issued: string | null;
+  business_name: string | null;
+  deceased_name: string | null;
+  deceased_age: string | null;
+  date_of_death: string | null;
+  place_of_death: string | null;
+  relationship_to_deceased: string | null;
+  years_of_residency: string | null;
+  bcn_no: string | null;
+  user_id: string;
+}
+
+interface Profile {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  address: string;
+  birthday: string | null;
+  civilStatus: string | null;
+}
 
 export default function DocumentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const [document, setDocument] = useState<any>(null);
+  const router = useRouter();
+  const [doc, setDoc] = useState<RequestDoc | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    const fetchDocument = async () => {
-      const result = await getDocumentById(id);
-      if (result.success && result.document) {
-        setDocument(result.document);
-      } else {
+    const load = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { router.push('/login'); return; }
+
+        const { data, error } = await supabase
+          .from('requests')
+          .select('*')
+          .eq('id', id)
+          .eq('user_id', user.id)
+          .eq('status', 'approved')
+          .single();
+
+        if (error || !data) { setNotFound(true); return; }
+        setDoc(data);
+
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('firstName, lastName, email, phone, address, birthday, civilStatus')
+          .eq('id', user.id)
+          .single();
+
+        if (profileData) setProfile(profileData);
+      } catch {
         setNotFound(true);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
-    fetchDocument();
-  }, [id]);
+    load();
+  }, [id, router]);
 
   if (loading) {
     return (
-      <div className="min-h-screen p-4 lg:p-8">
-        <div className="max-w-5xl mx-auto animate-pulse space-y-6">
-          <div className="h-8 bg-white/10 rounded w-48" />
-          <div className="h-12 bg-white/10 rounded w-96" />
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 h-96 bg-white/10 rounded-xl" />
-            <div className="space-y-4">
-              <div className="h-48 bg-white/10 rounded-xl" />
-              <div className="h-48 bg-white/10 rounded-xl" />
-            </div>
-          </div>
-        </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
       </div>
     );
   }
 
-  if (notFound || !document) {
+  if (notFound || !doc) {
     return (
       <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center">
         <div className="text-center">
           <FileText className="w-16 h-16 text-gray-600 mx-auto mb-4" />
           <p className="text-gray-400 mb-4">Document not found</p>
-          <Link href="/resident/my-documents">
-            <Button>Back to Documents</Button>
-          </Link>
+          <Link href="/my-documents"><Button>Back to Documents</Button></Link>
         </div>
       </div>
     );
   }
 
-  const isValid = () => {
-    if (!document.validUntil) return false;
-    const date = document.validUntil?.toDate 
-      ? document.validUntil.toDate() 
-      : new Date(document.validUntil);
-    return date > new Date();
-  };
+  const displayPurpose = doc.purpose === 'others' && doc.custom_purpose
+    ? doc.custom_purpose : doc.purpose;
+
+  // Build document-specific extra fields
+  const extraDetails: { label: string; value: string | null }[] = [];
+  if (doc.document_type === 'barangay-clearance') {
+    extraDetails.push(
+      { label: 'Purok / Zone', value: doc.purok },
+      { label: 'CTC Number', value: doc.ctc_no },
+      { label: 'CTC Date Issued', value: doc.ctc_date_issued },
+      { label: 'CTC Place Issued', value: doc.ctc_place_issued },
+    );
+  }
+  if (doc.document_type === 'business-clearance') {
+    extraDetails.push(
+      { label: 'Business Name', value: doc.business_name },
+      { label: 'Location / Purok', value: doc.purok },
+    );
+  }
+  if (doc.document_type === 'certification-of-death') {
+    extraDetails.push(
+      { label: 'Deceased Name', value: doc.deceased_name },
+      { label: 'Age at Death', value: doc.deceased_age },
+      { label: 'Date of Death', value: doc.date_of_death },
+      { label: 'Place of Death', value: doc.place_of_death },
+      { label: 'Relationship', value: doc.relationship_to_deceased },
+    );
+  }
+  if (doc.document_type === 'job-seeker') {
+    extraDetails.push(
+      { label: 'BCN Number', value: doc.bcn_no },
+      { label: 'Purok / Zone', value: doc.purok },
+      { label: 'Years of Residency', value: doc.years_of_residency },
+    );
+  }
+  if (doc.document_type === 'oath-of-undertaking') {
+    extraDetails.push(
+      { label: 'Purok / Zone', value: doc.purok },
+      { label: 'Years of Residency', value: doc.years_of_residency },
+    );
+  }
 
   return (
     <div className="min-h-screen p-4 lg:p-8">
       <div className="max-w-5xl mx-auto">
-        {/* Back Button */}
-        <Link href="/resident/my-documents">
+
+        <Link href="/my-documents">
           <Button variant="ghost" className="mb-6 gap-2">
-            <ArrowLeft className="w-4 h-4" />
-            Back to Documents
+            <ArrowLeft className="w-4 h-4" />Back to Documents
           </Button>
         </Link>
 
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-3xl font-bold text-white mb-2">{document.type}</h1>
-              <p className="text-gray-400">Document ID: {document.id}</p>
-            </div>
-            <Badge variant={isValid() ? 'approved' : 'rejected'}>
-              {isValid() ? 'Valid' : 'Expired'}
-            </Badge>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <h1 className="text-3xl font-bold text-white">{doc.type ?? doc.document_type}</h1>
+            <Badge variant="approved">approved</Badge>
           </div>
+          <p className="text-gray-400 font-mono text-sm">ID: {doc.id.toUpperCase()}</p>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Document Preview */}
+
+            {/* Request details */}
             <Card>
-              <CardHeader>
-                <CardTitle>Document Preview</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-white rounded-lg p-8 text-black">
-                  {/* Official Header */}
-                  <div className="text-center border-b-2 border-black pb-4 mb-6">
-                    <h2 className="text-2xl font-bold">REPUBLIC OF THE PHILIPPINES</h2>
-                    <p className="text-lg">Province of Cavite</p>
-                    <p className="text-lg">Municipality of Dasmariñas</p>
-                    <p className="text-xl font-bold mt-2">BARANGAY SALAWAG</p>
-                  </div>
-
-                  {/* Document Title */}
-                  <h3 className="text-2xl font-bold text-center mb-6 uppercase">
-                    {document.type}
-                  </h3>
-
-                  {/* Content */}
-                  <div className="space-y-4 mb-8">
-                    <p>TO WHOM IT MAY CONCERN:</p>
-                    <p className="text-justify indent-8">
-                      This is to certify that <strong>{document.applicant?.name}</strong>,
-                      of legal age, {document.applicant?.civilStatus}, Filipino citizen,
-                      and a bonafide resident of {document.applicant?.address}.
-                    </p>
-                    <p className="text-justify indent-8">
-                      This certification is being issued upon the request of the above-named
-                      person for <strong>{document.purpose}</strong> purposes.
-                    </p>
-                    <p className="text-justify indent-8">
-                      Issued this {formatDate(document.issuedAt)} at Barangay Salawag,
-                      Dasmariñas, Cavite.
-                    </p>
-                  </div>
-
-                  {/* Signature */}
-                  <div className="flex justify-end mt-12">
-                    <div className="text-center">
-                      <div className="border-t-2 border-black w-64 mb-1" />
-                      <p className="font-bold">{document.issuedBy}</p>
-                      <p className="text-sm">Barangay Captain</p>
-                    </div>
-                  </div>
-
-                  {/* QR Code Placeholder */}
-                  <div className="mt-8 text-center">
-                    <div className="inline-block p-4 border-2 border-black">
-                      <div className="w-32 h-32 bg-gray-200 flex items-center justify-center">
-                        <QrCode className="w-16 h-16 text-gray-400" />
-                      </div>
-                      <p className="text-xs mt-2">Scan to verify</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Document Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Document Information</CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle>Document Details</CardTitle></CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-400 mb-1">Document ID</p>
-                    <p className="text-white font-mono text-sm">{document.id}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-400 mb-1">Request ID</p>
-                    <p className="text-white font-mono text-sm">{document.requestId}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-400 mb-1">Date Issued</p>
-                    <p className="text-white">{formatDate(document.issuedAt)}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-400 mb-1">Valid Until</p>
-                    <p className="text-white">{formatDate(document.validUntil)}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-400 mb-1">Purpose</p>
-                    <p className="text-white">{document.purpose}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-400 mb-1">Issued By</p>
-                    <p className="text-white">{document.issuedBy}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* QR Code */}
-            <Card>
-              <CardHeader>
-                <CardTitle>QR Code</CardTitle>
-              </CardHeader>
-              <CardContent className="text-center">
-                <div className="bg-white p-6 rounded-lg mb-4 inline-block">
-                  <div className="w-48 h-48 bg-gray-100 flex items-center justify-center">
-                    <QrCode className="w-32 h-32 text-gray-400" />
-                  </div>
-                </div>
-                <p className="text-sm text-gray-400 mb-1">QR Code ID</p>
-                <p className="text-white font-mono text-sm">{document.qrCode}</p>
-              </CardContent>
-            </Card>
-
-            {/* Blockchain Info */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="w-5 h-5 text-purple-400" />
-                  Blockchain Verification
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <p className="text-sm text-gray-400 mb-1">Transaction ID</p>
-                  <p className="text-white font-mono text-xs break-all">
-                    {document.transactionId || 'Pending...'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-400 mb-1">Blockchain Hash</p>
-                  <p className="text-white font-mono text-xs break-all">
-                    {document.blockchainHash || 'Pending...'}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 pt-2">
-                  {document.blockchainHash ? (
-                    <>
-                      <CheckCircle className="w-5 h-5 text-green-400" />
-                      <span className="text-sm text-green-400">Verified on Blockchain</span>
-                    </>
-                  ) : (
-                    <>
-                      <Shield className="w-5 h-5 text-yellow-400" />
-                      <span className="text-sm text-yellow-400">Awaiting Verification</span>
-                    </>
+                  <DetailRow label="Document Type" value={doc.type ?? doc.document_type} />
+                  <DetailRow label="Purpose" value={displayPurpose ?? '—'} />
+                  <DetailRow label="Date Requested" value={new Date(doc.created_at).toLocaleDateString()} />
+                  <DetailRow label="Status" value="Approved" />
+                  {doc.additional_info && (
+                    <div className="col-span-2">
+                      <p className="text-sm text-gray-400 mb-2">Additional Information</p>
+                      <p className="text-white bg-white/5 p-3 rounded-lg">{doc.additional_info}</p>
+                    </div>
+                  )}
+                  {doc.notes && (
+                    <div className="col-span-2">
+                      <p className="text-sm text-gray-400 mb-2">Notes from Barangay</p>
+                      <p className="text-white bg-white/5 p-3 rounded-lg">{doc.notes}</p>
+                    </div>
                   )}
                 </div>
               </CardContent>
             </Card>
 
-            {/* Actions */}
+            {/* Extra fields */}
+            {extraDetails.length > 0 && (
+              <Card>
+                <CardHeader><CardTitle>Submitted Information</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4">
+                    {extraDetails.map(d => (
+                      <DetailRow key={d.label} label={d.label} value={d.value ?? '—'} />
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Profile */}
+            {profile && (
+              <Card>
+                <CardHeader><CardTitle>Your Information</CardTitle></CardHeader>
+                <CardContent className="space-y-3">
+                  <IconRow icon={<User className="w-4 h-4 text-gray-400" />} label="Full Name"
+                    value={`${profile.firstName} ${profile.lastName}`} />
+                  <IconRow icon={<MapPin className="w-4 h-4 text-gray-400" />} label="Address"
+                    value={profile.address || '—'} />
+                  {profile.birthday && (
+                    <IconRow icon={<Calendar className="w-4 h-4 text-gray-400" />} label="Birthday"
+                      value={new Date(profile.birthday).toLocaleDateString()} />
+                  )}
+                  {profile.civilStatus && (
+                    <DetailRow label="Civil Status" value={profile.civilStatus} />
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+
+            {/* Download */}
             <Card>
               <CardHeader>
-                <CardTitle>Actions</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-green-400" />Document File
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button className="w-full gap-2">
-                  <Download className="w-4 h-4" />
-                  Download PDF
-                </Button>
-                <Button variant="outline" className="w-full gap-2">
-                  <Printer className="w-4 h-4" />
-                  Print Document
-                </Button>
-                <Button variant="outline" className="w-full gap-2">
-                  <Share2 className="w-4 h-4" />
-                  Share Document
-                </Button>
+                {doc.file_url ? (
+                  <>
+                    <div className="flex items-center gap-2 text-green-400 text-sm">
+                      <CheckCircle className="w-4 h-4" />
+                      <span>File is ready to download</span>
+                    </div>
+                    <a href={doc.file_url} target="_blank" rel="noopener noreferrer" download>
+                      <Button className="w-full gap-2">
+                        <Download className="w-4 h-4" />Download Document
+                      </Button>
+                    </a>
+                  </>
+                ) : (
+                  <p className="text-sm text-gray-400 text-center py-2">
+                    The barangay hasn't uploaded your document file yet. Please check back later.
+                  </p>
+                )}
               </CardContent>
             </Card>
+
+            {/* Status timeline */}
+            <Card>
+              <CardHeader><CardTitle>Status</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center gap-2 text-green-400">
+                  <CheckCircle className="w-5 h-5" />
+                  <span className="font-medium">Approved</span>
+                </div>
+                <DetailRow label="Date" value={new Date(doc.created_at).toLocaleString()} />
+              </CardContent>
+            </Card>
+
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-sm text-gray-400 mb-1">{label}</p>
+      <p className="text-white font-medium">{value}</p>
+    </div>
+  );
+}
+
+function IconRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="mt-0.5 shrink-0">{icon}</div>
+      <div>
+        <p className="text-xs text-gray-400">{label}</p>
+        <p className="text-white text-sm">{value}</p>
       </div>
     </div>
   );
