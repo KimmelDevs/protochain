@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/Card';
 import Input from '@/app/components/ui/Input';
@@ -8,7 +8,7 @@ import TextArea from '@/app/components/ui/TextArea';
 import Button from '@/app/components/ui/Button';
 import Alert from '@/app/components/ui/Alert';
 import Tabs from '@/app/components/ui/Tabs';
-import { 
+import {
   Settings as SettingsIcon,
   Building2,
   Bell,
@@ -16,360 +16,456 @@ import {
   Mail,
   Save,
   Upload,
-  Key
+  Key,
+  Loader2,
 } from 'lucide-react';
+import { supabase } from '@/app/lib/supabase';
+
+// ─── Types ─────────────────────────────────────────────────────────────────────
+
+interface BarangayInfo {
+  name: string;
+  municipality: string;
+  province: string;
+  captain: string;
+  email: string;
+  phone: string;
+  address: string;
+  logo_url: string;
+}
+
+// ─── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
-  const [barangayInfo, setBarangayInfo] = useState({
-    name: 'Barangay Salawag',
-    municipality: 'Dasmariñas',
-    province: 'Cavite',
-    captain: 'Hon. Maria Santos',
-    email: 'salawag@dasmarinas.gov.ph',
-    phone: '(046) 123-4567',
-    address: 'Barangay Hall, Salawag, Dasmariñas City, Cavite',
-  });
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
+  // ── Barangay Info State ─────────────────────────────────────────────────────
+  const [barangayInfo, setBarangayInfo] = useState<BarangayInfo>({
+    name: '',
+    municipality: '',
+    province: '',
+    captain: '',
+    email: '',
+    phone: '',
+    address: '',
+    logo_url: '',
+  });
+  const [loadingInfo, setLoadingInfo]     = useState(true);
+  const [savingInfo, setSavingInfo]       = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+
+  // ── Feedback State ──────────────────────────────────────────────────────────
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage]     = useState('');
+
+  // ── Notification State (local only for now) ─────────────────────────────────
   const [notificationSettings, setNotificationSettings] = useState({
-    emailNotifications: true,
-    smsNotifications: false,
-    newRequestAlert: true,
+    emailNotifications:    true,
+    smsNotifications:      false,
+    newRequestAlert:       true,
     approvalNotifications: true,
     reminderNotifications: true,
   });
 
+  // ── System State (local only for now) ──────────────────────────────────────
   const [systemSettings, setSystemSettings] = useState({
-    maxFileSize: '5',
-    allowedFileTypes: '.pdf, .jpg, .png',
-    processingDays: '2',
-    autoApproval: false,
+    maxFileSize:         '5',
+    allowedFileTypes:    '.pdf, .jpg, .png',
+    processingDays:      '2',
+    autoApproval:        false,
     requireVerification: true,
   });
 
-  const [successMessage, setSuccessMessage] = useState('');
+  // ── Load barangay info from Supabase ────────────────────────────────────────
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('barangay_settings')
+          .select('*')
+          .eq('id', 1)
+          .single();
 
-  const handleSaveBarangayInfo = () => {
-    console.log('Saving barangay info:', barangayInfo);
-    setSuccessMessage('Barangay information updated successfully!');
+        if (!error && data) {
+          setBarangayInfo({
+            name:         data.name         ?? '',
+            municipality: data.municipality ?? '',
+            province:     data.province     ?? '',
+            captain:      data.captain      ?? '',
+            email:        data.email        ?? '',
+            phone:        data.phone        ?? '',
+            address:      data.address      ?? '',
+            logo_url:     data.logo_url     ?? '',
+          });
+        }
+      } catch {
+        // silently fail on load
+      } finally {
+        setLoadingInfo(false);
+      }
+    };
+    load();
+  }, []);
+
+  // ── Helpers ─────────────────────────────────────────────────────────────────
+  const showSuccess = (msg: string) => {
+    setSuccessMessage(msg);
     setTimeout(() => setSuccessMessage(''), 3000);
   };
 
+  // ── Save Barangay Info ──────────────────────────────────────────────────────
+  const handleSaveBarangayInfo = async () => {
+    setSavingInfo(true);
+    setErrorMessage('');
+
+    const { error } = await supabase
+      .from('barangay_settings')
+      .upsert({
+        id:           1,
+        name:         barangayInfo.name,
+        municipality: barangayInfo.municipality,
+        province:     barangayInfo.province,
+        captain:      barangayInfo.captain,
+        email:        barangayInfo.email,
+        phone:        barangayInfo.phone,
+        address:      barangayInfo.address,
+        logo_url:     barangayInfo.logo_url,
+        updated_at:   new Date().toISOString(),
+      });
+
+    if (error) {
+      setErrorMessage('Failed to save: ' + error.message);
+    } else {
+      showSuccess('Barangay information updated successfully!');
+    }
+
+    setSavingInfo(false);
+  };
+
+  // ── Upload Logo to documents bucket ────────────────────────────────────────
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingLogo(true);
+    setErrorMessage('');
+
+    try {
+      const ext  = file.name.split('.').pop();
+      const path = `barangay/logo.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(path, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from('documents')
+        .getPublicUrl(path);
+
+      // Save logo_url to DB immediately after upload
+      const { error: updateError } = await supabase
+        .from('barangay_settings')
+        .upsert({
+          id:         1,
+          logo_url:   data.publicUrl,
+          updated_at: new Date().toISOString(),
+        });
+
+      if (updateError) throw updateError;
+
+      setBarangayInfo(prev => ({ ...prev, logo_url: data.publicUrl }));
+      showSuccess('Logo uploaded successfully!');
+    } catch (err: unknown) {
+      setErrorMessage(
+        'Logo upload failed: ' + (err instanceof Error ? err.message : 'Unknown error')
+      );
+    } finally {
+      setUploadingLogo(false);
+      // Reset file input so same file can be re-uploaded if needed
+      if (logoInputRef.current) logoInputRef.current.value = '';
+    }
+  };
+
+  // ── Notification + System save handlers (local only for now) ────────────────
   const handleSaveNotifications = () => {
-    console.log('Saving notification settings:', notificationSettings);
-    setSuccessMessage('Notification settings updated successfully!');
-    setTimeout(() => setSuccessMessage(''), 3000);
+    showSuccess('Notification settings updated successfully!');
   };
 
   const handleSaveSystem = () => {
-    console.log('Saving system settings:', systemSettings);
-    setSuccessMessage('System settings updated successfully!');
-    setTimeout(() => setSuccessMessage(''), 3000);
+    showSuccess('System settings updated successfully!');
   };
 
+  // ── Toggle helper ───────────────────────────────────────────────────────────
+  const Toggle = ({
+    checked,
+    onChange,
+  }: {
+    checked: boolean;
+    onChange: (checked: boolean) => void;
+  }) => (
+    <label className="relative inline-flex items-center cursor-pointer">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={e => onChange(e.target.checked)}
+        className="sr-only peer"
+      />
+      <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
+    </label>
+  );
+
+  // ── Tab Contents ────────────────────────────────────────────────────────────
+
+  const generalContent = loadingInfo ? (
+    <div className="flex items-center justify-center py-20">
+      <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
+    </div>
+  ) : (
+    <div className="space-y-6">
+      {/* Barangay Info Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="w-5 h-5" />
+            Barangay Information
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="Barangay Name"
+              value={barangayInfo.name}
+              onChange={e => setBarangayInfo({ ...barangayInfo, name: e.target.value })}
+            />
+            <Input
+              label="Municipality/City"
+              value={barangayInfo.municipality}
+              onChange={e => setBarangayInfo({ ...barangayInfo, municipality: e.target.value })}
+            />
+            <Input
+              label="Province"
+              value={barangayInfo.province}
+              onChange={e => setBarangayInfo({ ...barangayInfo, province: e.target.value })}
+            />
+            <Input
+              label="Barangay Captain"
+              value={barangayInfo.captain}
+              onChange={e => setBarangayInfo({ ...barangayInfo, captain: e.target.value })}
+            />
+            <Input
+              label="Email Address"
+              type="email"
+              value={barangayInfo.email}
+              onChange={e => setBarangayInfo({ ...barangayInfo, email: e.target.value })}
+            />
+            <Input
+              label="Contact Number"
+              value={barangayInfo.phone}
+              onChange={e => setBarangayInfo({ ...barangayInfo, phone: e.target.value })}
+            />
+          </div>
+          <TextArea
+            label="Complete Address"
+            value={barangayInfo.address}
+            onChange={e => setBarangayInfo({ ...barangayInfo, address: e.target.value })}
+            rows={3}
+          />
+          <div className="flex justify-end">
+            <Button onClick={handleSaveBarangayInfo} disabled={savingInfo} className="gap-2">
+              {savingInfo ? (
+                <><Loader2 className="w-4 h-4 animate-spin" />Saving...</>
+              ) : (
+                <><Save className="w-4 h-4" />Save Changes</>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Logo Upload Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Barangay Logo</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <input
+            ref={logoInputRef}
+            type="file"
+            accept=".png,.jpg,.jpeg"
+            className="hidden"
+            onChange={handleLogoUpload}
+          />
+          <div className="flex items-center gap-6">
+            <div className="w-32 h-32 bg-white/5 rounded-lg flex items-center justify-center border-2 border-dashed border-white/20 overflow-hidden shrink-0">
+              {barangayInfo.logo_url ? (
+                <img
+                  src={barangayInfo.logo_url}
+                  alt="Barangay logo"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <Building2 className="w-16 h-16 text-gray-400" />
+              )}
+            </div>
+            <div>
+              <p className="text-sm text-gray-400 mb-1">Upload your barangay logo</p>
+              <p className="text-xs text-gray-500 mb-3">PNG or JPG — stored in documents bucket</p>
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() => logoInputRef.current?.click()}
+                disabled={uploadingLogo}
+              >
+                {uploadingLogo ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" />Uploading...</>
+                ) : (
+                  <><Upload className="w-4 h-4" />Upload Logo</>
+                )}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const notificationsContent = (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Bell className="w-5 h-5" />
+          Notification Preferences
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {[
+          { key: 'emailNotifications',    label: 'Email Notifications',    desc: 'Receive notifications via email' },
+          { key: 'smsNotifications',      label: 'SMS Notifications',      desc: 'Receive notifications via SMS' },
+          { key: 'newRequestAlert',       label: 'New Request Alerts',     desc: 'Get notified when new requests arrive' },
+          { key: 'approvalNotifications', label: 'Approval Notifications', desc: 'Notify residents when documents are approved' },
+          { key: 'reminderNotifications', label: 'Reminder Notifications', desc: 'Send reminders for pending requests' },
+        ].map(({ key, label, desc }) => (
+          <div key={key} className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
+            <div>
+              <p className="text-white font-medium">{label}</p>
+              <p className="text-sm text-gray-400">{desc}</p>
+            </div>
+            <Toggle
+              checked={notificationSettings[key as keyof typeof notificationSettings] as boolean}
+              onChange={val => setNotificationSettings({ ...notificationSettings, [key]: val })}
+            />
+          </div>
+        ))}
+        <div className="flex justify-end pt-4">
+          <Button onClick={handleSaveNotifications} className="gap-2">
+            <Save className="w-4 h-4" />Save Changes
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const systemContent = (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <SettingsIcon className="w-5 h-5" />
+            System Configuration
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="Max File Size (MB)"
+              type="number"
+              value={systemSettings.maxFileSize}
+              onChange={e => setSystemSettings({ ...systemSettings, maxFileSize: e.target.value })}
+            />
+            <Input
+              label="Standard Processing Days"
+              type="number"
+              value={systemSettings.processingDays}
+              onChange={e => setSystemSettings({ ...systemSettings, processingDays: e.target.value })}
+            />
+          </div>
+          <Input
+            label="Allowed File Types"
+            value={systemSettings.allowedFileTypes}
+            onChange={e => setSystemSettings({ ...systemSettings, allowedFileTypes: e.target.value })}
+          />
+          <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
+            <div>
+              <p className="text-white font-medium">Require Email Verification</p>
+              <p className="text-sm text-gray-400">Users must verify email before making requests</p>
+            </div>
+            <Toggle
+              checked={systemSettings.requireVerification}
+              onChange={val => setSystemSettings({ ...systemSettings, requireVerification: val })}
+            />
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={handleSaveSystem} className="gap-2">
+              <Save className="w-4 h-4" />Save Changes
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="w-5 h-5" />
+            Security Settings
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Alert variant="warning" title="Blockchain Configuration">
+            Blockchain settings should only be modified by system administrators.
+            Contact your IT department for assistance.
+          </Alert>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm text-gray-400 mb-2">Blockchain Network</p>
+              <p className="text-white font-medium">Ethereum Sepolia Testnet</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-400 mb-2">Smart Contract</p>
+              <p className="text-white font-mono text-xs">0x1234...5678</p>
+            </div>
+          </div>
+          <Button variant="outline" className="gap-2">
+            <Key className="w-4 h-4" />
+            Manage API Keys
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
   const tabs = [
-    {
-      label: 'General',
-      value: 'general',
-      content: (
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building2 className="w-5 h-5" />
-                Barangay Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input
-                  label="Barangay Name"
-                  value={barangayInfo.name}
-                  onChange={(e) => setBarangayInfo({ ...barangayInfo, name: e.target.value })}
-                />
-                <Input
-                  label="Municipality/City"
-                  value={barangayInfo.municipality}
-                  onChange={(e) => setBarangayInfo({ ...barangayInfo, municipality: e.target.value })}
-                />
-                <Input
-                  label="Province"
-                  value={barangayInfo.province}
-                  onChange={(e) => setBarangayInfo({ ...barangayInfo, province: e.target.value })}
-                />
-                <Input
-                  label="Barangay Captain"
-                  value={barangayInfo.captain}
-                  onChange={(e) => setBarangayInfo({ ...barangayInfo, captain: e.target.value })}
-                />
-                <Input
-                  label="Email Address"
-                  type="email"
-                  value={barangayInfo.email}
-                  onChange={(e) => setBarangayInfo({ ...barangayInfo, email: e.target.value })}
-                />
-                <Input
-                  label="Contact Number"
-                  value={barangayInfo.phone}
-                  onChange={(e) => setBarangayInfo({ ...barangayInfo, phone: e.target.value })}
-                />
-              </div>
-              <TextArea
-                label="Complete Address"
-                value={barangayInfo.address}
-                onChange={(e) => setBarangayInfo({ ...barangayInfo, address: e.target.value })}
-                rows={3}
-              />
-              <div className="flex justify-end">
-                <Button onClick={handleSaveBarangayInfo} className="gap-2">
-                  <Save className="w-4 h-4" />
-                  Save Changes
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Logo Upload */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Barangay Logo</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-6">
-                <div className="w-32 h-32 bg-white/5 rounded-lg flex items-center justify-center border-2 border-dashed border-white/20">
-                  <Building2 className="w-16 h-16 text-gray-400" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-400 mb-3">Upload your barangay logo (PNG, JPG)</p>
-                  <Button variant="outline" className="gap-2">
-                    <Upload className="w-4 h-4" />
-                    Upload Logo
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      ),
-    },
-    {
-      label: 'Notifications',
-      value: 'notifications',
-      content: (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="w-5 h-5" />
-              Notification Preferences
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
-              <div>
-                <p className="text-white font-medium">Email Notifications</p>
-                <p className="text-sm text-gray-400">Receive notifications via email</p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={notificationSettings.emailNotifications}
-                  onChange={(e) => setNotificationSettings({ 
-                    ...notificationSettings, 
-                    emailNotifications: e.target.checked 
-                  })}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
-            </div>
-
-            <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
-              <div>
-                <p className="text-white font-medium">SMS Notifications</p>
-                <p className="text-sm text-gray-400">Receive notifications via SMS</p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={notificationSettings.smsNotifications}
-                  onChange={(e) => setNotificationSettings({ 
-                    ...notificationSettings, 
-                    smsNotifications: e.target.checked 
-                  })}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
-            </div>
-
-            <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
-              <div>
-                <p className="text-white font-medium">New Request Alerts</p>
-                <p className="text-sm text-gray-400">Get notified when new requests arrive</p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={notificationSettings.newRequestAlert}
-                  onChange={(e) => setNotificationSettings({ 
-                    ...notificationSettings, 
-                    newRequestAlert: e.target.checked 
-                  })}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
-            </div>
-
-            <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
-              <div>
-                <p className="text-white font-medium">Approval Notifications</p>
-                <p className="text-sm text-gray-400">Notify residents when documents are approved</p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={notificationSettings.approvalNotifications}
-                  onChange={(e) => setNotificationSettings({ 
-                    ...notificationSettings, 
-                    approvalNotifications: e.target.checked 
-                  })}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
-            </div>
-
-            <div className="flex justify-end pt-4">
-              <Button onClick={handleSaveNotifications} className="gap-2">
-                <Save className="w-4 h-4" />
-                Save Changes
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ),
-    },
-    {
-      label: 'System',
-      value: 'system',
-      content: (
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <SettingsIcon className="w-5 h-5" />
-                System Configuration
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input
-                  label="Max File Size (MB)"
-                  type="number"
-                  value={systemSettings.maxFileSize}
-                  onChange={(e) => setSystemSettings({ 
-                    ...systemSettings, 
-                    maxFileSize: e.target.value 
-                  })}
-                />
-                <Input
-                  label="Standard Processing Days"
-                  type="number"
-                  value={systemSettings.processingDays}
-                  onChange={(e) => setSystemSettings({ 
-                    ...systemSettings, 
-                    processingDays: e.target.value 
-                  })}
-                />
-              </div>
-              <Input
-                label="Allowed File Types"
-                value={systemSettings.allowedFileTypes}
-                onChange={(e) => setSystemSettings({ 
-                  ...systemSettings, 
-                  allowedFileTypes: e.target.value 
-                })}
-              />
-              
-              <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
-                <div>
-                  <p className="text-white font-medium">Require Email Verification</p>
-                  <p className="text-sm text-gray-400">Users must verify email before making requests</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={systemSettings.requireVerification}
-                    onChange={(e) => setSystemSettings({ 
-                      ...systemSettings, 
-                      requireVerification: e.target.checked 
-                    })}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-              </div>
-
-              <div className="flex justify-end">
-                <Button onClick={handleSaveSystem} className="gap-2">
-                  <Save className="w-4 h-4" />
-                  Save Changes
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="w-5 h-5" />
-                Security Settings
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Alert variant="warning" title="Blockchain Configuration">
-                Blockchain settings should only be modified by system administrators. 
-                Contact your IT department for assistance.
-              </Alert>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-400 mb-2">Blockchain Network</p>
-                  <p className="text-white font-medium">Polygon Mumbai Testnet</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-400 mb-2">Smart Contract</p>
-                  <p className="text-white font-mono text-xs">0x1234...5678</p>
-                </div>
-              </div>
-              <Button variant="outline" className="gap-2">
-                <Key className="w-4 h-4" />
-                Manage API Keys
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      ),
-    },
+    { label: 'General',       value: 'general',       content: generalContent       },
+    { label: 'Notifications', value: 'notifications', content: notificationsContent },
+    { label: 'System',        value: 'system',        content: systemContent        },
   ];
 
   return (
     <div className="min-h-screen p-4 lg:p-8">
       <div className="max-w-5xl mx-auto">
+
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
-            Settings
-          </h1>
-          <p className="text-gray-400">
-            Manage system configuration and preferences
-          </p>
+          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">Settings</h1>
+          <p className="text-gray-400">Manage system configuration and preferences</p>
         </motion.div>
 
-        {/* Success Message */}
+        {/* Alerts */}
         {successMessage && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -378,6 +474,17 @@ export default function SettingsPage() {
           >
             <Alert variant="success" onClose={() => setSuccessMessage('')}>
               {successMessage}
+            </Alert>
+          </motion.div>
+        )}
+        {errorMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6"
+          >
+            <Alert variant="error" onClose={() => setErrorMessage('')}>
+              {errorMessage}
             </Alert>
           </motion.div>
         )}
@@ -390,6 +497,7 @@ export default function SettingsPage() {
         >
           <Tabs tabs={tabs} defaultValue="general" />
         </motion.div>
+
       </div>
     </div>
   );
