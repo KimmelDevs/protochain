@@ -1,64 +1,79 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { encryptFields } from '@/app/lib/utils/crypto';
+'use client';
 
-// Service role client — bypasses RLS
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { supabase } from '@/app/lib/supabase';
+import { User } from '@supabase/supabase-js';
 
-const SENSITIVE_FIELDS = ['phone', 'address', 'birthday'] as const;
+interface UserData {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  address: string;
+  role: string;
+  username: string;
+  birthday: string;
+  civilStatus: string;
+}
 
-export async function POST(req: NextRequest) {
-  try {
-    const { email, password, profile } = await req.json();
+interface AuthContextType {
+  user: User | null;
+  userData: UserData | null;
+  loading: boolean;
+  refreshUserData: () => Promise<void>;
+}
 
-    // 1. Create auth user (auto-confirmed so they can log in immediately)
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  userData: null,
+  loading: true,
+  refreshUserData: async () => {},
+});
+
+export const useAuth = () => useContext(AuthContext);
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchUserData = async (userId: string) => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    setUserData(data);
+    setLoading(false);
+  };
+
+  const refreshUserData = async () => {
+    if (user) await fetchUserData(user.id);
+  };
+
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (session?.user) fetchUserData(session.user.id);
+      else setLoading(false);
     });
 
-    if (authError) {
-      console.error('[register] auth error:', authError);
-      return NextResponse.json({ error: authError.message }, { status: 400 });
-    }
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) fetchUserData(session.user.id);
+      else {
+        setUserData(null);
+        setLoading(false);
+      }
+    });
 
-    const userId = authData.user.id;
+    return () => subscription.unsubscribe();
+  }, []);
 
-    // 2. Encrypt PII fields before storing
-    const encrypted = encryptFields(
-      {
-        id:          userId,
-        email,
-        firstName:   profile.firstName,
-        lastName:    profile.lastName,
-        username:    profile.username,
-        phone:       profile.phone,
-        address:     profile.address,
-        birthday:    profile.birthday,
-        civilStatus: profile.civilStatus,
-        role:        profile.role ?? 'resident',
-      },
-      [...SENSITIVE_FIELDS]
-    );
-
-    // 3. Insert encrypted profile row
-    const { error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .insert(encrypted);
-
-    if (profileError) {
-      console.error('[register] profile error:', profileError);
-      await supabaseAdmin.auth.admin.deleteUser(userId);
-      return NextResponse.json({ error: profileError.message }, { status: 400 });
-    }
-
-    return NextResponse.json({ success: true }, { status: 201 });
-  } catch (err: any) {
-    console.error('[register] error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
+  return (
+    <AuthContext.Provider value={{ user, userData, loading, refreshUserData }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
