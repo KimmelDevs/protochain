@@ -16,183 +16,13 @@ import {
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface RequestDetail {
-  id: string; type: string; document_type: string; status: string;
-  created_at: string; purpose: string; custom_purpose: string | null;
-  additional_info: string | null; file_url: string | null; notes: string | null;
-  file_hash: string | null;
-  purok: string | null; ctc_no: string | null; ctc_date_issued: string | null;
-  ctc_place_issued: string | null; business_name: string | null;
-  deceased_name: string | null; deceased_age: string | null;
-  date_of_death: string | null; place_of_death: string | null;
-  relationship_to_deceased: string | null; years_of_residency: string | null;
-  bcn_no: string | null; user_id: string;
-}
-
-interface Profile {
-  firstName: string; lastName: string; email: string;
-  phone: string; address: string; birthday: string | null; civilStatus: string | null;
-}
-
-// ─── SHA-256 Hasher ───────────────────────────────────────────────────────────
-
-async function sha256Hex(blob: Blob): Promise<string> {
-  const buffer = await blob.arrayBuffer();
-  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-  return Array.from(new Uint8Array(hashBuffer))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-// ─── JSZip loader ─────────────────────────────────────────────────────────────
-
-async function loadJSZip() {
-  // @ts-ignore
-  if (typeof window.JSZip === 'undefined') {
-    await new Promise<void>((resolve, reject) => {
-      const s = document.createElement('script');
-      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
-      s.onload = () => resolve();
-      s.onerror = () => reject(new Error('Failed to load JSZip'));
-      document.head.appendChild(s);
-    });
-  }
-  // @ts-ignore
-  return window.JSZip;
-}
-
-const xmlEscape = (s: string) =>
-  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-   .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
-
-// ─── Document Generators ──────────────────────────────────────────────────────
-
-async function generateBrgyClearance(req: RequestDetail, profile: Profile): Promise<Blob> {
-  const JSZip = await loadJSZip();
-  const response = await fetch('/files/BRGY-CLEARANCE-TEMPLATE.docx');
-  if (!response.ok) throw new Error('Could not load template');
-  const zip = await JSZip.loadAsync(await response.arrayBuffer());
-  const name = `${profile.firstName} ${profile.lastName}`;
-  const sex = profile.civilStatus?.toLowerCase().includes('female') ? 'female' : 'male';
-  const today = new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' });
-  const purpose = req.purpose === 'others' && req.custom_purpose ? req.custom_purpose : req.purpose;
-  let content: string = await zip.file('word/document.xml').async('string');
-  content = content.replace(
-    /_____________________ of legal age, male\/female, single\/married\/widow\/ widower, Filipino citizen, whose name and signature\/right thumb mark appears below is a BONAFIDE and permanent resident of BRGY\. GUIN-ON, Calbayog City, /g,
-    `${xmlEscape(name)} of legal age, ${xmlEscape(sex)}, ${xmlEscape(profile.civilStatus ?? '')}, Filipino citizen, whose name and signature/right thumb mark appears below is a BONAFIDE and permanent resident of ${xmlEscape(req.purok ?? '')}, BRGY. GUIN-ON, Calbayog City, `
-  );
-  content = content.replace(/Issued this ___ day of JANUARY, 2024 at Brgy\. Guin-on, Calbayog City, Samar, Philippines\./g,
-    `Issued this ${xmlEscape(today)} at Brgy. Guin-on, Calbayog City, Samar, Philippines.`);
-  content = content.replace(/CTC #: __________________ /g, `CTC #: ${xmlEscape(req.ctc_no ?? '')} `);
-  content = content.replace(/Date Issued: ______________ /g, `Date Issued: ${xmlEscape(req.ctc_date_issued ?? '')} `);
-  content = content.replace(/Place Issued: ______________/g, `Place Issued: ${xmlEscape(req.ctc_place_issued ?? '')}`);
-  content = content.replace(/Further certifies that he\/ she has no derogatory record and has good moral character as per our Barangay record in connected\. /g,
-    `Further certifies that he/ she has no derogatory record and has good moral character as per our Barangay record in connected. This clearance is issued upon request for ${xmlEscape(purpose ?? '')} and for whatever legal purpose it may serve. `);
-  zip.file('word/document.xml', content);
-  return new Blob([await zip.generateAsync({ type: 'arraybuffer' })], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-}
-
-async function generateBusinessClearance(req: RequestDetail, profile: Profile): Promise<Blob> {
-  const JSZip = await loadJSZip();
-  const response = await fetch('/files/BUSINESS-CLEARANCE.docx');
-  if (!response.ok) throw new Error('Could not load template');
-  const zip = await JSZip.loadAsync(await response.arrayBuffer());
-  const owner = `${profile.firstName} ${profile.lastName}`;
-  const today = new Date();
-  const day = today.getDate().toString();
-  const suffix = day.endsWith('1') && day !== '11' ? 'st' : day.endsWith('2') && day !== '12' ? 'nd' : day.endsWith('3') && day !== '13' ? 'rd' : 'th';
-  const month = today.toLocaleDateString('en-PH', { month: 'long' }).toUpperCase();
-  const year = today.getFullYear().toString();
-  let content: string = await zip.file('word/document.xml').async('string');
-  content = content.replace(/Grante GREGORIO BALDOMARO GOMEZ, /g, `Granted to ${xmlEscape(owner)}, `);
-  content = content.replace(/GREGORIO BALDOMARO COMEZ/g, xmlEscape(owner));
-  content = content.replace(/of AGRICULTURAL PRODUCTS /g, `of ${xmlEscape(req.business_name ?? '')} `);
-  content = content.replace(/(<w:t[^>]*>)PUROK-1 (<\/w:t>)/g, `$1${xmlEscape(req.purok ?? '')} $2`);
-  content = content.replace(/(<w:t[^>]*>)04(<\/w:t>)/, `$1${xmlEscape(day)}$2`);
-  content = content.replace(/(<w:t[^>]*>)th(<\/w:t>)/, `$1${xmlEscape(suffix)}$2`);
-  content = content.replace(/of DECEMBER /g, `of ${xmlEscape(month)} `);
-  content = content.replace(/(<w:t[^>]*>)2025(<\/w:t>)/g, `$1${xmlEscape(year)}$2`);
-  zip.file('word/document.xml', content);
-  return new Blob([await zip.generateAsync({ type: 'arraybuffer' })], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-}
-
-async function generateDeathCert(req: RequestDetail, profile: Profile): Promise<Blob> {
-  const JSZip = await loadJSZip();
-  const response = await fetch('/files/CERTIFICATION-OF-DEATH.docx');
-  if (!response.ok) throw new Error('Could not load template');
-  const zip = await JSZip.loadAsync(await response.arrayBuffer());
-  const requestor = `${profile.firstName} ${profile.lastName}`;
-  const today = new Date();
-  const day = today.getDate().toString();
-  const suffix = day.endsWith('1') && day !== '11' ? 'st' : day.endsWith('2') && day !== '12' ? 'nd' : day.endsWith('3') && day !== '13' ? 'rd' : 'th';
-  const month = today.toLocaleDateString('en-PH', { month: 'long' }).toUpperCase();
-  const year = today.getFullYear().toString();
-  let content: string = await zip.file('word/document.xml').async('string');
-  content = content.replace(/ERNESTO VALENZUELA ,/g, `${xmlEscape(req.deceased_name ?? '')},`);
-  content = content.replace(/ 72 /g, ` ${xmlEscape(req.deceased_age ?? '')} `);
-  content = content.replace(/Purok 5, Brgy\. Guin- on, Calbayog City/g, xmlEscape(req.purok ?? ''));
-  content = content.replace(/\. The said aforementioned name died on MAY 8 2025/g, `. The said aforementioned name died on ${xmlEscape(req.date_of_death ?? '')}`);
-  content = content.replace(/PUROK 5 BRGY\. GUIN- ON  CALBAYOG CITY\./g, `${xmlEscape(req.place_of_death ?? '')}.`);
-  content = content.replace(/ ISAGANI ROJAS CANETE/g, ` ${xmlEscape(requestor)}`);
-  content = content.replace(/ \(son\) of the deceased/g, ` (${xmlEscape(req.relationship_to_deceased ?? '')}) of the deceased`);
-  content = content.replace(/(<w:t[^>]*>)14(<\/w:t>)/g, `$1${xmlEscape(day)}$2`);
-  content = content.replace(/(<w:t[^>]*>)th(<\/w:t>)/g, `$1${xmlEscape(suffix)}$2`);
-  content = content.replace(/(<w:t[^>]*>)MAY(<\/w:t>)/g, `$1${xmlEscape(month)}$2`);
-  content = content.replace(/(<w:t[^>]*>), 2025 (<\/w:t>)/g, `$1, ${xmlEscape(year)} $2`);
-  zip.file('word/document.xml', content);
-  return new Blob([await zip.generateAsync({ type: 'arraybuffer' })], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-}
-
-async function generateJobSeeker(req: RequestDetail, profile: Profile): Promise<Blob> {
-  const JSZip = await loadJSZip();
-  const response = await fetch('/files/Certification.docx');
-  if (!response.ok) throw new Error('Could not load template');
-  const zip = await JSZip.loadAsync(await response.arrayBuffer());
-  const name = `${profile.firstName} ${profile.lastName}`.toUpperCase();
-  const today = new Date();
-  const day = today.getDate().toString().padStart(2, '0');
-  const suffix = day.endsWith('1') && day !== '11' ? 'ST' : day.endsWith('2') && day !== '12' ? 'ND' : day.endsWith('3') && day !== '13' ? 'RD' : 'TH';
-  const month = today.toLocaleDateString('en-PH', { month: 'long' }).toUpperCase();
-  const year = today.getFullYear().toString();
-  let content: string = await zip.file('word/document.xml').async('string');
-  content = content.replace(/JIRAH JALAYAJAY ARIMALA/g, xmlEscape(name));
-  content = content.replace(/MAIKA DELA CRUZ MERILLES/g, xmlEscape(name));
-  content = content.replace(/(<w:t[^>]*>) BCN NO\.: 09(<\/w:t>)/g, `$1 BCN NO.: ${xmlEscape(req.bcn_no ?? '')}$2`);
-  content = content.replace(/(<w:t[^>]*>)09(<\/w:t>)/g, `$1${xmlEscape(req.bcn_no ?? '')}$2`);
-  content = content.replace(/for 5 years\/month,/g, `for ${xmlEscape(req.years_of_residency ?? '')} years/month,`);
-  content = content.replace(/(<w:t[^>]*>)06(<\/w:t>)/g, `$1${xmlEscape(day)}$2`);
-  content = content.replace(/(<w:t[^>]*>)TH(<\/w:t>)/g, `$1${xmlEscape(suffix)}$2`);
-  content = content.replace(/(<w:t[^>]*>)OCTOBER (<\/w:t>)/g, `$1${xmlEscape(month)} $2`);
-  content = content.replace(/2025, in Calbayog City, Samar\./g, `${xmlEscape(year)}, in Calbayog City, Samar.`);
-  content = content.replace(/(<w:t[^>]*>)OCTOBER 06(<\/w:t>)/g, `$1${xmlEscape(month)} ${xmlEscape(day)}$2`);
-  content = content.replace(/(<w:t[^>]*>), 2025(<\/w:t>)/g, `$1, ${xmlEscape(year)}$2`);
-  zip.file('word/document.xml', content);
-  return new Blob([await zip.generateAsync({ type: 'arraybuffer' })], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-}
-
-async function generateOath(req: RequestDetail, profile: Profile): Promise<Blob> {
-  const JSZip = await loadJSZip();
-  const response = await fetch('/files/Oath-of-Undertaking-for-First-Time-Jobseeker.docx');
-  if (!response.ok) throw new Error('Could not load template');
-  const zip = await JSZip.loadAsync(await response.arrayBuffer());
-  const name = `${profile.firstName} ${profile.lastName}`.toUpperCase();
-  const today = new Date();
-  const day = today.getDate().toString();
-  const suffix = day.endsWith('1') && day !== '11' ? 'st' : day.endsWith('2') && day !== '12' ? 'nd' : day.endsWith('3') && day !== '13' ? 'rd' : 'th';
-  const month = today.toLocaleDateString('en-PH', { month: 'long' }).toUpperCase();
-  const year = today.getFullYear().toString();
-  let content: string = await zip.file('word/document.xml').async('string');
-  content = content.replace(/EGBERT KIA DELA CRUZ/g, xmlEscape(name));
-  content = content.replace(/Samar for 5 years,/g, `Samar for ${xmlEscape(req.years_of_residency ?? '')} years,`);
-  content = content.replace(/(Signed, this<\/w:t><\/w:r><w:r[^>]*><w:rPr>[^<]*(?:<[^<]*>)*<\/w:rPr><w:t xml:space="preserve">) 2(<\/w:t>)/, `$1 ${xmlEscape(day)}$2`);
-  content = content.replace(/(<w:t[^>]*>) SEPTEMBER (<\/w:t>)/g, `$1 ${xmlEscape(month)} $2`);
-  content = content.replace(/ 2024, in Barangay Guin-on, Calbayog City, Samar\./g, ` ${xmlEscape(year)}, in Barangay Guin-on, Calbayog City, Samar.`);
-  zip.file('word/document.xml', content);
-  return new Blob([await zip.generateAsync({ type: 'arraybuffer' })], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-}
+import {
+  type RequestDetail,
+  type Profile,
+  normaliseProfile,
+  sha256Hex,
+  generateDocument,
+} from '@/app/lib/utils/docGenerators';
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
@@ -201,39 +31,41 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
   const router = useRouter();
   const uploadRef = useRef<HTMLInputElement>(null);
 
-  const [request, setRequest] = useState<RequestDetail | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
+  const [request, setRequest]               = useState<RequestDetail | null>(null);
+  const [profile, setProfile]               = useState<Profile | null>(null);
+  const [loading, setLoading]               = useState(true);
+  const [notFound, setNotFound]             = useState(false);
   const [showApproveModal, setShowApproveModal] = useState(false);
-  const [showRejectModal, setShowRejectModal] = useState(false);
-  const [rejectReason, setRejectReason] = useState('');
-  const [approvalNotes, setApprovalNotes] = useState('');
-  const [processing, setProcessing] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [generating, setGenerating] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [generatedBlob, setGeneratedBlob] = useState<Blob | null>(null);
+  const [showRejectModal, setShowRejectModal]   = useState(false);
+  const [rejectReason, setRejectReason]     = useState('');
+  const [approvalNotes, setApprovalNotes]   = useState('');
+  const [processing, setProcessing]         = useState(false);
+  const [error, setError]                   = useState('');
+  const [success, setSuccess]               = useState('');
+  const [generating, setGenerating]         = useState(false);
+  const [uploading, setUploading]           = useState(false);
+  const [generatedBlob, setGeneratedBlob]   = useState<Blob | null>(null);
   const [generatedFileName, setGeneratedFileName] = useState('');
-  const [uploadedHash, setUploadedHash] = useState<string | null>(null);
+  const [uploadedHash, setUploadedHash]     = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
       try {
+        // API route decrypts SENSITIVE_FIELDS (purok, ctc_no, etc.) server-side
         const reqRes = await fetch(`/api/requests?id=${id}`);
         if (!reqRes.ok) { setNotFound(true); return; }
         const reqJson = await reqRes.json();
         if (!reqJson.data?.[0]) { setNotFound(true); return; }
-        const reqData = reqJson.data[0];
+        const reqData: RequestDetail = reqJson.data[0];
         setRequest(reqData);
-        // Load existing hash if already uploaded before
         if (reqData.file_hash) setUploadedHash(reqData.file_hash);
 
+        // API route decrypts phone/address/birthday server-side.
+        // normaliseProfile handles both snake_case and camelCase column names.
         const profileRes = await fetch(`/api/profile?id=${reqData.user_id}`);
         if (profileRes.ok) {
           const profileJson = await profileRes.json();
-          setProfile(profileJson.data);
+          setProfile(normaliseProfile(profileJson.data));
         }
       } catch {
         setNotFound(true);
@@ -243,6 +75,8 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
     };
     load();
   }, [id]);
+
+  // ── Approve ────────────────────────────────────────────────────────────────
 
   const handleApprove = async () => {
     setProcessing(true); setError('');
@@ -260,6 +94,8 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
     } finally { setProcessing(false); }
   };
 
+  // ── Reject ─────────────────────────────────────────────────────────────────
+
   const handleReject = async () => {
     if (!rejectReason.trim()) { setError('Please provide a reason for rejection.'); return; }
     setProcessing(true); setError('');
@@ -276,49 +112,49 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
     } finally { setProcessing(false); }
   };
 
+  // ── Generate ───────────────────────────────────────────────────────────────
+
   const handleGenerate = async () => {
     if (!request || !profile) return;
     setGenerating(true); setError('');
     try {
-      let blob: Blob;
-      const name = `${profile.firstName}_${profile.lastName}`.replace(/\s+/g, '_');
-      let fileName = '';
-      switch (request.document_type) {
-        case 'barangay-clearance': blob = await generateBrgyClearance(request, profile); fileName = `Barangay_Clearance_${name}.docx`; break;
-        case 'business-clearance': blob = await generateBusinessClearance(request, profile); fileName = `Business_Clearance_${name}.docx`; break;
-        case 'certification-of-death': blob = await generateDeathCert(request, profile); fileName = `Certification_of_Death_${name}.docx`; break;
-        case 'job-seeker': blob = await generateJobSeeker(request, profile); fileName = `FTJ_Certification_${name}.docx`; break;
-        case 'oath-of-undertaking': blob = await generateOath(request, profile); fileName = `Oath_of_Undertaking_${name}.docx`; break;
-        default: throw new Error('No template for this document type.');
-      }
+      const { blob, fileName } = await generateDocument(request, profile);
+      // Trigger browser download
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url; a.download = fileName; a.click();
       URL.revokeObjectURL(url);
-      setGeneratedBlob(blob); setGeneratedFileName(fileName);
+      setGeneratedBlob(blob);
+      setGeneratedFileName(fileName);
       setSuccess('Document generated and downloaded! Review it, then click "Upload to Supabase" to make it available to the resident.');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to generate document.');
     } finally { setGenerating(false); }
   };
 
-  const handleUploadGenerated = async () => { if (generatedBlob && generatedFileName) await uploadFile(generatedBlob, generatedFileName); };
-  const handleManualUpload = async (e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0]; if (file) await uploadFile(file, file.name); };
+  // ── Upload ─────────────────────────────────────────────────────────────────
+
+  const handleUploadGenerated = async () => {
+    if (generatedBlob && generatedFileName) await uploadFile(generatedBlob, generatedFileName);
+  };
+
+  const handleManualUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) await uploadFile(file, file.name);
+  };
 
   const uploadFile = async (file: Blob, fileName: string) => {
     setUploading(true); setError('');
     try {
-      // ── Step 1: Compute SHA-256 hash ──────────────────────────────────────
       const hash = await sha256Hex(file);
 
-      // ── Step 2: Upload file to Supabase Storage ───────────────────────────
       const path = `documents/${id}/${fileName}`;
-      const { error: uploadError } = await supabase.storage.from('documents').upload(path, file, { upsert: true });
+      const { error: uploadError } = await supabase.storage
+        .from('documents').upload(path, file, { upsert: true });
       if (uploadError) throw uploadError;
 
       const { data: urlData } = supabase.storage.from('documents').getPublicUrl(path);
 
-      // ── Step 3: Save file_url + file_hash to DB ───────────────────────────
       const { error: updateError } = await supabase
         .from('requests')
         .update({ file_url: urlData.publicUrl, file_hash: hash })
@@ -333,7 +169,14 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
     } finally { setUploading(false); }
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 text-blue-400 animate-spin" /></div>;
+  // ── Early returns ──────────────────────────────────────────────────────────
+
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
+    </div>
+  );
+
   if (notFound || !request) return (
     <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center">
       <Card><CardContent className="p-8 text-center">
@@ -343,29 +186,19 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
     </div>
   );
 
-  const displayPurpose = request.purpose === 'others' && request.custom_purpose ? request.custom_purpose : request.purpose;
-  const daysWaiting = Math.floor((Date.now() - new Date(request.created_at).getTime()) / (1000 * 60 * 60 * 24));
+  // ── Derived values ─────────────────────────────────────────────────────────
 
-  const extraDetails: { label: string; value: string | null }[] = [];
-  if (request.document_type === 'barangay-clearance') extraDetails.push(
-    { label: 'Purok / Zone', value: request.purok }, { label: 'CTC Number', value: request.ctc_no },
-    { label: 'CTC Date Issued', value: request.ctc_date_issued }, { label: 'CTC Place Issued', value: request.ctc_place_issued },
+  const displayPurpose = request.purpose === 'others' && request.custom_purpose
+    ? request.custom_purpose
+    : request.purpose;
+
+  const daysWaiting = Math.floor(
+    (Date.now() - new Date(request.created_at).getTime()) / (1000 * 60 * 60 * 24)
   );
-  if (request.document_type === 'business-clearance') extraDetails.push(
-    { label: 'Business Name', value: request.business_name }, { label: 'Location / Purok', value: request.purok },
-  );
-  if (request.document_type === 'certification-of-death') extraDetails.push(
-    { label: 'Deceased Name', value: request.deceased_name }, { label: 'Age at Death', value: request.deceased_age },
-    { label: 'Date of Death', value: request.date_of_death }, { label: 'Place of Death', value: request.place_of_death },
-    { label: 'Relationship', value: request.relationship_to_deceased },
-  );
-  if (request.document_type === 'job-seeker') extraDetails.push(
-    { label: 'BCN Number', value: request.bcn_no }, { label: 'Purok / Zone', value: request.purok },
-    { label: 'Years of Residency', value: request.years_of_residency },
-  );
-  if (request.document_type === 'oath-of-undertaking') extraDetails.push(
-    { label: 'Purok / Zone', value: request.purok }, { label: 'Years of Residency', value: request.years_of_residency },
-  );
+
+  const extraDetails = buildExtraDetails(request);
+
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen p-4 lg:p-8">
@@ -373,7 +206,9 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
         <input ref={uploadRef} type="file" accept=".docx,.pdf" className="hidden" onChange={handleManualUpload} />
 
         <Link href="/pending-requests">
-          <Button variant="ghost" className="mb-6 gap-2"><ArrowLeft className="w-4 h-4" />Back to Pending Requests</Button>
+          <Button variant="ghost" className="mb-6 gap-2">
+            <ArrowLeft className="w-4 h-4" />Back to Pending Requests
+          </Button>
         </Link>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
@@ -391,20 +226,21 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
             </Alert>
           </div>
         )}
-        {error && <div className="mb-6"><Alert variant="error" onClose={() => setError('')}>{error}</Alert></div>}
+        {error   && <div className="mb-6"><Alert variant="error"   onClose={() => setError('')}>{error}</Alert></div>}
         {success && <div className="mb-6"><Alert variant="success" onClose={() => setSuccess('')}>{success}</Alert></div>}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
 
+            {/* Request info */}
             <Card>
               <CardHeader><CardTitle>Request Information</CardTitle></CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4">
                   <DetailRow label="Document Type" value={request.type ?? request.document_type} />
-                  <DetailRow label="Purpose" value={displayPurpose ?? '—'} />
+                  <DetailRow label="Purpose"        value={displayPurpose ?? '—'} />
                   <DetailRow label="Date Requested" value={new Date(request.created_at).toLocaleDateString()} />
-                  <DetailRow label="Days Waiting" value={daysWaiting === 0 ? 'Today' : `${daysWaiting} day${daysWaiting > 1 ? 's' : ''}`} />
+                  <DetailRow label="Days Waiting"   value={daysWaiting === 0 ? 'Today' : `${daysWaiting} day${daysWaiting > 1 ? 's' : ''}`} />
                   {request.additional_info && (
                     <div className="col-span-2">
                       <p className="text-sm text-gray-400 mb-2">Additional Information</p>
@@ -415,6 +251,7 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
               </CardContent>
             </Card>
 
+            {/* Extra doc-type fields */}
             {extraDetails.length > 0 && (
               <Card>
                 <CardHeader><CardTitle>Submitted Information</CardTitle></CardHeader>
@@ -426,17 +263,18 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
               </Card>
             )}
 
+            {/* Applicant */}
             {profile && (
               <Card>
                 <CardHeader><CardTitle>Applicant Information</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
-                  <IconRow icon={<User className="w-5 h-5 text-gray-400" />} label="Full Name" value={`${profile.firstName} ${profile.lastName}`} />
-                  <IconRow icon={<Mail className="w-5 h-5 text-gray-400" />} label="Email" value={profile.email} />
-                  <IconRow icon={<Phone className="w-5 h-5 text-gray-400" />} label="Phone" value={profile.phone} />
-                  <IconRow icon={<MapPin className="w-5 h-5 text-gray-400" />} label="Address" value={profile.address} />
+                  <IconRow icon={<User  className="w-5 h-5 text-gray-400" />} label="Full Name" value={`${profile.firstName} ${profile.lastName}`} />
+                  <IconRow icon={<Mail  className="w-5 h-5 text-gray-400" />} label="Email"     value={profile.email} />
+                  <IconRow icon={<Phone className="w-5 h-5 text-gray-400" />} label="Phone"     value={profile.phone} />
+                  <IconRow icon={<MapPin className="w-5 h-5 text-gray-400" />} label="Address"  value={profile.address} />
                   {profile.birthday && (
                     <div className="grid grid-cols-2 gap-4 pt-2">
-                      <DetailRow label="Birthday" value={new Date(profile.birthday).toLocaleDateString()} />
+                      <DetailRow label="Birthday"     value={new Date(profile.birthday).toLocaleDateString()} />
                       <DetailRow label="Civil Status" value={profile.civilStatus ?? '—'} />
                     </div>
                   )}
@@ -444,67 +282,23 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
               </Card>
             )}
 
+            {/* Document generation (approved only) */}
             {request.status === 'approved' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-blue-400" />Document Generation
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {request.file_url ? (
-                    <div className="space-y-3">
-                      <Alert variant="success">Document has been uploaded. The resident can now download it.</Alert>
-                      <a href={request.file_url} target="_blank" rel="noopener noreferrer" download>
-                        <Button variant="outline" className="w-full gap-2"><Download className="w-4 h-4" />Download Uploaded Document</Button>
-                      </a>
-                      {uploadedHash && <HashDisplay hash={uploadedHash} />}
-                      <div className="relative">
-                        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10" /></div>
-                        <div className="relative flex justify-center text-xs"><span className="bg-[#0f0f23] px-2 text-gray-500">or replace document</span></div>
-                      </div>
-                      <Button className="w-full gap-2" onClick={handleGenerate} disabled={generating}>
-                        {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
-                        {generating ? 'Generating...' : 'Re-generate & Download .docx'}
-                      </Button>
-                      {generatedBlob && (
-                        <Button variant="outline" className="w-full gap-2" onClick={handleUploadGenerated} disabled={uploading}>
-                          {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                          {uploading ? 'Uploading...' : `Upload "${generatedFileName}"`}
-                        </Button>
-                      )}
-                      <Button variant="outline" className="w-full gap-2" onClick={() => uploadRef.current?.click()} disabled={uploading}>
-                        <Upload className="w-4 h-4" />Upload Existing File (.docx or .pdf)
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <p className="text-sm text-gray-400">Generate the document using the resident's submitted data, then upload it so they can download it.</p>
-                      <Button className="w-full gap-2" onClick={handleGenerate} disabled={generating}>
-                        {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
-                        {generating ? 'Generating...' : 'Step 1: Generate & Download .docx'}
-                      </Button>
-                      {generatedBlob && (
-                        <Button variant="outline" className="w-full gap-2" onClick={handleUploadGenerated} disabled={uploading}>
-                          {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                          {uploading ? 'Uploading...' : `Step 2: Upload "${generatedFileName}" to Supabase`}
-                        </Button>
-                      )}
-                      <div className="relative">
-                        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10" /></div>
-                        <div className="relative flex justify-center text-xs"><span className="bg-[#0f0f23] px-2 text-gray-500">or upload manually</span></div>
-                      </div>
-                      <Button variant="outline" className="w-full gap-2" onClick={() => uploadRef.current?.click()} disabled={uploading}>
-                        <Upload className="w-4 h-4" />Upload Existing File (.docx or .pdf)
-                      </Button>
-                      {uploadedHash && <HashDisplay hash={uploadedHash} />}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <DocumentGenerationCard
+                fileUrl={request.file_url}
+                uploadedHash={uploadedHash}
+                generating={generating}
+                uploading={uploading}
+                generatedBlob={generatedBlob}
+                generatedFileName={generatedFileName}
+                onGenerate={handleGenerate}
+                onUploadGenerated={handleUploadGenerated}
+                onManualUpload={() => uploadRef.current?.click()}
+              />
             )}
           </div>
 
+          {/* Sidebar */}
           <div className="space-y-6">
             <Card>
               <CardHeader><CardTitle>Actions</CardTitle></CardHeader>
@@ -514,14 +308,18 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
                     <Button className="w-full gap-2" onClick={() => setShowApproveModal(true)}>
                       <CheckCircle className="w-4 h-4" />Approve Request
                     </Button>
-                    <Button variant="outline" className="w-full gap-2 text-red-400 border-red-500/30 hover:bg-red-500/10" onClick={() => setShowRejectModal(true)}>
+                    <Button
+                      variant="outline"
+                      className="w-full gap-2 text-red-400 border-red-500/30 hover:bg-red-500/10"
+                      onClick={() => setShowRejectModal(true)}
+                    >
                       <XCircle className="w-4 h-4" />Reject Request
                     </Button>
                   </>
                 ) : (
                   <div className="text-center py-2">
                     {request.status === 'approved' && <div className="flex items-center gap-2 text-green-400 justify-center"><CheckCircle className="w-5 h-5" /><span className="font-medium">Approved</span></div>}
-                    {request.status === 'rejected' && <div className="flex items-center gap-2 text-red-400 justify-center"><XCircle className="w-5 h-5" /><span className="font-medium">Rejected</span></div>}
+                    {request.status === 'rejected' && <div className="flex items-center gap-2 text-red-400   justify-center"><XCircle    className="w-5 h-5" /><span className="font-medium">Rejected</span></div>}
                   </div>
                 )}
               </CardContent>
@@ -531,7 +329,7 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
               <CardHeader><CardTitle className="flex items-center gap-2"><Clock className="w-5 h-5 text-blue-400" />Processing Info</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <DetailRow label="Standard Processing" value="1-2 business days" />
-                <DetailRow label="Date Submitted" value={new Date(request.created_at).toLocaleString()} />
+                <DetailRow label="Date Submitted"      value={new Date(request.created_at).toLocaleString()} />
                 {request.status !== 'pending' && <DetailRow label="Status" value={request.status.toUpperCase()} />}
               </CardContent>
             </Card>
@@ -542,7 +340,7 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
                   <AlertCircle className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />
                   <div>
                     <p className="text-sm text-yellow-400 font-medium mb-1">Important</p>
-                    <p className="text-xs text-gray-400">After approving, generate the document and upload it so the resident can download it from their requests page.</p>
+                    <p className="text-xs text-gray-400">After approving, generate the document and upload it so the resident can download it.</p>
                   </div>
                 </div>
               </CardContent>
@@ -550,10 +348,11 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
           </div>
         </div>
 
+        {/* Approve modal */}
         <Modal isOpen={showApproveModal} onClose={() => setShowApproveModal(false)} title="Approve Request">
           <div className="space-y-4">
-            <Alert variant="success">You are about to approve this request. After approving you can generate and upload the document.</Alert>
-            <TextArea label="Approval Notes (Optional)" value={approvalNotes} onChange={(e) => setApprovalNotes(e.target.value)} rows={4} placeholder="Add any notes for this approval..." />
+            <Alert variant="success">You are about to approve this request.</Alert>
+            <TextArea label="Approval Notes (Optional)" value={approvalNotes} onChange={e => setApprovalNotes(e.target.value)} rows={4} placeholder="Add any notes for this approval..." />
             <div className="flex gap-3">
               <Button variant="outline" className="flex-1" onClick={() => setShowApproveModal(false)} disabled={processing}>Cancel</Button>
               <Button className="flex-1 gap-2" onClick={handleApprove} disabled={processing}>
@@ -564,10 +363,11 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
           </div>
         </Modal>
 
+        {/* Reject modal */}
         <Modal isOpen={showRejectModal} onClose={() => setShowRejectModal(false)} title="Reject Request">
           <div className="space-y-4">
-            <Alert variant="warning">Please provide a clear reason for rejection. This will be visible to the resident.</Alert>
-            <TextArea label="Reason for Rejection *" value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} rows={4} placeholder="Explain why this request is being rejected..." />
+            <Alert variant="warning">Please provide a clear reason for rejection.</Alert>
+            <TextArea label="Reason for Rejection *" value={rejectReason} onChange={e => setRejectReason(e.target.value)} rows={4} placeholder="Explain why this request is being rejected..." />
             <div className="flex gap-3">
               <Button variant="outline" className="flex-1" onClick={() => setShowRejectModal(false)} disabled={processing}>Cancel</Button>
               <Button className="flex-1 gap-2 bg-red-500 hover:bg-red-600" onClick={handleReject} disabled={processing}>
@@ -582,15 +382,92 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
   );
 }
 
-// ─── Hash Display ─────────────────────────────────────────────────────────────
+// ─── Document Generation Card ─────────────────────────────────────────────────
+
+function DocumentGenerationCard({
+  fileUrl, uploadedHash, generating, uploading,
+  generatedBlob, generatedFileName,
+  onGenerate, onUploadGenerated, onManualUpload,
+}: {
+  fileUrl: string | null; uploadedHash: string | null;
+  generating: boolean; uploading: boolean;
+  generatedBlob: Blob | null; generatedFileName: string;
+  onGenerate: () => void; onUploadGenerated: () => void; onManualUpload: () => void;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <FileText className="w-5 h-5 text-blue-400" />Document Generation
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {fileUrl ? (
+          <div className="space-y-3">
+            <Alert variant="success">Document has been uploaded. The resident can now download it.</Alert>
+            <a href={fileUrl} target="_blank" rel="noopener noreferrer" download>
+              <Button variant="outline" className="w-full gap-2"><Download className="w-4 h-4" />Download Uploaded Document</Button>
+            </a>
+            {uploadedHash && <HashDisplay hash={uploadedHash} />}
+            <Divider label="or replace document" />
+            <GenerateButton generating={generating} label="Re-generate & Download .docx" onClick={onGenerate} />
+            {generatedBlob && <UploadButton uploading={uploading} label={`Upload "${generatedFileName}"`} onClick={onUploadGenerated} />}
+            <ManualUploadButton uploading={uploading} onClick={onManualUpload} />
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-gray-400">Generate the document using the resident's submitted data, then upload it so they can download it.</p>
+            <GenerateButton generating={generating} label="Step 1: Generate & Download .docx" onClick={onGenerate} />
+            {generatedBlob && <UploadButton uploading={uploading} label={`Step 2: Upload "${generatedFileName}" to Supabase`} onClick={onUploadGenerated} />}
+            <Divider label="or upload manually" />
+            <ManualUploadButton uploading={uploading} onClick={onManualUpload} />
+            {uploadedHash && <HashDisplay hash={uploadedHash} />}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Shared sub-components ────────────────────────────────────────────────────
+
+function GenerateButton({ generating, label, onClick }: { generating: boolean; label: string; onClick: () => void }) {
+  return (
+    <Button className="w-full gap-2" onClick={onClick} disabled={generating}>
+      {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+      {generating ? 'Generating...' : label}
+    </Button>
+  );
+}
+
+function UploadButton({ uploading, label, onClick }: { uploading: boolean; label: string; onClick: () => void }) {
+  return (
+    <Button variant="outline" className="w-full gap-2" onClick={onClick} disabled={uploading}>
+      {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+      {uploading ? 'Uploading...' : label}
+    </Button>
+  );
+}
+
+function ManualUploadButton({ uploading, onClick }: { uploading: boolean; onClick: () => void }) {
+  return (
+    <Button variant="outline" className="w-full gap-2" onClick={onClick} disabled={uploading}>
+      <Upload className="w-4 h-4" />Upload Existing File (.docx or .pdf)
+    </Button>
+  );
+}
+
+function Divider({ label }: { label: string }) {
+  return (
+    <div className="relative">
+      <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10" /></div>
+      <div className="relative flex justify-center text-xs"><span className="bg-[#0f0f23] px-2 text-gray-500">{label}</span></div>
+    </div>
+  );
+}
 
 function HashDisplay({ hash }: { hash: string }) {
   const [copied, setCopied] = useState(false);
-  const copy = () => {
-    navigator.clipboard.writeText(hash);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
   return (
     <div className="rounded-lg border border-green-500/30 bg-green-500/5 p-3 space-y-2">
       <div className="flex items-center gap-2">
@@ -598,14 +475,15 @@ function HashDisplay({ hash }: { hash: string }) {
         <span className="text-xs font-medium text-green-400">SHA-256 Document Hash</span>
       </div>
       <p className="font-mono text-xs text-gray-300 break-all leading-relaxed">{hash}</p>
-      <button onClick={copy} className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
+      <button
+        onClick={() => { navigator.clipboard.writeText(hash); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+        className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+      >
         {copied ? '✓ Copied!' : 'Copy hash'}
       </button>
     </div>
   );
 }
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
@@ -626,4 +504,44 @@ function IconRow({ icon, label, value }: { icon: React.ReactNode; label: string;
       </div>
     </div>
   );
+}
+
+// ─── Extra details builder ────────────────────────────────────────────────────
+
+function buildExtraDetails(request: RequestDetail): { label: string; value: string | null }[] {
+  switch (request.document_type) {
+    case 'barangay-clearance':
+      return [
+        { label: 'Purok / Zone',      value: request.purok },
+        { label: 'CTC Number',        value: request.ctc_no },
+        { label: 'CTC Date Issued',   value: request.ctc_date_issued },
+        { label: 'CTC Place Issued',  value: request.ctc_place_issued },
+      ];
+    case 'business-clearance':
+      return [
+        { label: 'Business Name',     value: request.business_name },
+        { label: 'Location / Purok',  value: request.purok },
+      ];
+    case 'certification-of-death':
+      return [
+        { label: 'Deceased Name',     value: request.deceased_name },
+        { label: 'Age at Death',      value: request.deceased_age },
+        { label: 'Date of Death',     value: request.date_of_death },
+        { label: 'Place of Death',    value: request.place_of_death },
+        { label: 'Relationship',      value: request.relationship_to_deceased },
+      ];
+    case 'job-seeker':
+      return [
+        { label: 'BCN Number',        value: request.bcn_no },
+        { label: 'Purok / Zone',      value: request.purok },
+        { label: 'Years of Residency', value: request.years_of_residency },
+      ];
+    case 'oath-of-undertaking':
+      return [
+        { label: 'Purok / Zone',      value: request.purok },
+        { label: 'Years of Residency', value: request.years_of_residency },
+      ];
+    default:
+      return [];
+  }
 }
