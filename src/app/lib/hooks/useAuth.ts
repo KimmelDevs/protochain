@@ -34,7 +34,7 @@ export function useAuthActions() {
         return { success: true };
       }
 
-      router.push(metadata.role === 'admin' ? '/admin/dashboard' : '/resident/dashboard');
+      router.push(metadata.role === 'admin' ? '/admindashboard' : '/dashboard');
       return { success: true };
     } catch (err: any) {
       return { success: false, error: err.message || 'An unexpected error occurred.' };
