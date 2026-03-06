@@ -8,7 +8,7 @@ interface TableProps {
 export function Table({ children, className = '' }: TableProps) {
   return (
     <div className="overflow-x-auto">
-      <table className={`w-full ${className}`}>
+      <table className={`w-full border border-gray-200 dark:border-white/10 transition-colors duration-300 ${className}`}>
         {children}
       </table>
     </div>
@@ -22,7 +22,7 @@ interface TableHeaderProps {
 
 export function TableHeader({ children, className = '' }: TableHeaderProps) {
   return (
-    <thead className={`border-b border-white/10 ${className}`}>
+    <thead className={`border-b border-gray-200 dark:border-white/10 transition-colors duration-300 ${className}`}>
       {children}
     </thead>
   );
@@ -51,8 +51,8 @@ export function TableRow({ children, className = '', hover = true }: TableRowPro
   return (
     <tr
       className={`
-        border-b border-white/5
-        ${hover ? 'hover:bg-white/5 transition-colors' : ''}
+        border-b border-gray-200 dark:border-white/10 transition-colors duration-300
+        ${hover ? 'hover:bg-gray-100 dark:hover:bg-white/5 transition-colors duration-300' : ''}
         ${className}
       `}
     >
@@ -70,7 +70,8 @@ export function TableHead({ children, className = '' }: TableHeadProps) {
   return (
     <th
       className={`
-        px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider
+        px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-400 uppercase tracking-wider
+        transition-colors duration-300
         ${className}
       `}
     >
@@ -86,7 +87,10 @@ interface TableCellProps extends React.TdHTMLAttributes<HTMLTableCellElement> {
 
 export function TableCell({ children, className = '', ...props }: TableCellProps) {
   return (
-    <td className={`px-6 py-4 text-sm text-gray-300 ${className}`} {...props}>
+    <td
+      className={`px-6 py-4 text-sm text-gray-900 dark:text-gray-300 transition-colors duration-300 ${className}`}
+      {...props}
+    >
       {children}
     </td>
   );

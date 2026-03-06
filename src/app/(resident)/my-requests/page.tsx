@@ -30,7 +30,21 @@ export default function MyRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [darkMode, setDarkMode] = useState(false);
 
+  // Load theme from localStorage
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    setDarkMode(savedTheme === 'dark');
+  }, []);
+
+  // Apply theme
+  useEffect(() => {
+    if (darkMode) document.documentElement.classList.add('dark');
+    else document.documentElement.classList.remove('dark');
+  }, [darkMode]);
+
+  // Load user requests
   useEffect(() => {
     const load = async () => {
       try {
@@ -66,29 +80,35 @@ export default function MyRequestsPage() {
     r.purpose === 'others' && r.custom_purpose ? r.custom_purpose : r.purpose ?? '—';
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 text-blue-400 animate-spin" /></div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#0f0f23] transition-colors duration-300">
+        <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen p-4 lg:p-8">
+    <div className="min-h-screen p-4 lg:p-8 bg-white dark:bg-[#0f0f23] transition-colors duration-300 text-gray-900 dark:text-white">
       <div className="max-w-7xl mx-auto">
+
+        {/* Header */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">My Requests</h1>
-          <p className="text-gray-400">Track and manage all your document requests</p>
+          <h1 className="text-3xl md:text-4xl font-bold mb-2">My Requests</h1>
+          <p className="text-gray-500 dark:text-gray-400">Track and manage all your document requests</p>
         </motion.div>
 
         {/* Stats */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
           className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           {[
-            { label: 'Total', value: requests.length, color: 'text-white' },
+            { label: 'Total', value: requests.length, color: 'text-gray-900 dark:text-white' },
             { label: 'Pending', value: count('pending'), color: 'text-yellow-400' },
             { label: 'Approved', value: count('approved'), color: 'text-green-400' },
             { label: 'Rejected', value: count('rejected'), color: 'text-red-400' },
           ].map(s => (
             <Card key={s.label}><CardContent className="p-4">
               <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
-              <div className="text-sm text-gray-400">{s.label}</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">{s.label}</div>
             </CardContent></Card>
           ))}
         </motion.div>
@@ -100,16 +120,26 @@ export default function MyRequestsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <Input placeholder="Search by ID or document type..." value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
+                  <Input
+                    placeholder="Search by ID or document type..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 text-gray-900 dark:text-white"
+                  />
                 </div>
-                <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
+
+                {/* Fixed Select usage: no darkMode prop */}
+                <Select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
                   options={[
                     { value: 'all', label: 'All Status' },
                     { value: 'pending', label: 'Pending' },
                     { value: 'approved', label: 'Approved' },
                     { value: 'rejected', label: 'Rejected' },
-                  ]} />
+                  ]}
+                  darkMode={darkMode} // ✅ pass darkMode from page state
+                />
               </div>
             </CardContent>
           </Card>
@@ -123,8 +153,8 @@ export default function MyRequestsPage() {
               {requests.length === 0 ? (
                 <div className="text-center py-16">
                   <FileText className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-                  <p className="text-white font-medium mb-1">No requests yet</p>
-                  <p className="text-gray-400 text-sm mb-6">You haven't submitted any document requests.</p>
+                  <p className="text-gray-900 dark:text-white font-medium mb-1">No requests yet</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">You haven't submitted any document requests.</p>
                   <Link href="/request-document"><Button>Request a Document</Button></Link>
                 </div>
               ) : (
@@ -149,9 +179,7 @@ export default function MyRequestsPage() {
                     ) : (
                       filtered.map((req) => (
                         <TableRow key={req.id}>
-                          <TableCell className="font-mono text-xs text-gray-400">
-                            {req.id.slice(0, 8).toUpperCase()}
-                          </TableCell>
+                          <TableCell className="font-mono text-xs">{req.id.slice(0, 8).toUpperCase()}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <FileText className="w-4 h-4 text-blue-400 shrink-0" />
@@ -160,7 +188,7 @@ export default function MyRequestsPage() {
                           </TableCell>
                           <TableCell className="capitalize">{displayPurpose(req)}</TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-1 text-gray-400">
+                            <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
                               <Calendar className="w-4 h-4" />
                               {new Date(req.created_at).toLocaleDateString()}
                             </div>

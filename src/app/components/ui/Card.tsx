@@ -10,7 +10,8 @@ export function Card({ children, className = '', hover = false }: CardProps) {
   return (
     <div
       className={`
-        rounded-xl bg-white/5 border border-white/10 backdrop-blur-sm
+        rounded-xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 backdrop-blur-sm
+        transition-colors duration-300
         ${hover ? 'hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/20 transition-all duration-300' : ''}
         ${className}
       `}
@@ -27,7 +28,7 @@ interface CardHeaderProps {
 
 export function CardHeader({ children, className = '' }: CardHeaderProps) {
   return (
-    <div className={`p-6 border-b border-white/10 ${className}`}>
+    <div className={`p-6 border-b border-gray-200 dark:border-white/10 transition-colors duration-300 ${className}`}>
       {children}
     </div>
   );
@@ -40,7 +41,7 @@ interface CardTitleProps {
 
 export function CardTitle({ children, className = '' }: CardTitleProps) {
   return (
-    <h3 className={`text-lg font-semibold text-white ${className}`}>
+    <h3 className={`text-lg font-semibold text-gray-900 dark:text-white transition-colors duration-300 ${className}`}>
       {children}
     </h3>
   );
@@ -53,7 +54,7 @@ interface CardContentProps {
 
 export function CardContent({ children, className = '' }: CardContentProps) {
   return (
-    <div className={`p-6 ${className}`}>
+    <div className={`p-6 text-gray-900 dark:text-white transition-colors duration-300 ${className}`}>
       {children}
     </div>
   );
@@ -66,7 +67,7 @@ interface CardFooterProps {
 
 export function CardFooter({ children, className = '' }: CardFooterProps) {
   return (
-    <div className={`p-6 border-t border-white/10 ${className}`}>
+    <div className={`p-6 border-t border-gray-200 dark:border-white/10 transition-colors duration-300 ${className}`}>
       {children}
     </div>
   );
