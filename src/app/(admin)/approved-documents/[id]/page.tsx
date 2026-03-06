@@ -18,7 +18,7 @@ import {
   normaliseProfile,
   sha256Hex,
   generateDocument,
-} from '@/app/lib/utils/docGenerators';
+} from '@/app/lib/utils/Docgenerators';
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
