@@ -20,8 +20,6 @@ import {
   generateDocument,
 } from '@/app/lib/utils/Docgenerators';
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
-
 export default function ApprovedDocumentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const uploadRef = useRef<HTMLInputElement>(null);
@@ -41,7 +39,7 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
   useEffect(() => {
     const load = async () => {
       try {
-        // API route decrypts SENSITIVE_FIELDS (purok, ctc_no, etc.) server-side
+        // status=approved filter + full server-side decryption
         const reqRes = await fetch(`/api/requests?id=${id}&status=approved`);
         if (!reqRes.ok) { setNotFound(true); return; }
         const reqJson = await reqRes.json();
@@ -50,8 +48,6 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
         setRequest(reqData);
         if (reqData.file_hash) setUploadedHash(reqData.file_hash);
 
-        // API route decrypts phone/address/birthday server-side.
-        // normaliseProfile handles both snake_case and camelCase column names.
         const profileRes = await fetch(`/api/profile?id=${reqData.user_id}`);
         if (profileRes.ok) {
           const profileJson = await profileRes.json();
@@ -79,13 +75,13 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
       URL.revokeObjectURL(url);
       setGeneratedBlob(blob);
       setGeneratedFileName(fileName);
-      setSuccess('Document generated and downloaded! Review it, then upload it to make it available to the resident.');
+      setSuccess('Document generated! Review it, then upload it to share with the resident.');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to generate document.');
     } finally { setGenerating(false); }
   };
 
-  // ── Upload ─────────────────────────────────────────────────────────────────
+  // ── Upload — uses PATCH /api/requests ────────────────────────────────────
 
   const handleUploadGenerated = async () => {
     if (generatedBlob && generatedFileName) await uploadFile(generatedBlob, generatedFileName);
@@ -108,11 +104,13 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
 
       const { data: urlData } = supabase.storage.from('documents').getPublicUrl(path);
 
-      const { error: updateError } = await supabase
-        .from('requests')
-        .update({ file_url: urlData.publicUrl, file_hash: hash })
-        .eq('id', id);
-      if (updateError) throw updateError;
+      const res = await fetch(`/api/requests?id=${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file_url: urlData.publicUrl, file_hash: hash }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? 'Failed to update request.');
 
       setRequest(prev => prev ? { ...prev, file_url: urlData.publicUrl, file_hash: hash } : prev);
       setUploadedHash(hash);
@@ -139,16 +137,10 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
     </div>
   );
 
-  // ── Derived values ─────────────────────────────────────────────────────────
-
   const displayPurpose = request.purpose === 'others' && request.custom_purpose
-    ? request.custom_purpose
-    : request.purpose;
-
-  const approvedDate   = request.processed_at ?? request.created_at;
-  const extraDetails   = buildExtraDetails(request);
-
-  // ── Render ─────────────────────────────────────────────────────────────────
+    ? request.custom_purpose : request.purpose;
+  const approvedDate = request.processed_at ?? request.created_at;
+  const extraDetails = buildExtraDetails(request);
 
   return (
     <div className="min-h-screen p-4 lg:p-8">
@@ -175,7 +167,6 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
 
-            {/* Request info */}
             <Card>
               <CardHeader><CardTitle>Request Information</CardTitle></CardHeader>
               <CardContent>
@@ -200,7 +191,6 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
               </CardContent>
             </Card>
 
-            {/* Extra doc-type fields */}
             {extraDetails.length > 0 && (
               <Card>
                 <CardHeader><CardTitle>Submitted Information</CardTitle></CardHeader>
@@ -212,7 +202,6 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
               </Card>
             )}
 
-            {/* Applicant */}
             {profile && (
               <Card>
                 <CardHeader><CardTitle>Applicant Information</CardTitle></CardHeader>
@@ -231,7 +220,6 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
               </Card>
             )}
 
-            {/* Document generation — always shown since request is approved */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -241,7 +229,7 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
               <CardContent className="space-y-4">
                 {request.file_url ? (
                   <div className="space-y-3">
-                    <Alert variant="success">Document has been uploaded. The resident can now download it.</Alert>
+                    <Alert variant="success">Document uploaded. The resident can now download it.</Alert>
                     <a href={request.file_url} target="_blank" rel="noopener noreferrer" download>
                       <Button variant="outline" className="w-full gap-2">
                         <Download className="w-4 h-4" />Download Uploaded Document
@@ -250,9 +238,7 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
                     {uploadedHash && <HashDisplay hash={uploadedHash} />}
                     <Divider label="or replace document" />
                     <GenerateButton generating={generating} label="Re-generate & Download .docx" onClick={handleGenerate} />
-                    {generatedBlob && (
-                      <UploadButton uploading={uploading} label={`Upload "${generatedFileName}"`} onClick={handleUploadGenerated} />
-                    )}
+                    {generatedBlob && <UploadButton uploading={uploading} label={`Upload "${generatedFileName}"`} onClick={handleUploadGenerated} />}
                     <Button variant="outline" className="w-full gap-2" onClick={() => uploadRef.current?.click()} disabled={uploading}>
                       <Upload className="w-4 h-4" />Upload Existing File (.docx or .pdf)
                     </Button>
@@ -261,9 +247,7 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
                   <div className="space-y-3">
                     <p className="text-sm text-gray-400">Generate the document using the resident's data, then upload it so they can download it.</p>
                     <GenerateButton generating={generating} label="Step 1: Generate & Download .docx" onClick={handleGenerate} />
-                    {generatedBlob && (
-                      <UploadButton uploading={uploading} label={`Step 2: Upload "${generatedFileName}" to Supabase`} onClick={handleUploadGenerated} />
-                    )}
+                    {generatedBlob && <UploadButton uploading={uploading} label={`Step 2: Upload "${generatedFileName}" to Supabase`} onClick={handleUploadGenerated} />}
                     <Divider label="or upload manually" />
                     <Button variant="outline" className="w-full gap-2" onClick={() => uploadRef.current?.click()} disabled={uploading}>
                       <Upload className="w-4 h-4" />Upload Existing File (.docx or .pdf)
@@ -275,14 +259,9 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
             </Card>
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-6">
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-400" />Status
-                </CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle className="flex items-center gap-2"><CheckCircle className="w-5 h-5 text-green-400" />Status</CardTitle></CardHeader>
               <CardContent>
                 <div className="flex items-center gap-2 text-green-400">
                   <CheckCircle className="w-5 h-5" /><span className="font-medium">Approved</span>
@@ -291,11 +270,7 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-blue-400" />Processing Info
-                </CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle className="flex items-center gap-2"><Clock className="w-5 h-5 text-blue-400" />Processing Info</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <DetailRow label="Date Submitted" value={new Date(request.created_at).toLocaleString()} />
                 <DetailRow label="Date Approved"  value={new Date(approvedDate).toLocaleString()} />
@@ -307,8 +282,6 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
     </div>
   );
 }
-
-// ─── Shared sub-components ────────────────────────────────────────────────────
 
 function GenerateButton({ generating, label, onClick }: { generating: boolean; label: string; onClick: () => void }) {
   return (
@@ -378,8 +351,6 @@ function IconRow({ icon, label, value }: { icon: React.ReactNode; label: string;
     </div>
   );
 }
-
-// ─── Extra details builder ────────────────────────────────────────────────────
 
 function buildExtraDetails(request: RequestDetail): { label: string; value: string | null }[] {
   switch (request.document_type) {

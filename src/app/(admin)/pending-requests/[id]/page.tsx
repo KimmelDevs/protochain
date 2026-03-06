@@ -24,34 +24,32 @@ import {
   generateDocument,
 } from '@/app/lib/utils/Docgenerators';
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
-
 export default function ReviewRequestPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
   const uploadRef = useRef<HTMLInputElement>(null);
 
-  const [request, setRequest]               = useState<RequestDetail | null>(null);
-  const [profile, setProfile]               = useState<Profile | null>(null);
-  const [loading, setLoading]               = useState(true);
-  const [notFound, setNotFound]             = useState(false);
+  const [request, setRequest]                   = useState<RequestDetail | null>(null);
+  const [profile, setProfile]                   = useState<Profile | null>(null);
+  const [loading, setLoading]                   = useState(true);
+  const [notFound, setNotFound]                 = useState(false);
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showRejectModal, setShowRejectModal]   = useState(false);
-  const [rejectReason, setRejectReason]     = useState('');
-  const [approvalNotes, setApprovalNotes]   = useState('');
-  const [processing, setProcessing]         = useState(false);
-  const [error, setError]                   = useState('');
-  const [success, setSuccess]               = useState('');
-  const [generating, setGenerating]         = useState(false);
-  const [uploading, setUploading]           = useState(false);
-  const [generatedBlob, setGeneratedBlob]   = useState<Blob | null>(null);
+  const [rejectReason, setRejectReason]         = useState('');
+  const [approvalNotes, setApprovalNotes]       = useState('');
+  const [processing, setProcessing]             = useState(false);
+  const [error, setError]                       = useState('');
+  const [success, setSuccess]                   = useState('');
+  const [generating, setGenerating]             = useState(false);
+  const [uploading, setUploading]               = useState(false);
+  const [generatedBlob, setGeneratedBlob]       = useState<Blob | null>(null);
   const [generatedFileName, setGeneratedFileName] = useState('');
-  const [uploadedHash, setUploadedHash]     = useState<string | null>(null);
+  const [uploadedHash, setUploadedHash]         = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
       try {
-        // API route decrypts SENSITIVE_FIELDS (purok, ctc_no, etc.) server-side
+        // API route decrypts ALL sensitive fields server-side
         const reqRes = await fetch(`/api/requests?id=${id}`);
         if (!reqRes.ok) { setNotFound(true); return; }
         const reqJson = await reqRes.json();
@@ -60,8 +58,6 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
         setRequest(reqData);
         if (reqData.file_hash) setUploadedHash(reqData.file_hash);
 
-        // API route decrypts phone/address/birthday server-side.
-        // normaliseProfile handles both snake_case and camelCase column names.
         const profileRes = await fetch(`/api/profile?id=${reqData.user_id}`);
         if (profileRes.ok) {
           const profileJson = await profileRes.json();
@@ -77,16 +73,23 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
   }, [id]);
 
   // ── Approve ────────────────────────────────────────────────────────────────
+  // Uses PATCH /api/requests so notes get encrypted server-side
 
   const handleApprove = async () => {
     setProcessing(true); setError('');
     try {
-      const { error: updateError } = await supabase
-        .from('requests')
-        .update({ status: 'approved', notes: approvalNotes || null, processed_at: new Date().toISOString() })
-        .eq('id', id);
-      if (updateError) throw updateError;
-      setRequest(prev => prev ? { ...prev, status: 'approved' } : prev);
+      const res = await fetch(`/api/requests?id=${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status:       'approved',
+          notes:        approvalNotes || null,
+          processed_at: new Date().toISOString(),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? 'Failed to approve request.');
+      setRequest(prev => prev ? { ...prev, status: 'approved', notes: approvalNotes || null } : prev);
       setShowApproveModal(false);
       setSuccess('Request approved! Now generate and upload the document below.');
     } catch (err: unknown) {
@@ -95,16 +98,23 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
   };
 
   // ── Reject ─────────────────────────────────────────────────────────────────
+  // Uses PATCH /api/requests so reject reason gets encrypted server-side
 
   const handleReject = async () => {
     if (!rejectReason.trim()) { setError('Please provide a reason for rejection.'); return; }
     setProcessing(true); setError('');
     try {
-      const { error: updateError } = await supabase
-        .from('requests')
-        .update({ status: 'rejected', notes: rejectReason, processed_at: new Date().toISOString() })
-        .eq('id', id);
-      if (updateError) throw updateError;
+      const res = await fetch(`/api/requests?id=${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status:       'rejected',
+          notes:        rejectReason,
+          processed_at: new Date().toISOString(),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? 'Failed to reject request.');
       setShowRejectModal(false);
       router.push('/pending-requests');
     } catch (err: unknown) {
@@ -119,20 +129,20 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
     setGenerating(true); setError('');
     try {
       const { blob, fileName } = await generateDocument(request, profile);
-      // Trigger browser download
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url; a.download = fileName; a.click();
       URL.revokeObjectURL(url);
       setGeneratedBlob(blob);
       setGeneratedFileName(fileName);
-      setSuccess('Document generated and downloaded! Review it, then click "Upload to Supabase" to make it available to the resident.');
+      setSuccess('Document generated! Review it, then click "Upload to Supabase" to share it with the resident.');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to generate document.');
     } finally { setGenerating(false); }
   };
 
   // ── Upload ─────────────────────────────────────────────────────────────────
+  // Uses PATCH /api/requests so file_url and file_hash are written via API
 
   const handleUploadGenerated = async () => {
     if (generatedBlob && generatedFileName) await uploadFile(generatedBlob, generatedFileName);
@@ -155,11 +165,14 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
 
       const { data: urlData } = supabase.storage.from('documents').getPublicUrl(path);
 
-      const { error: updateError } = await supabase
-        .from('requests')
-        .update({ file_url: urlData.publicUrl, file_hash: hash })
-        .eq('id', id);
-      if (updateError) throw updateError;
+      // Write file_url + file_hash via API (not direct Supabase)
+      const res = await fetch(`/api/requests?id=${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file_url: urlData.publicUrl, file_hash: hash }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? 'Failed to update request.');
 
       setRequest(prev => prev ? { ...prev, file_url: urlData.publicUrl, file_hash: hash } : prev);
       setUploadedHash(hash);
@@ -186,19 +199,12 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
     </div>
   );
 
-  // ── Derived values ─────────────────────────────────────────────────────────
-
   const displayPurpose = request.purpose === 'others' && request.custom_purpose
-    ? request.custom_purpose
-    : request.purpose;
-
+    ? request.custom_purpose : request.purpose;
   const daysWaiting = Math.floor(
     (Date.now() - new Date(request.created_at).getTime()) / (1000 * 60 * 60 * 24)
   );
-
   const extraDetails = buildExtraDetails(request);
-
-  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen p-4 lg:p-8">
@@ -231,8 +237,6 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-
-            {/* Request info */}
             <Card>
               <CardHeader><CardTitle>Request Information</CardTitle></CardHeader>
               <CardContent>
@@ -251,7 +255,6 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
               </CardContent>
             </Card>
 
-            {/* Extra doc-type fields */}
             {extraDetails.length > 0 && (
               <Card>
                 <CardHeader><CardTitle>Submitted Information</CardTitle></CardHeader>
@@ -263,7 +266,6 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
               </Card>
             )}
 
-            {/* Applicant */}
             {profile && (
               <Card>
                 <CardHeader><CardTitle>Applicant Information</CardTitle></CardHeader>
@@ -282,7 +284,6 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
               </Card>
             )}
 
-            {/* Document generation (approved only) */}
             {request.status === 'approved' && (
               <DocumentGenerationCard
                 fileUrl={request.file_url}
@@ -298,7 +299,6 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
             )}
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-6">
             <Card>
               <CardHeader><CardTitle>Actions</CardTitle></CardHeader>
@@ -308,11 +308,9 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
                     <Button className="w-full gap-2" onClick={() => setShowApproveModal(true)}>
                       <CheckCircle className="w-4 h-4" />Approve Request
                     </Button>
-                    <Button
-                      variant="outline"
+                    <Button variant="outline"
                       className="w-full gap-2 text-red-400 border-red-500/30 hover:bg-red-500/10"
-                      onClick={() => setShowRejectModal(true)}
-                    >
+                      onClick={() => setShowRejectModal(true)}>
                       <XCircle className="w-4 h-4" />Reject Request
                     </Button>
                   </>
@@ -348,7 +346,6 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
           </div>
         </div>
 
-        {/* Approve modal */}
         <Modal isOpen={showApproveModal} onClose={() => setShowApproveModal(false)} title="Approve Request">
           <div className="space-y-4">
             <Alert variant="success">You are about to approve this request.</Alert>
@@ -363,7 +360,6 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
           </div>
         </Modal>
 
-        {/* Reject modal */}
         <Modal isOpen={showRejectModal} onClose={() => setShowRejectModal(false)} title="Reject Request">
           <div className="space-y-4">
             <Alert variant="warning">Please provide a clear reason for rejection.</Alert>
@@ -404,7 +400,7 @@ function DocumentGenerationCard({
       <CardContent className="space-y-4">
         {fileUrl ? (
           <div className="space-y-3">
-            <Alert variant="success">Document has been uploaded. The resident can now download it.</Alert>
+            <Alert variant="success">Document uploaded. The resident can now download it.</Alert>
             <a href={fileUrl} target="_blank" rel="noopener noreferrer" download>
               <Button variant="outline" className="w-full gap-2"><Download className="w-4 h-4" />Download Uploaded Document</Button>
             </a>
@@ -416,7 +412,7 @@ function DocumentGenerationCard({
           </div>
         ) : (
           <div className="space-y-3">
-            <p className="text-sm text-gray-400">Generate the document using the resident's submitted data, then upload it so they can download it.</p>
+            <p className="text-sm text-gray-400">Generate the document using the resident's data, then upload it so they can download it.</p>
             <GenerateButton generating={generating} label="Step 1: Generate & Download .docx" onClick={onGenerate} />
             {generatedBlob && <UploadButton uploading={uploading} label={`Step 2: Upload "${generatedFileName}" to Supabase`} onClick={onUploadGenerated} />}
             <Divider label="or upload manually" />
@@ -428,8 +424,6 @@ function DocumentGenerationCard({
     </Card>
   );
 }
-
-// ─── Shared sub-components ────────────────────────────────────────────────────
 
 function GenerateButton({ generating, label, onClick }: { generating: boolean; label: string; onClick: () => void }) {
   return (
@@ -505,8 +499,6 @@ function IconRow({ icon, label, value }: { icon: React.ReactNode; label: string;
     </div>
   );
 }
-
-// ─── Extra details builder ────────────────────────────────────────────────────
 
 function buildExtraDetails(request: RequestDetail): { label: string; value: string | null }[] {
   switch (request.document_type) {

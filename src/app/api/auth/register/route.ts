@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
         birthday:    profile.birthday,
         civilStatus: profile.civilStatus,
         role:        profile.role ?? 'resident',
+    avatar_base64:  profile.avatar_base64 ?? null,
       },
       [...SENSITIVE_FIELDS]
     );
