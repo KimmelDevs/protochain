@@ -138,7 +138,6 @@ export default function MyRequestsPage() {
                     { value: 'approved', label: 'Approved' },
                     { value: 'rejected', label: 'Rejected' },
                   ]}
-                  darkMode={darkMode} // ✅ pass darkMode from page state
                 />
               </div>
             </CardContent>
