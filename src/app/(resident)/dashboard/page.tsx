@@ -78,7 +78,7 @@ export default function ResidentDashboard() {
 
   const stats = [
     { label: 'Total Requests', value: total,    icon: FileText,    color: 'from-blue-500 to-blue-600',    bg: 'bg-blue-500/10',    border: 'border-blue-500/30' },
-    { label: 'Pending',        value: pending,  icon: Clock,       color: 'from-yellow-500 to-yellow-600', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30' },
+    { label: 'Pending',        value: pending,  icon: Clock,       color: 'from-yellow-500 to-yellow-600', bg: 'bg-white dark:bg-white/5', border: 'border-yellow-500/30' },
     { label: 'Approved',       value: approved, icon: CheckCircle, color: 'from-green-500 to-green-600',  bg: 'bg-green-500/10',   border: 'border-green-500/30' },
     { label: 'Rejected',       value: rejected, icon: XCircle,     color: 'from-red-500 to-red-600',      bg: 'bg-red-500/10',     border: 'border-red-500/30' },
   ];
