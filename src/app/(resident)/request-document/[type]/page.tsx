@@ -66,11 +66,11 @@ function FloatInput({ label, value, onChange, type = 'text', required = false }:
     <div className="relative">
       <input type={type} value={value} onChange={(e) => onChange(e.target.value)}
         placeholder=" " required={required}
-        className={`peer w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border border-white/20 text-white
+        className={`peer w-full px-4 pt-6 pb-2 rounded-lg bg-white dark:bg-[#1c1c34] border border-gray-300 dark:border-white/20 text-black dark:text-white
           focus:outline-none focus:ring-2 focus:ring-primary-500
           ${type === 'date' ? '[&::-webkit-calendar-picker-indicator]:invert' : ''}`}
       />
-      <label className={`absolute left-4 text-gray-400 text-sm transition-all pointer-events-none
+      <label className={`absolute left-4 text-gray-500 dark:text-gray-400 text-sm transition-all pointer-events-none
         ${value ? 'top-2 text-xs' : 'top-1/2 -translate-y-1/2'}
         peer-focus:top-2 peer-focus:text-xs peer-focus:translate-y-0`}>
         {label}{required ? ' *' : ''}
@@ -111,7 +111,6 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { router.push('/login'); return; }
 
-        // ✅ Use API route — decrypts phone, address, birthday server-side
         const res = await fetch(`/api/profile?id=${user.id}`);
         if (!res.ok) throw new Error('Failed to load profile');
         const json = await res.json();
@@ -128,21 +127,11 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
   const validate = (): boolean => {
     if (!purpose) { setError('Please select a purpose.'); return false; }
     if (purpose === 'others' && !customPurpose.trim()) { setError('Please specify your purpose.'); return false; }
-    if (type === 'barangay-clearance' && (!purok.trim() || !ctcNo.trim() || !ctcDateIssued || !ctcPlaceIssued.trim())) {
-      setError('Please fill in all required fields.'); return false;
-    }
-    if (type === 'business-clearance' && (!businessName.trim() || !purok.trim())) {
-      setError('Please fill in all required fields.'); return false;
-    }
-    if (type === 'certification-of-death' && (!deceasedName.trim() || !deceasedAge.trim() || !dateOfDeath || !placeOfDeath.trim() || !relationship.trim())) {
-      setError('Please fill in all deceased person details.'); return false;
-    }
-    if (type === 'job-seeker' && (!purok.trim() || !yearsOfResidency.trim() || !bcnNo.trim())) {
-      setError('Please fill in all required fields.'); return false;
-    }
-    if (type === 'oath-of-undertaking' && (!purok.trim() || !yearsOfResidency.trim())) {
-      setError('Please fill in all required fields.'); return false;
-    }
+    if (type === 'barangay-clearance' && (!purok.trim() || !ctcNo.trim() || !ctcDateIssued || !ctcPlaceIssued.trim())) { setError('Please fill in all required fields.'); return false; }
+    if (type === 'business-clearance' && (!businessName.trim() || !purok.trim())) { setError('Please fill in all required fields.'); return false; }
+    if (type === 'certification-of-death' && (!deceasedName.trim() || !deceasedAge.trim() || !dateOfDeath || !placeOfDeath.trim() || !relationship.trim())) { setError('Please fill in all deceased person details.'); return false; }
+    if (type === 'job-seeker' && (!purok.trim() || !yearsOfResidency.trim() || !bcnNo.trim())) { setError('Please fill in all required fields.'); return false; }
+    if (type === 'oath-of-undertaking' && (!purok.trim() || !yearsOfResidency.trim())) { setError('Please fill in all required fields.'); return false; }
     return true;
   };
 
@@ -154,7 +143,6 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
 
     setSubmitting(true);
     try {
-      // ✅ Use API route — encrypts sensitive request fields server-side
       const res = await fetch('/api/requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -184,50 +172,54 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
   };
 
   if (!config) return (
-    <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center">
-      <Card><CardContent className="p-8 text-center">
-        <p className="text-lg font-semibold text-white mb-2">Not Found</p>
-        <p className="text-gray-400 mb-6">This document type does not exist.</p>
-        <Link href="/request-document"><Button>Back to Document Types</Button></Link>
-      </CardContent></Card>
+    <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center bg-white dark:bg-[#0f0f23]">
+      <Card className="bg-white dark:bg-[#1c1c34] border border-gray-300 dark:border-white/20">
+        <CardContent className="p-8 text-center">
+          <p className="text-lg font-semibold text-black dark:text-white mb-2">Not Found</p>
+          <p className="text-gray-500 dark:text-gray-400 mb-6">This document type does not exist.</p>
+          <Link href="/request-document"><Button>Back to Document Types</Button></Link>
+        </CardContent>
+      </Card>
     </div>
   );
 
   if (submitted) return (
-    <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center">
+    <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center bg-white dark:bg-[#0f0f23]">
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
-        <Card><CardContent className="p-10 text-center max-w-md">
-          <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-white mb-2">Request Submitted!</h2>
-          <p className="text-gray-400 mb-6">
-            Your <span className="text-white font-medium">{config.title}</span> request has been received.
-            You'll be notified once it's ready.
-          </p>
-          <div className="flex flex-col gap-3">
-            <Link href="/my-requests"><Button className="w-full">View My Requests</Button></Link>
-            <Link href="/request-document"><Button variant="outline" className="w-full">Request Another</Button></Link>
-          </div>
-        </CardContent></Card>
+        <Card className="bg-white dark:bg-[#1c1c34] border border-gray-300 dark:border-white/20">
+          <CardContent className="p-10 text-center max-w-md">
+            <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-black dark:text-white mb-2">Request Submitted!</h2>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">
+              Your <span className="text-black dark:text-white font-medium">{config.title}</span> request has been received.
+              You'll be notified once it's ready.
+            </p>
+            <div className="flex flex-col gap-3">
+              <Link href="/my-requests"><Button className="w-full">View My Requests</Button></Link>
+              <Link href="/request-document"><Button variant="outline" className="w-full">Request Another</Button></Link>
+            </div>
+          </CardContent>
+        </Card>
       </motion.div>
     </div>
   );
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#0f0f23]">
       <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
     </div>
   );
 
   return (
-    <div className="min-h-screen p-4 lg:p-8">
+    <div className="min-h-screen p-4 lg:p-8 bg-white dark:bg-[#0f0f23]">
       <div className="max-w-2xl mx-auto">
         <Link href="/request-document">
-          <Button variant="ghost" className="mb-6 gap-2"><ArrowLeft className="w-4 h-4" />Back</Button>
+          <Button variant="ghost" className="mb-6 gap-2 text-black dark:text-white"><ArrowLeft className="w-4 h-4" />Back</Button>
         </Link>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-          <h1 className="text-3xl font-bold text-white mb-2">{config.title}</h1>
-          <p className="text-gray-400">{config.description}</p>
+          <h1 className="text-3xl font-bold text-black dark:text-white mb-2">{config.title}</h1>
+          <p className="text-gray-700 dark:text-gray-400">{config.description}</p>
         </motion.div>
 
         {error && (
@@ -237,12 +229,13 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <Card>
-            <CardHeader><CardTitle>Your Information</CardTitle></CardHeader>
+          {/* Cards and inputs below updated for light/dark mode */}
+                    <Card className="bg-white dark:bg-[#1c1c34] border border-gray-300 dark:border-white/20">
+            <CardHeader><CardTitle className="text-black dark:text-white">Your Information</CardTitle></CardHeader>
             <CardContent>
-              <p className="text-xs text-gray-500 mb-4">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
                 Pulled from your profile. If anything is wrong,{' '}
-                <Link href="/profile" className="text-blue-400 hover:underline">update your profile</Link> first.
+                <Link href="/profile" className="text-blue-500 dark:text-blue-400 hover:underline">update your profile</Link> first.
               </p>
               <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
                 <InfoRow label="Name" value={`${profile?.firstName ?? ''} ${profile?.lastName ?? ''}`.trim()} />
@@ -255,8 +248,8 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
           </Card>
 
           {type === 'barangay-clearance' && (
-            <Card>
-              <CardHeader><CardTitle>Additional Details</CardTitle></CardHeader>
+            <Card className="bg-white dark:bg-[#1c1c34] border border-gray-300 dark:border-white/20">
+              <CardHeader><CardTitle className="text-black dark:text-white">Additional Details</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <FloatInput label="Purok / Zone" value={purok} onChange={setPurok} required />
                 <FloatInput label="CTC Number" value={ctcNo} onChange={setCtcNo} required />
@@ -267,8 +260,8 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
           )}
 
           {type === 'business-clearance' && (
-            <Card>
-              <CardHeader><CardTitle>Business Details</CardTitle></CardHeader>
+            <Card className="bg-white dark:bg-[#1c1c34] border border-gray-300 dark:border-white/20">
+              <CardHeader><CardTitle className="text-black dark:text-white">Business Details</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <FloatInput label="Business Name" value={businessName} onChange={setBusinessName} required />
                 <FloatInput label="Business Location / Purok" value={purok} onChange={setPurok} required />
@@ -277,8 +270,8 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
           )}
 
           {type === 'certification-of-death' && (
-            <Card>
-              <CardHeader><CardTitle>Deceased Person's Information</CardTitle></CardHeader>
+            <Card className="bg-white dark:bg-[#1c1c34] border border-gray-300 dark:border-white/20">
+              <CardHeader><CardTitle className="text-black dark:text-white">Deceased Person's Information</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <FloatInput label="Full Name of Deceased" value={deceasedName} onChange={setDeceasedName} required />
                 <FloatInput label="Age at Time of Death" value={deceasedAge} onChange={setDeceasedAge} required />
@@ -290,8 +283,8 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
           )}
 
           {type === 'job-seeker' && (
-            <Card>
-              <CardHeader><CardTitle>Additional Details</CardTitle></CardHeader>
+            <Card className="bg-white dark:bg-[#1c1c34] border border-gray-300 dark:border-white/20">
+              <CardHeader><CardTitle className="text-black dark:text-white">Additional Details</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <FloatInput label="BCN Number" value={bcnNo} onChange={setBcnNo} required />
                 <FloatInput label="Purok / Zone" value={purok} onChange={setPurok} required />
@@ -301,8 +294,8 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
           )}
 
           {type === 'oath-of-undertaking' && (
-            <Card>
-              <CardHeader><CardTitle>Additional Details</CardTitle></CardHeader>
+            <Card className="bg-white dark:bg-[#1c1c34] border border-gray-300 dark:border-white/20">
+              <CardHeader><CardTitle className="text-black dark:text-white">Additional Details</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <FloatInput label="Purok / Zone" value={purok} onChange={setPurok} required />
                 <FloatInput label="Years of Residency in Barangay" value={yearsOfResidency} onChange={setYearsOfResidency} required />
@@ -310,8 +303,8 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
             </Card>
           )}
 
-          <Card>
-            <CardHeader><CardTitle>Request Details</CardTitle></CardHeader>
+          <Card className="bg-white dark:bg-[#1c1c34] border border-gray-300 dark:border-white/20">
+            <CardHeader><CardTitle className="text-black dark:text-white">Request Details</CardTitle></CardHeader>
             <CardContent className="space-y-5">
               <Select label="Purpose *" name="purpose" value={purpose}
                 onChange={(e) => { setPurpose(e.target.value); setError(''); }}
@@ -323,12 +316,17 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
               <TextArea label="Additional Information (Optional)" name="additionalInfo"
                 value={additionalInfo} onChange={(e) => setAdditionalInfo(e.target.value)}
                 rows={3} placeholder="Any extra details that may help process your request..."
+                className="bg-white dark:bg-[#1c1c34] text-black dark:text-white border border-gray-300 dark:border-white/20"
               />
               <div className="flex gap-3 pt-2">
                 <Link href="/request-document" className="flex-1">
                   <Button type="button" variant="outline" className="w-full">Cancel</Button>
                 </Link>
-                <Button type="submit" disabled={submitting} className="flex-1 gap-2">
+                <Button
+                  type="submit"
+                  disabled={submitting}
+                  className="flex-1 gap-2 text-white"
+                >
                   {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
                   {submitting ? 'Submitting...' : 'Submit Request'}
                 </Button>
@@ -344,8 +342,8 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-gray-500 text-xs mb-0.5">{label}</p>
-      <p className="text-white">{value || <span className="text-gray-600 italic text-xs">Not set</span>}</p>
+      <p className="text-gray-500 dark:text-gray-400 text-xs mb-0.5">{label}</p>
+      <p className="text-black dark:text-white">{value || <span className="text-gray-400 dark:text-gray-500 italic text-xs">Not set</span>}</p>
     </div>
   );
 }
