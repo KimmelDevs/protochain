@@ -55,16 +55,28 @@ const documentTypes = [
 
 export default function RequestDocumentPage() {
   return (
-    <div className="min-h-screen p-4 lg:p-8">
+    <div className="min-h-screen p-4 lg:p-8 bg-white dark:bg-[#0f0f23] transition-colors duration-300">
       <div className="max-w-5xl mx-auto">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">Request a Document</h1>
-          <p className="text-gray-400">Choose the type of document you want to request</p>
+
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">
+            Request a Document
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            Choose the type of document you want to request
+          </p>
         </motion.div>
 
+        {/* Documents */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {documentTypes.map((doc, index) => {
             const Icon = doc.icon;
+
             return (
               <motion.div
                 key={doc.id}
@@ -75,19 +87,38 @@ export default function RequestDocumentPage() {
                 <Link href={`/request-document/${doc.id}`}>
                   <Card hover className="h-full">
                     <CardContent className="p-6">
+
+                      {/* Icon */}
                       <div className={`w-14 h-14 bg-gradient-to-r ${doc.color} rounded-lg flex items-center justify-center mb-4`}>
                         <Icon className="w-7 h-7 text-white" />
                       </div>
-                      <h3 className="text-lg font-bold text-white mb-2">{doc.title}</h3>
-                      <p className="text-gray-400 text-sm mb-4 line-clamp-2">{doc.description}</p>
+
+                      {/* Title */}
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                        {doc.title}
+                      </h3>
+
+                      {/* Description */}
+                      <p className="text-gray-600 dark:text-gray-400 text-sm mb-4 line-clamp-2">
+                        {doc.description}
+                      </p>
+
+                      {/* Processing */}
                       <div className="flex items-center gap-2 mb-4 text-sm">
                         <Clock className="w-4 h-4 text-gray-500" />
-                        <span className="text-gray-500">Processing: {doc.processingTime}</span>
+                        <span className="text-gray-500 dark:text-gray-400">
+                          Processing: {doc.processingTime}
+                        </span>
                       </div>
-                      <div className="flex items-center justify-between pt-4 border-t border-white/10">
-                        <span className="text-sm font-medium text-blue-400">Apply Now</span>
-                        <ArrowRight className="w-5 h-5 text-blue-400" />
+
+                      {/* Footer */}
+                      <div className="flex items-center justify-between pt-4 border-t border-gray-300 dark:border-white/10">
+                        <span className="text-sm font-medium text-blue-500 dark:text-blue-400">
+                          Apply Now
+                        </span>
+                        <ArrowRight className="w-5 h-5 text-blue-500 dark:text-blue-400" />
                       </div>
+
                     </CardContent>
                   </Card>
                 </Link>
@@ -95,6 +126,7 @@ export default function RequestDocumentPage() {
             );
           })}
         </div>
+
       </div>
     </div>
   );
