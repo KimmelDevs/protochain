@@ -50,7 +50,7 @@ export default function ProfilePage() {
   const showSuccess = (msg: string) => { setSuccessMessage(msg); setTimeout(() => setSuccessMessage(''), 3500); };
   const showError   = (msg: string) => { setErrorMessage(msg);   setTimeout(() => setErrorMessage(''), 4000); };
 
-  // ── Load profile via API route (decrypts PII server-side) ─────────────────
+  // ── Load profile via API route ─────────────────
   useEffect(() => {
     const load = async () => {
       try {
@@ -60,7 +60,6 @@ export default function ProfilePage() {
         setUserId(user.id);
         setMemberSince(new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }));
 
-        // Fetch profile via server route so PII is decrypted server-side
         const res = await fetch(`/api/profile?id=${user.id}`);
         const json = await res.json();
         if (!res.ok) throw new Error(json.error);
@@ -80,7 +79,6 @@ export default function ProfilePage() {
         setProfileData(loaded);
         setOriginalData(loaded);
 
-        // Request stats — no PII, safe to fetch directly
         const now = new Date();
         const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
         const { data: requests } = await supabase
@@ -103,7 +101,7 @@ export default function ProfilePage() {
     load();
   }, []);
 
-  // ── Avatar — not PII, safe to save directly ───────────────────────────────
+  // ── Avatar ─────────────────
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -117,7 +115,7 @@ export default function ProfilePage() {
     } catch { showError('Failed to update profile picture.'); }
   };
 
-  // ── Save profile via API route (encrypts PII server-side) ─────────────────
+  // ── Save profile ─────────────────
   const handleSaveProfile = async () => {
     setSaving(true);
     try {
@@ -147,7 +145,7 @@ export default function ProfilePage() {
     }
   };
 
-  // ── Password — Supabase Auth handles this, no PII involved ────────────────
+  // ── Change Password ─────────────────
   const handleChangePassword = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) { showError('Passwords do not match.'); return; }
     if (passwordData.newPassword.length < 8) { showError('Password must be at least 8 characters.'); return; }
@@ -166,17 +164,19 @@ export default function ProfilePage() {
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 text-blue-400 animate-spin" /></div>;
+    return <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#0f0f23]">
+      <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
+    </div>;
   }
 
   return (
-    <div className="min-h-screen p-4 lg:p-8">
+    <div className="min-h-screen p-4 lg:p-8 bg-white dark:bg-[#0f0f23] text-black dark:text-white">
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
 
       <div className="max-w-5xl mx-auto">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">Profile Settings</h1>
-          <p className="text-gray-400">Manage your account information and settings</p>
+          <h1 className="text-3xl md:text-4xl font-bold mb-2">Profile Settings</h1>
+          <p className="text-gray-700 dark:text-gray-400">Manage your account information and settings</p>
         </motion.div>
 
         {successMessage && (
@@ -193,12 +193,12 @@ export default function ProfilePage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left sidebar */}
           <div className="lg:col-span-1">
-            <Card>
+            <Card className="bg-white dark:bg-[#1a1a3a] border border-gray-300 dark:border-white/10">
               <CardContent className="p-6">
                 <div className="text-center mb-6">
                   <div className="relative inline-block">
                     {profileData.avatarBase64 ? (
-                      <img src={profileData.avatarBase64} alt="Profile" className="w-32 h-32 rounded-full object-cover border-4 border-white/10" />
+                      <img src={profileData.avatarBase64} alt="Profile" className="w-32 h-32 rounded-full object-cover border-4 border-gray-300 dark:border-white/10" />
                     ) : (
                       <div className="w-32 h-32 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-4xl font-bold">
                         {getInitials(profileData.firstName, profileData.lastName)}
@@ -209,20 +209,20 @@ export default function ProfilePage() {
                       <Camera className="w-5 h-5" />
                     </button>
                   </div>
-                  <h2 className="text-xl font-bold text-white mt-4">{profileData.firstName} {profileData.lastName}</h2>
-                  <p className="text-sm text-gray-400">{profileData.email}</p>
+                  <h2 className="text-xl font-bold mt-4">{profileData.firstName} {profileData.lastName}</h2>
+                  <p className="text-sm text-gray-700 dark:text-gray-400">{profileData.email}</p>
                   {profileData.username && <p className="text-xs text-gray-500 mt-1">@{profileData.username}</p>}
                 </div>
 
-                <div className="space-y-3 pt-4 border-t border-white/10">
+                <div className="space-y-3 pt-4 border-t border-gray-300 dark:border-white/10">
                   <div className="flex items-center gap-3 text-sm">
                     <Shield className="w-4 h-4 text-green-400" />
-                    <span className="text-gray-400">Account Verified</span>
+                    <span className="text-gray-700 dark:text-gray-400">Account Verified</span>
                   </div>
                   {memberSince && (
                     <div className="flex items-center gap-3 text-sm">
-                      <Calendar className="w-4 h-4 text-blue-400" />
-                      <span className="text-gray-400">Member since {memberSince}</span>
+                      <Calendar className="w-4 h-4 text-blue-400 dark:text-white" />
+                      <span className="text-gray-700 dark:text-gray-400">Member since {memberSince}</span>
                     </div>
                   )}
                 </div>
@@ -238,16 +238,30 @@ export default function ProfilePage() {
 
           {/* Right forms */}
           <div className="lg:col-span-2 space-y-6">
-            <Card>
+            <Card className="bg-white dark:bg-[#1a1a3a] border border-gray-300 dark:border-white/10">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>Personal Information</CardTitle>
                   {!isEditing ? (
-                    <Button size="sm" onClick={() => setIsEditing(true)}>Edit Profile</Button>
+                    <Button size="sm" className="text-white" onClick={() => setIsEditing(true)}>
+                      Edit Profile
+                    </Button>
                   ) : (
                     <div className="flex gap-2">
-                      <Button size="sm" variant="outline" onClick={() => { setProfileData(originalData); setIsEditing(false); }}>Cancel</Button>
-                      <Button size="sm" onClick={handleSaveProfile} className="gap-2" disabled={saving}>
+                      <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-black dark:text-white"
+                      onClick={() => { setProfileData(originalData); setIsEditing(false); }}
+                    >
+                      Cancel
+                    </Button>
+                      <Button
+                        size="sm"
+                        className="gap-2 text-white"
+                        onClick={handleSaveProfile}
+                        disabled={saving}
+                      >
                         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                         Save Changes
                       </Button>
@@ -277,7 +291,7 @@ export default function ProfilePage() {
 
             {showPasswordChange && (
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-                <Card>
+                <Card className="bg-white dark:bg-[#1a1a3a] border border-gray-300 dark:border-white/10">
                   <CardHeader><CardTitle>Change Password</CardTitle></CardHeader>
                   <CardContent>
                     <div className="space-y-4">
@@ -296,7 +310,7 @@ export default function ProfilePage() {
               </motion.div>
             )}
 
-            <Card>
+            <Card className="bg-white dark:bg-[#1a1a3a] border border-gray-300 dark:border-white/10">
               <CardHeader><CardTitle>Account Statistics</CardTitle></CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -308,16 +322,16 @@ export default function ProfilePage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-white dark:bg-[#1a1a3a] border border-gray-300 dark:border-white/10">
               <CardHeader><CardTitle>Privacy & Security</CardTitle></CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
+                  <div className="flex items-center justify-between p-4 bg-gray-100 dark:bg-white/5 rounded-lg">
                     <div className="flex items-center gap-3">
                       <Mail className="w-5 h-5 text-blue-400" />
                       <div>
-                        <p className="text-white font-medium">Email Notifications</p>
-                        <p className="text-sm text-gray-400">Receive updates via email</p>
+                        <p className="font-medium text-black dark:text-white">Email Notifications</p>
+                        <p className="text-sm text-gray-700 dark:text-gray-400">Receive updates via email</p>
                       </div>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
@@ -325,12 +339,12 @@ export default function ProfilePage() {
                       <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
                     </label>
                   </div>
-                  <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
+                  <div className="flex items-center justify-between p-4 bg-gray-100 dark:bg-white/5 rounded-lg">
                     <div className="flex items-center gap-3">
                       <Shield className="w-5 h-5 text-green-400" />
                       <div>
-                        <p className="text-white font-medium">Two-Factor Authentication</p>
-                        <p className="text-sm text-gray-400">Add extra security to your account</p>
+                        <p className="font-medium text-black dark:text-white">Two-Factor Authentication</p>
+                        <p className="text-sm text-gray-700 dark:text-gray-400">Add extra security to your account</p>
                       </div>
                     </div>
                     <Button size="sm" variant="outline">Enable</Button>
@@ -347,9 +361,9 @@ export default function ProfilePage() {
 
 function StatBox({ value, label, color }: { value: number; label: string; color: string }) {
   return (
-    <div className="text-center p-4 bg-white/5 rounded-lg">
+    <div className="text-center p-4 bg-gray-100 dark:bg-white/5 rounded-lg">
       <div className={`text-2xl font-bold ${color}`}>{value}</div>
-      <div className="text-sm text-gray-400">{label}</div>
+      <div className="text-sm text-gray-700 dark:text-gray-400">{label}</div>
     </div>
   );
 }

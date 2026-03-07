@@ -55,7 +55,7 @@ export default function Sidebar() {
         <Link href="/" className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
             <Shield className="w-5 h-5 text-white" />
-          </div>
+          </div>  
 
           <div className="flex flex-col">
             <span className="text-sm font-bold text-gray-900 dark:text-white leading-tight">
