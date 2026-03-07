@@ -117,7 +117,7 @@ export default function MyDocumentsPage() {
             { label: 'With File', value: documents.filter(d => d.file_url).length, icon: <FileText className="w-8 h-8 text-blue-400" /> },
             { label: 'Document Types', value: new Set(documents.map(d => d.type)).size, icon: <FileText className="w-8 h-8 text-purple-400" /> },
           ].map(s => (
-            <div key={s.label} className="bg-white/5 dark:bg-white/10 border border-gray-200 dark:border-white/10 rounded-xl p-4 transition-colors duration-300">
+            <div key={s.label} className="bg-white/5 dark:bg-white/10 border border-gray-300 dark:border-white/10 rounded-xl p-4 transition-colors duration-300">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-2xl font-bold text-gray-900 dark:text-white">{s.value}</div>
@@ -133,7 +133,7 @@ export default function MyDocumentsPage() {
         {documents.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-            className="bg-white/5 dark:bg-white/10 border border-gray-200 dark:border-white/10 rounded-xl p-6 mb-6 transition-colors duration-300"
+            className="bg-white/5 dark:bg-white/10 border border-gray-300 dark:border-white/10 rounded-xl p-6 mb-6 transition-colors duration-300"
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="relative">
@@ -161,7 +161,7 @@ export default function MyDocumentsPage() {
         >
           {documents.length === 0 && (
             <div className="col-span-full">
-              <div className="bg-white/5 dark:bg-white/10 border border-gray-200 dark:border-white/10 rounded-xl p-12 text-center transition-colors duration-300">
+              <div className="bg-white/5 dark:bg-white/10 border border-gray-300 dark:border-white/10 rounded-xl p-12 text-center transition-colors duration-300">
                 <div className="w-20 h-20 bg-white/5 dark:bg-white/10 rounded-full flex items-center justify-center mx-auto mb-6">
                   <FileText className="w-10 h-10 text-gray-500 dark:text-gray-400" />
                 </div>
@@ -179,7 +179,7 @@ export default function MyDocumentsPage() {
 
           {documents.length > 0 && filtered.length === 0 && (
             <div className="col-span-full">
-              <div className="bg-white/5 dark:bg-white/10 border border-gray-200 dark:border-white/10 rounded-xl p-12 text-center transition-colors duration-300">
+              <div className="bg-white/5 dark:bg-white/10 border border-gray-300 dark:border-white/10 rounded-xl p-12 text-center transition-colors duration-300">
                 <Search className="w-10 h-10 text-gray-500 dark:text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Results Found</h3>
                 <button
@@ -195,7 +195,7 @@ export default function MyDocumentsPage() {
           {filtered.map((doc) => (
             <div
               key={doc.id}
-              className="bg-white/5 dark:bg-white/10 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-blue-500/30 transition-all transition-colors duration-300 group"
+              className="bg-white/5 dark:bg-white/10 border border-gray-300 dark:border-white/10 rounded-xl p-6 hover:border-blue-500/30 transition-all transition-colors duration-300 group"
             >
               <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
                 <FileText className="w-6 h-6 text-white" />

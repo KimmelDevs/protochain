@@ -8,7 +8,7 @@ interface TableProps {
 export function Table({ children, className = '' }: TableProps) {
   return (
     <div className="overflow-x-auto">
-      <table className={`w-full border border-gray-200 dark:border-white/10 transition-colors duration-300 ${className}`}>
+      <table className={`w-full border border-gray-300 dark:border-white/10 transition-colors duration-300 ${className}`}>
         {children}
       </table>
     </div>
@@ -22,7 +22,7 @@ interface TableHeaderProps {
 
 export function TableHeader({ children, className = '' }: TableHeaderProps) {
   return (
-    <thead className={`border-b border-gray-200 dark:border-white/10 transition-colors duration-300 ${className}`}>
+    <thead className={`border-b border-gray-300 dark:border-white/10 transition-colors duration-300 ${className}`}>
       {children}
     </thead>
   );
@@ -51,7 +51,7 @@ export function TableRow({ children, className = '', hover = true }: TableRowPro
   return (
     <tr
       className={`
-        border-b border-gray-200 dark:border-white/10 transition-colors duration-300
+        border-b border-gray-300 dark:border-white/10 transition-colors duration-300
         ${hover ? 'hover:bg-gray-100 dark:hover:bg-white/5 transition-colors duration-300' : ''}
         ${className}
       `}

@@ -48,10 +48,10 @@ export default function Sidebar() {
   }, [darkMode]);
 
   return (
-    <aside className="w-64 h-screen bg-white dark:bg-[#0f0f23] border-r border-gray-200 dark:border-white/10 flex flex-col sticky top-0">
+    <aside className="w-64 h-screen bg-white dark:bg-[#0f0f23] border-r border-gray-300 dark:border-white/10 flex flex-col sticky top-0">
 
       {/* Logo */}
-      <div className="p-6 border-b border-gray-200 dark:border-white/10 flex-shrink-0">
+      <div className="p-6 border-b border-gray-300 dark:border-white/10 flex-shrink-0">
         <Link href="/" className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
             <Shield className="w-5 h-5 text-white" />
@@ -118,7 +118,7 @@ export default function Sidebar() {
       </div>
 
       {/* Logout */}
-      <div className="p-4 border-t border-gray-200 dark:border-white/10 flex-shrink-0">
+      <div className="p-4 border-t border-gray-300 dark:border-white/10 flex-shrink-0">
         <button
           onClick={() => {
             window.location.href = '/login';

@@ -135,7 +135,7 @@ export default function ResidentDashboard() {
           {/* Recent requests */}
           <motion.div
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-            className="lg:col-span-2 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl p-6 transition-colors duration-300"
+            className="lg:col-span-2 bg-white dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-xl p-6 transition-colors duration-300"
           >
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white transition-colors duration-300">Recent Requests</h2>
@@ -152,7 +152,7 @@ export default function ResidentDashboard() {
               </div>
             ) : recent.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="w-20 h-20 bg-gray-100 dark:bg-white/10 border border-gray-200 dark:border-white/10 rounded-full flex items-center justify-center mx-auto mb-5 transition-colors duration-300">
+                <div className="w-20 h-20 bg-gray-100 dark:bg-white/10 border border-gray-300 dark:border-white/10 rounded-full flex items-center justify-center mx-auto mb-5 transition-colors duration-300">
                   <Inbox className="w-10 h-10 text-gray-500 dark:text-gray-400 transition-colors duration-300" />
                 </div>
                 <h3 className="text-gray-900 dark:text-white font-semibold text-lg mb-2 transition-colors duration-300">No requests yet</h3>
@@ -171,7 +171,7 @@ export default function ResidentDashboard() {
                   const style = getStatusStyle(req.status);
                   const StatusIcon = style.icon;
                   return (
-                    <div key={req.id} className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg p-4 hover:border-blue-500/30 transition-all transition-colors duration-300">
+                    <div key={req.id} className="bg-white dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-lg p-4 hover:border-blue-500/30 transition-all transition-colors duration-300">
                       <div className="flex items-center justify-between">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-3 mb-2">
@@ -201,7 +201,7 @@ export default function ResidentDashboard() {
                         </div>
                       </div>
                       {req.notes && (
-                        <p className="mt-2 text-xs text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-white/5 pt-2 truncate transition-colors duration-300">
+                        <p className="mt-2 text-xs text-gray-600 dark:text-gray-400 border-t border-gray-300 dark:border-white/5 pt-2 truncate transition-colors duration-300">
                           📝 {req.notes}
                         </p>
                       )}
@@ -210,7 +210,7 @@ export default function ResidentDashboard() {
                 })}
 
                 {total <= 3 && (
-                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10 transition-colors duration-300">
+                  <div className="mt-4 pt-4 border-t border-gray-300 dark:border-white/10 transition-colors duration-300">
                     <Link href="/request-document">
                       <span className="inline-flex items-center gap-2 text-sm text-blue-500 dark:text-blue-400 hover:text-blue-400 dark:hover:text-blue-300 transition-colors duration-300">
                         <Plus className="w-4 h-4" />Submit another request
@@ -232,7 +232,7 @@ export default function ResidentDashboard() {
             {quickActions.map((action) => {
               const Icon = action.icon;
               return (
-                <Link key={action.title} href={action.href} className="block bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl p-5 hover:border-blue-500/30 transition-all transition-colors duration-300 group">
+                <Link key={action.title} href={action.href} className="block bg-white dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-xl p-5 hover:border-blue-500/30 transition-all transition-colors duration-300 group">
                   <div className={`bg-gradient-to-r ${action.color} w-11 h-11 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
                     <Icon className="w-5 h-5 text-white" />
                   </div>
@@ -243,7 +243,7 @@ export default function ResidentDashboard() {
             })}
 
             {!loading && total > 0 && (
-              <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl p-5 transition-colors duration-300">
+              <div className="bg-white dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-xl p-5 transition-colors duration-300">
                 <h3 className="font-semibold text-gray-900 dark:text-white mb-3 text-sm transition-colors duration-300">Your Status</h3>
                 <div className="space-y-2">
                   {[ 
