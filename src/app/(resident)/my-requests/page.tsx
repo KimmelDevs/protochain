@@ -154,7 +154,11 @@ export default function MyRequestsPage() {
                   <FileText className="w-12 h-12 text-gray-600 mx-auto mb-4" />
                   <p className="text-gray-900 dark:text-white font-medium mb-1">No requests yet</p>
                   <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">You haven't submitted any document requests.</p>
-                  <Link href="/request-document"><Button>Request a Document</Button></Link>
+                  <Link href="/request-document">
+                    <button className="bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity">
+                      Request a Document
+                    </button>
+                  </Link>
                 </div>
               ) : (
                 <Table>

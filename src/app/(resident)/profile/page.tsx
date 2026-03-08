@@ -228,7 +228,11 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="mt-6">
-                  <Button variant="outline" className="w-full gap-2" onClick={() => setShowPasswordChange(p => !p)}>
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 border-orange-500 text-black hover:bg-orange-500 transition-colors"
+                    onClick={() => setShowPasswordChange(p => !p)}
+                  >
                     <Key className="w-4 h-4" />Change Password
                   </Button>
                 </div>
@@ -243,28 +247,33 @@ export default function ProfilePage() {
                 <div className="flex items-center justify-between">
                   <CardTitle>Personal Information</CardTitle>
                   {!isEditing ? (
-                    <Button size="sm" className="text-white" onClick={() => setIsEditing(true)}>
+                    <button
+                      className="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg font-semibold transition-opacity hover:opacity-90"
+                      onClick={() => setIsEditing(true)}
+                    >
                       Edit Profile
-                    </Button>
+                    </button>
                   ) : (
                     <div className="flex gap-2">
-                      <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-black dark:text-white"
-                      onClick={() => { setProfileData(originalData); setIsEditing(false); }}
-                    >
-                      Cancel
-                    </Button>
-                      <Button
-                        size="sm"
-                        className="gap-2 text-white"
+                      <button
+                        className="bg-transparent border border-gray-400 dark:border-gray-600 text-black dark:text-white px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                        onClick={() => { setProfileData(originalData); setIsEditing(false); }}
+                      >
+                        Cancel
+                      </button>
+
+                      <button
+                        className="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-opacity hover:opacity-90"
                         onClick={handleSaveProfile}
                         disabled={saving}
                       >
-                        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                        {saving ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Save className="w-4 h-4" />
+                        )}
                         Save Changes
-                      </Button>
+                      </button>
                     </div>
                   )}
                 </div>

@@ -160,7 +160,7 @@ export default function ResidentDashboard() {
                   You haven't submitted any document requests yet.
                 </p>
                 <Link href="/request-document">
-                  <span className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity">
+                  <span className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-500 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity">
                     <Plus className="w-4 h-4" />Request a Document
                   </span>
                 </Link>

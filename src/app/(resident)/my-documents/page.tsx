@@ -169,7 +169,7 @@ export default function MyDocumentsPage() {
                 <p className="text-gray-500 dark:text-gray-400 mb-2">You don't have any approved documents yet.</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">Once your request is approved, it will appear here.</p>
                 <Link href="/request-document">
-                  <button className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity">
+                  <button className="bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity">
                     Request a Document
                   </button>
                 </Link>
