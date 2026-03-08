@@ -164,13 +164,13 @@ export default function ProfilePage() {
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#0f0f23]">
+    return <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f0f23]">
       <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
     </div>;
   }
 
   return (
-    <div className="min-h-screen p-4 lg:p-8 bg-white dark:bg-[#0f0f23] text-black dark:text-white">
+    <div className="min-h-screen p-4 lg:p-8 bg-gray-50 dark:bg-[#0f0f23] text-black dark:text-white">
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
 
       <div className="max-w-5xl mx-auto">

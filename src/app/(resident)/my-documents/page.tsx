@@ -91,14 +91,14 @@ export default function MyDocumentsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#0f0f23] transition-colors duration-300">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f0f23] transition-colors duration-300">
         <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen p-4 lg:p-8 bg-white dark:bg-[#0f0f23] transition-colors duration-300">
+    <div className="min-h-screen p-4 lg:p-8 bg-gray-50 dark:bg-[#0f0f23] transition-colors duration-300">
       <div className="max-w-7xl mx-auto">
 
         {/* Header */}

@@ -55,7 +55,7 @@ const documentTypes = [
 
 export default function RequestDocumentPage() {
   return (
-    <div className="min-h-screen p-4 lg:p-8 bg-white dark:bg-[#0f0f23] transition-colors duration-300">
+    <div className="min-h-screen p-4 lg:p-8 bg-gray-50 dark:bg-[#0f0f23] transition-colors duration-300">
       <div className="max-w-5xl mx-auto">
 
         {/* Header */}

@@ -172,7 +172,7 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
   };
 
   if (!config) return (
-    <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center bg-white dark:bg-[#0f0f23]">
+    <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center bg-gray-50 dark:bg-[#0f0f23]">
       <Card className="bg-white dark:bg-[#1c1c34] border border-gray-300 dark:border-white/20">
         <CardContent className="p-8 text-center">
           <p className="text-lg font-semibold text-black dark:text-white mb-2">Not Found</p>
@@ -184,7 +184,7 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
   );
 
   if (submitted) return (
-    <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center bg-white dark:bg-[#0f0f23]">
+    <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center bg-gray-50 dark:bg-[#0f0f23]">
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
         <Card className="bg-white dark:bg-[#1c1c34] border border-gray-300 dark:border-white/20">
           <CardContent className="p-10 text-center max-w-md">
@@ -205,13 +205,13 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
   );
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#0f0f23]">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f0f23]">
       <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
     </div>
   );
 
   return (
-    <div className="min-h-screen p-4 lg:p-8 bg-white dark:bg-[#0f0f23]">
+    <div className="min-h-screen p-4 lg:p-8 bg-gray-50 dark:bg-[#0f0f23]">
       <div className="max-w-2xl mx-auto">
         <Link href="/request-document">
           <Button variant="ghost" className="mb-6 gap-2 text-black dark:text-white"><ArrowLeft className="w-4 h-4" />Back</Button>
