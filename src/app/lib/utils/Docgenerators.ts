@@ -99,6 +99,27 @@ export async function generateBrgyClearance(req: RequestDetail, profile: Profile
   const today   = new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' });
   const purpose = req.purpose === 'others' && req.custom_purpose ? req.custom_purpose : req.purpose;
 
+  // ── Auto-generate today's date for CTC Date Issued ───────────────────────────
+  const ctcDateIssued = new Date().toLocaleDateString('en-PH', {
+    year:  'numeric',
+    month: 'long',
+    day:   'numeric',
+  });
+
+  // ── Fetch barangay address from settings for CTC Place Issued ────────────────
+  let ctcPlaceIssued = req.ctc_place_issued ?? '';
+  try {
+    const settingsRes = await fetch('/api/barangay-settings');
+    if (settingsRes.ok) {
+      const settingsJson = await settingsRes.json();
+      if (settingsJson?.data?.address) {
+        ctcPlaceIssued = settingsJson.data.address;
+      }
+    }
+  } catch {
+    // silently fall back to req.ctc_place_issued
+  }
+
   let content: string = await zip.file('word/document.xml').async('string');
 
   content = content.replace(
@@ -109,9 +130,14 @@ export async function generateBrgyClearance(req: RequestDetail, profile: Profile
     /Issued this ___ day of JANUARY, 2024 at Brgy\. Guin-on, Calbayog City, Samar, Philippines\./g,
     `Issued this ${xmlEscape(today)} at Brgy. Guin-on, Calbayog City, Samar, Philippines.`
   );
-  content = content.replace(/CTC #: __________________ /g,    `CTC #: ${xmlEscape(req.ctc_no ?? '')} `);
-  content = content.replace(/Date Issued: ______________ /g,  `Date Issued: ${xmlEscape(req.ctc_date_issued ?? '')} `);
-  content = content.replace(/Place Issued: ______________/g,  `Place Issued: ${xmlEscape(req.ctc_place_issued ?? '')}`);
+  content = content.replace(/CTC #: __________________ /g,   `CTC #: ${xmlEscape(req.ctc_no ?? '')} `);
+
+  // ── CHANGED: use today's date instead of req.ctc_date_issued ─────────────────
+  content = content.replace(/Date Issued: ______________ /g, `Date Issued: ${xmlEscape(ctcDateIssued)} `);
+
+  // ── CHANGED: use barangay settings address instead of req.ctc_place_issued ───
+  content = content.replace(/Place Issued: ______________/g, `Place Issued: ${xmlEscape(ctcPlaceIssued)}`);
+
   content = content.replace(
     /Further certifies that he\/ she has no derogatory record and has good moral character as per our Barangay record in connected\. /g,
     `Further certifies that he/ she has no derogatory record and has good moral character as per our Barangay record in connected. This clearance is issued upon request for ${xmlEscape(purpose ?? '')} and for whatever legal purpose it may serve. `
