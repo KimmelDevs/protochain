@@ -14,6 +14,7 @@ import {
   Moon,
   Sun
 } from 'lucide-react';
+import Image from "next/image";
 
 const menuItems = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -53,9 +54,15 @@ export default function Sidebar() {
       {/* Logo */}
       <div className="p-6 border-b border-gray-300 dark:border-white/10 flex-shrink-0">
         <Link href="/" className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
-            <Shield className="w-5 h-5 text-white" />
-          </div>  
+          <div className="w-9 h-9 rounded-lg overflow-hidden flex items-center justify-center">
+                      <Image
+                        src="/protochain_logo2.jpg"
+                        alt="ProtoChain Logo"
+                        width={36}
+                        height={36}
+                        priority
+                      />
+           </div>  
 
           <div className="flex flex-col">
             <span className="text-sm font-bold text-gray-900 dark:text-white leading-tight">

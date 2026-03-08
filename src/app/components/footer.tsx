@@ -1,5 +1,6 @@
 import { Shield } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Footer() {
   return (
@@ -8,9 +9,15 @@ export default function Footer() {
         <div className="grid md:grid-cols-4 gap-8">
           <div className="md:col-span-2">
             <Link href="/" className="flex items-center gap-2.5 mb-4">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
-                <Shield className="w-5 h-5 text-white" />
-              </div>
+              <div className="w-9 h-9 rounded-lg overflow-hidden flex items-center justify-center">
+                <Image
+                  src="/protochain_logo2.jpg"
+                  alt="ProtoChain Logo"
+                  width={36}
+                  height={36}
+                  priority
+                />
+                </div>
               <div className="flex flex-col">
                 <span className="text-sm font-bold text-white leading-tight">
                   ProtoChain
