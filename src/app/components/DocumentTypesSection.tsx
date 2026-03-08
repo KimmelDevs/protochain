@@ -93,7 +93,7 @@ export default function DocumentTypesSection() {
           className="text-center mt-12"
         >
           <Link href="/login">
-            <button className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold py-3 px-8 rounded-lg transition transform hover:scale-105">
+            <button className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-500 text-white font-semibold py-3 px-8 rounded-lg transition transform hover:scale-105">
               Request a Document Now
               <ArrowRight className="w-4 h-4" />
             </button>

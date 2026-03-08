@@ -54,7 +54,7 @@ export default function Header() {
             </button>
           </Link>
           <Link href="/register">
-            <button className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg hover:from-blue-600 hover:to-purple-700 transition">
+            <button className="px-4 py-2 text-sm font-medium text-white bg-orange-600 hover:bg-orange-500 rounded-lg transition">
               Sign Up
             </button>
           </Link>

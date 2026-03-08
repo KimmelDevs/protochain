@@ -60,7 +60,7 @@ export default function HeroSection() {
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4">
               <Link href="/login">
-                <button className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold py-3 px-8 rounded-lg transition transform hover:scale-105">
+                <button className="flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-500 text-white font-semibold py-3 px-8 rounded-lg transition transform hover:scale-105">
                   Request a Document
                   <ArrowRight className="w-5 h-5" />
                 </button>
