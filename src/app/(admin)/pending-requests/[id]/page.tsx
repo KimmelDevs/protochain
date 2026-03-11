@@ -190,39 +190,63 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
     </div>
   );
 
-  if (notFound || !request) return (
-    <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center">
-      <Card><CardContent className="p-8 text-center">
-        <p className="text-gray-400 mb-4">Request not found</p>
-        <Link href="/pending-requests"><Button>Back to Pending Requests</Button></Link>
-      </CardContent></Card>
+    if (notFound || !request) return (
+    <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center bg-gray-50 dark:bg-[#0f0f23]">
+      <Card>
+        <CardContent className="p-8 text-center">
+          <p className="text-gray-600 dark:text-gray-400 mb-4">Request not found</p>
+          <Link href="/pending-requests">
+            <Button>Back to Pending Requests</Button>
+          </Link>
+        </CardContent>
+      </Card>
     </div>
   );
 
   const displayPurpose = request.purpose === 'others' && request.custom_purpose
     ? request.custom_purpose : request.purpose;
+
   const daysWaiting = Math.floor(
     (Date.now() - new Date(request.created_at).getTime()) / (1000 * 60 * 60 * 24)
   );
+
   const extraDetails = buildExtraDetails(request);
 
   return (
-    <div className="min-h-screen p-4 lg:p-8">
+    <div className="min-h-screen p-4 lg:p-8 bg-gray-50 dark:bg-[#0f0f23]">
       <div className="max-w-5xl mx-auto">
-        <input ref={uploadRef} type="file" accept=".docx,.pdf" className="hidden" onChange={handleManualUpload} />
+
+        <input
+          ref={uploadRef}
+          type="file"
+          accept=".docx,.pdf"
+          className="hidden"
+          onChange={handleManualUpload}
+        />
 
         <Link href="/pending-requests">
           <Button variant="ghost" className="mb-6 gap-2">
-            <ArrowLeft className="w-4 h-4" />Back to Pending Requests
+            <ArrowLeft className="w-4 h-4" />
+            Back to Pending Requests
           </Button>
         </Link>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6"
+        >
           <div className="flex items-center justify-between mb-2">
-            <h1 className="text-3xl font-bold text-white">{request.type ?? request.document_type}</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              {request.type ?? request.document_type}
+            </h1>
+
             <Badge variant={request.status as any}>{request.status}</Badge>
           </div>
-          <p className="text-gray-400 font-mono text-sm">ID: {request.id.toUpperCase()}</p>
+
+          <p className="text-gray-600 dark:text-gray-400 font-mono text-sm">
+            ID: {request.id.toUpperCase()}
+          </p>
         </motion.div>
 
         {daysWaiting >= 2 && request.status === 'pending' && (
@@ -232,23 +256,51 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
             </Alert>
           </div>
         )}
-        {error   && <div className="mb-6"><Alert variant="error"   onClose={() => setError('')}>{error}</Alert></div>}
-        {success && <div className="mb-6"><Alert variant="success" onClose={() => setSuccess('')}>{success}</Alert></div>}
+
+        {error && (
+          <div className="mb-6">
+            <Alert variant="error" onClose={() => setError('')}>
+              {error}
+            </Alert>
+          </div>
+        )}
+
+        {success && (
+          <div className="mb-6">
+            <Alert variant="success" onClose={() => setSuccess('')}>
+              {success}
+            </Alert>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
           <div className="lg:col-span-2 space-y-6">
+
             <Card>
-              <CardHeader><CardTitle>Request Information</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle>Request Information</CardTitle>
+              </CardHeader>
+
               <CardContent>
                 <div className="grid grid-cols-2 gap-4">
                   <DetailRow label="Document Type" value={request.type ?? request.document_type} />
-                  <DetailRow label="Purpose"        value={displayPurpose ?? '—'} />
+                  <DetailRow label="Purpose" value={displayPurpose ?? '—'} />
                   <DetailRow label="Date Requested" value={new Date(request.created_at).toLocaleDateString()} />
-                  <DetailRow label="Days Waiting"   value={daysWaiting === 0 ? 'Today' : `${daysWaiting} day${daysWaiting > 1 ? 's' : ''}`} />
+                  <DetailRow
+                    label="Days Waiting"
+                    value={daysWaiting === 0 ? 'Today' : `${daysWaiting} day${daysWaiting > 1 ? 's' : ''}`}
+                  />
+
                   {request.additional_info && (
                     <div className="col-span-2">
-                      <p className="text-sm text-gray-400 mb-2">Additional Information</p>
-                      <p className="text-white bg-white/5 p-3 rounded-lg">{request.additional_info}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                        Additional Information
+                      </p>
+
+                      <p className="text-gray-900 dark:text-white bg-gray-100 dark:bg-white/5 p-3 rounded-lg">
+                        {request.additional_info}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -257,10 +309,19 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
 
             {extraDetails.length > 0 && (
               <Card>
-                <CardHeader><CardTitle>Submitted Information</CardTitle></CardHeader>
+                <CardHeader>
+                  <CardTitle>Submitted Information</CardTitle>
+                </CardHeader>
+
                 <CardContent>
                   <div className="grid grid-cols-2 gap-4">
-                    {extraDetails.map(d => <DetailRow key={d.label} label={d.label} value={d.value ?? '—'} />)}
+                    {extraDetails.map(d => (
+                      <DetailRow
+                        key={d.label}
+                        label={d.label}
+                        value={d.value ?? '—'}
+                      />
+                    ))}
                   </div>
                 </CardContent>
               </Card>
@@ -268,111 +329,214 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
 
             {profile && (
               <Card>
-                <CardHeader><CardTitle>Applicant Information</CardTitle></CardHeader>
+                <CardHeader>
+                  <CardTitle>Applicant Information</CardTitle>
+                </CardHeader>
+
                 <CardContent className="space-y-3">
-                  <IconRow icon={<User  className="w-5 h-5 text-gray-400" />} label="Full Name" value={`${profile.firstName} ${profile.lastName}`} />
-                  <IconRow icon={<Mail  className="w-5 h-5 text-gray-400" />} label="Email"     value={profile.email} />
-                  <IconRow icon={<Phone className="w-5 h-5 text-gray-400" />} label="Phone"     value={profile.phone} />
-                  <IconRow icon={<MapPin className="w-5 h-5 text-gray-400" />} label="Address"  value={profile.address} />
+
+                  <IconRow
+                    icon={<User className="w-5 h-5 text-gray-500 dark:text-gray-400" />}
+                    label="Full Name"
+                    value={`${profile.firstName} ${profile.lastName}`}
+                  />
+
+                  <IconRow
+                    icon={<Mail className="w-5 h-5 text-gray-500 dark:text-gray-400" />}
+                    label="Email"
+                    value={profile.email}
+                  />
+
+                  <IconRow
+                    icon={<Phone className="w-5 h-5 text-gray-500 dark:text-gray-400" />}
+                    label="Phone"
+                    value={profile.phone}
+                  />
+
+                  <IconRow
+                    icon={<MapPin className="w-5 h-5 text-gray-500 dark:text-gray-400" />}
+                    label="Address"
+                    value={profile.address}
+                  />
+
                   {profile.birthday && (
                     <div className="grid grid-cols-2 gap-4 pt-2">
-                      <DetailRow label="Birthday"     value={new Date(profile.birthday).toLocaleDateString()} />
-                      <DetailRow label="Civil Status" value={profile.civilStatus ?? '—'} />
+                      <DetailRow
+                        label="Birthday"
+                        value={new Date(profile.birthday).toLocaleDateString()}
+                      />
+
+                      <DetailRow
+                        label="Civil Status"
+                        value={profile.civilStatus ?? '—'}
+                      />
                     </div>
                   )}
                 </CardContent>
               </Card>
             )}
 
-            {request.status === 'approved' && (
-              <DocumentGenerationCard
-                fileUrl={request.file_url}
-                uploadedHash={uploadedHash}
-                generating={generating}
-                uploading={uploading}
-                generatedBlob={generatedBlob}
-                generatedFileName={generatedFileName}
-                onGenerate={handleGenerate}
-                onUploadGenerated={handleUploadGenerated}
-                onManualUpload={() => uploadRef.current?.click()}
-              />
-            )}
           </div>
 
           <div className="space-y-6">
+
             <Card>
-              <CardHeader><CardTitle>Actions</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle>Actions</CardTitle>
+              </CardHeader>
+
               <CardContent className="space-y-3">
+
                 {request.status === 'pending' ? (
                   <>
-                    <Button className="w-full gap-2" onClick={() => setShowApproveModal(true)}>
-                      <CheckCircle className="w-4 h-4" />Approve Request
+                    <Button
+                      variant="orange"
+                      size="sm"
+                      className="w-full gap-2"
+                      onClick={() => setShowApproveModal(true)}
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                      Approve Request
                     </Button>
-                    <Button variant="outline"
-                      className="w-full gap-2 text-red-400 border-red-500/30 hover:bg-red-500/10"
-                      onClick={() => setShowRejectModal(true)}>
-                      <XCircle className="w-4 h-4" />Reject Request
+
+                    <Button
+                      variant="outline"
+                      className="w-full gap-2 text-red-500 border-red-500/30 hover:bg-red-500/10"
+                      onClick={() => setShowRejectModal(true)}
+                    >
+                      <XCircle className="w-4 h-4" />
+                      Reject Request
                     </Button>
                   </>
                 ) : (
                   <div className="text-center py-2">
-                    {request.status === 'approved' && <div className="flex items-center gap-2 text-green-400 justify-center"><CheckCircle className="w-5 h-5" /><span className="font-medium">Approved</span></div>}
-                    {request.status === 'rejected' && <div className="flex items-center gap-2 text-red-400   justify-center"><XCircle    className="w-5 h-5" /><span className="font-medium">Rejected</span></div>}
+
+                    {request.status === 'approved' && (
+                      <div className="flex items-center gap-2 text-green-500 dark:text-green-400 justify-center">
+                        <CheckCircle className="w-5 h-5" />
+                        <span className="font-medium">Approved</span>
+                      </div>
+                    )}
+
+                    {request.status === 'rejected' && (
+                      <div className="flex items-center gap-2 text-red-500 dark:text-red-400 justify-center">
+                        <XCircle className="w-5 h-5" />
+                        <span className="font-medium">Rejected</span>
+                      </div>
+                    )}
+
                   </div>
                 )}
+
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader><CardTitle className="flex items-center gap-2"><Clock className="w-5 h-5 text-blue-400" />Processing Info</CardTitle></CardHeader>
-              <CardContent className="space-y-3">
-                <DetailRow label="Standard Processing" value="1-2 business days" />
-                <DetailRow label="Date Submitted"      value={new Date(request.created_at).toLocaleString()} />
-                {request.status !== 'pending' && <DetailRow label="Status" value={request.status.toUpperCase()} />}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm text-yellow-400 font-medium mb-1">Important</p>
-                    <p className="text-xs text-gray-400">After approving, generate the document and upload it so the resident can download it.</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </div>
+          {/* Approve Modal */}
+          <Modal
+            isOpen={showApproveModal}
+            onClose={() => setShowApproveModal(false)}
+            title="Approve Request"
+          >
+            <div className="space-y-4">
+
+              <Alert
+                variant="success"
+                className="bg-green-50 dark:bg-green-900 text-green-800 dark:text-green-200 border-green-200 dark:border-green-700"
+              >
+                You are about to approve this request.
+              </Alert>
+
+              <TextArea
+                label="Approval Notes (Optional)"
+                value={approvalNotes}
+                onChange={(e) => setApprovalNotes(e.target.value)}
+                rows={4}
+                placeholder="Add any notes for this approval..."
+                className="bg-gray-50 dark:bg-[#0f0f23] text-gray-900 dark:text-white border-gray-200 dark:border-white/10"
+              />
+
+              <div className="flex gap-3">
+
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setShowApproveModal(false)}
+                  disabled={processing}
+                >
+                  Cancel
+                </Button>
+
+                <Button
+                  variant="orange"
+                  className="flex-1 gap-2"
+                  onClick={handleApprove}
+                  disabled={processing}
+                >
+                  {processing
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : <CheckCircle className="w-4 h-4" />}
+                  {processing ? 'Processing...' : 'Confirm Approval'}
+                </Button>
+
+              </div>
+
+            </div>
+          </Modal>
+
+
+          {/* Reject Modal */}
+          <Modal
+            isOpen={showRejectModal}
+            onClose={() => setShowRejectModal(false)}
+            title="Reject Request"
+          >
+            <div className="space-y-4">
+
+              <Alert
+                variant="warning"
+                className="bg-yellow-50 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 border-yellow-200 dark:border-yellow-700"
+              >
+                Please provide a clear reason for rejection.
+              </Alert>
+
+              <TextArea
+                label="Reason for Rejection *"
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                rows={4}
+                placeholder="Explain why this request is being rejected..."
+                className="bg-gray-50 dark:bg-[#0f0f23] text-gray-900 dark:text-white border-gray-200 dark:border-white/10"
+              />
+
+              <div className="flex gap-3">
+
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setShowRejectModal(false)}
+                  disabled={processing}
+                >
+                  Cancel
+                </Button>
+
+                <Button
+                  className="flex-1 gap-2"
+                  variant="rejection"
+                  onClick={handleReject}
+                  disabled={processing}
+                >
+                  {processing
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : <XCircle className="w-4 h-4" />}
+                  {processing ? 'Processing...' : 'Confirm Rejection'}
+                </Button>
+
+              </div>
+
+            </div>
+          </Modal>
         </div>
-
-        <Modal isOpen={showApproveModal} onClose={() => setShowApproveModal(false)} title="Approve Request">
-          <div className="space-y-4">
-            <Alert variant="success">You are about to approve this request.</Alert>
-            <TextArea label="Approval Notes (Optional)" value={approvalNotes} onChange={e => setApprovalNotes(e.target.value)} rows={4} placeholder="Add any notes for this approval..." />
-            <div className="flex gap-3">
-              <Button variant="outline" className="flex-1" onClick={() => setShowApproveModal(false)} disabled={processing}>Cancel</Button>
-              <Button className="flex-1 gap-2" onClick={handleApprove} disabled={processing}>
-                {processing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                {processing ? 'Processing...' : 'Confirm Approval'}
-              </Button>
-            </div>
-          </div>
-        </Modal>
-
-        <Modal isOpen={showRejectModal} onClose={() => setShowRejectModal(false)} title="Reject Request">
-          <div className="space-y-4">
-            <Alert variant="warning">Please provide a clear reason for rejection.</Alert>
-            <TextArea label="Reason for Rejection *" value={rejectReason} onChange={e => setRejectReason(e.target.value)} rows={4} placeholder="Explain why this request is being rejected..." />
-            <div className="flex gap-3">
-              <Button variant="outline" className="flex-1" onClick={() => setShowRejectModal(false)} disabled={processing}>Cancel</Button>
-              <Button className="flex-1 gap-2 bg-red-500 hover:bg-red-600" onClick={handleReject} disabled={processing}>
-                {processing ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
-                {processing ? 'Processing...' : 'Confirm Rejection'}
-              </Button>
-            </div>
-          </div>
-        </Modal>
       </div>
     </div>
   );
@@ -394,59 +558,132 @@ function DocumentGenerationCard({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <FileText className="w-5 h-5 text-blue-400" />Document Generation
+          <FileText className="w-5 h-5 text-blue-500 dark:text-blue-400" />
+          Document Generation
         </CardTitle>
       </CardHeader>
+
       <CardContent className="space-y-4">
+
         {fileUrl ? (
           <div className="space-y-3">
-            <Alert variant="success">Document uploaded. The resident can now download it.</Alert>
+
+            <Alert variant="success">
+              Document uploaded. The resident can now download it.
+            </Alert>
+
             <a href={fileUrl} target="_blank" rel="noopener noreferrer" download>
-              <Button variant="outline" className="w-full gap-2"><Download className="w-4 h-4" />Download Uploaded Document</Button>
+              <Button variant="outline" className="w-full gap-2">
+                <Download className="w-4 h-4" />
+                Download Uploaded Document
+              </Button>
             </a>
+
             {uploadedHash && <HashDisplay hash={uploadedHash} />}
+
             <Divider label="or replace document" />
-            <GenerateButton generating={generating} label="Re-generate & Download .docx" onClick={onGenerate} />
-            {generatedBlob && <UploadButton uploading={uploading} label={`Upload "${generatedFileName}"`} onClick={onUploadGenerated} />}
+
+            <GenerateButton
+              generating={generating}
+              label="Re-generate & Download .docx"
+              onClick={onGenerate}
+            />
+
+            {generatedBlob && (
+              <UploadButton
+                uploading={uploading}
+                label={`Upload "${generatedFileName}"`}
+                onClick={onUploadGenerated}
+              />
+            )}
+
             <ManualUploadButton uploading={uploading} onClick={onManualUpload} />
+
           </div>
         ) : (
           <div className="space-y-3">
-            <p className="text-sm text-gray-400">Generate the document using the resident's data, then upload it so they can download it.</p>
-            <GenerateButton generating={generating} label="Step 1: Generate & Download .docx" onClick={onGenerate} />
-            {generatedBlob && <UploadButton uploading={uploading} label={`Step 2: Upload "${generatedFileName}" to Supabase`} onClick={onUploadGenerated} />}
+
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Generate the document using the resident's data, then upload it so they can download it.
+            </p>
+
+            <GenerateButton
+              generating={generating}
+              label="Step 1: Generate & Download .docx"
+              onClick={onGenerate}
+            />
+
+            {generatedBlob && (
+              <UploadButton
+                uploading={uploading}
+                label={`Step 2: Upload "${generatedFileName}" to Supabase`}
+                onClick={onUploadGenerated}
+              />
+            )}
+
             <Divider label="or upload manually" />
+
             <ManualUploadButton uploading={uploading} onClick={onManualUpload} />
+
             {uploadedHash && <HashDisplay hash={uploadedHash} />}
+
           </div>
         )}
+
       </CardContent>
     </Card>
   );
 }
 
-function GenerateButton({ generating, label, onClick }: { generating: boolean; label: string; onClick: () => void }) {
+function GenerateButton({
+  generating, label, onClick
+}: {
+  generating: boolean; label: string; onClick: () => void
+}) {
   return (
     <Button className="w-full gap-2" onClick={onClick} disabled={generating}>
-      {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+      {generating
+        ? <Loader2 className="w-4 h-4 animate-spin" />
+        : <Wand2 className="w-4 h-4" />}
       {generating ? 'Generating...' : label}
     </Button>
   );
 }
 
-function UploadButton({ uploading, label, onClick }: { uploading: boolean; label: string; onClick: () => void }) {
+function UploadButton({
+  uploading, label, onClick
+}: {
+  uploading: boolean; label: string; onClick: () => void
+}) {
   return (
-    <Button variant="outline" className="w-full gap-2" onClick={onClick} disabled={uploading}>
-      {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+    <Button
+      variant="outline"
+      className="w-full gap-2"
+      onClick={onClick}
+      disabled={uploading}
+    >
+      {uploading
+        ? <Loader2 className="w-4 h-4 animate-spin" />
+        : <Upload className="w-4 h-4" />}
       {uploading ? 'Uploading...' : label}
     </Button>
   );
 }
 
-function ManualUploadButton({ uploading, onClick }: { uploading: boolean; onClick: () => void }) {
+function ManualUploadButton({
+  uploading, onClick
+}: {
+  uploading: boolean; onClick: () => void
+}) {
   return (
-    <Button variant="outline" className="w-full gap-2" onClick={onClick} disabled={uploading}>
-      <Upload className="w-4 h-4" />Upload Existing File (.docx or .pdf)
+    <Button
+      variant="outline"
+      className="w-full gap-2"
+      onClick={onClick}
+      disabled={uploading}
+    >
+      <Upload className="w-4 h-4" />
+      Upload Existing File (.docx or .pdf)
     </Button>
   );
 }
@@ -454,27 +691,49 @@ function ManualUploadButton({ uploading, onClick }: { uploading: boolean; onClic
 function Divider({ label }: { label: string }) {
   return (
     <div className="relative">
-      <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10" /></div>
-      <div className="relative flex justify-center text-xs"><span className="bg-[#0f0f23] px-2 text-gray-500">{label}</span></div>
+
+      <div className="absolute inset-0 flex items-center">
+        <div className="w-full border-t border-gray-200 dark:border-white/10" />
+      </div>
+
+      <div className="relative flex justify-center text-xs">
+        <span className="bg-gray-50 dark:bg-[#0f0f23] px-2 text-gray-500 dark:text-gray-400">
+          {label}
+        </span>
+      </div>
+
     </div>
   );
 }
 
 function HashDisplay({ hash }: { hash: string }) {
   const [copied, setCopied] = useState(false);
+
   return (
     <div className="rounded-lg border border-green-500/30 bg-green-500/5 p-3 space-y-2">
+
       <div className="flex items-center gap-2">
-        <ShieldCheck className="w-4 h-4 text-green-400 shrink-0" />
-        <span className="text-xs font-medium text-green-400">SHA-256 Document Hash</span>
+        <ShieldCheck className="w-4 h-4 text-green-500 dark:text-green-400 shrink-0" />
+        <span className="text-xs font-medium text-green-600 dark:text-green-400">
+          SHA-256 Document Hash
+        </span>
       </div>
-      <p className="font-mono text-xs text-gray-300 break-all leading-relaxed">{hash}</p>
+
+      <p className="font-mono text-xs text-gray-700 dark:text-gray-300 break-all leading-relaxed">
+        {hash}
+      </p>
+
       <button
-        onClick={() => { navigator.clipboard.writeText(hash); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-        className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+        onClick={() => {
+          navigator.clipboard.writeText(hash);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        }}
+        className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
       >
         {copied ? '✓ Copied!' : 'Copy hash'}
       </button>
+
     </div>
   );
 }
@@ -482,20 +741,27 @@ function HashDisplay({ hash }: { hash: string }) {
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-sm text-gray-400 mb-1">{label}</p>
-      <p className="text-white font-medium">{value}</p>
+      <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{label}</p>
+      <p className="text-gray-900 dark:text-white font-medium">{value}</p>
     </div>
   );
 }
 
-function IconRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+function IconRow({
+  icon, label, value
+}: {
+  icon: React.ReactNode; label: string; value: string
+}) {
   return (
     <div className="flex items-start gap-3">
+
       <div className="mt-0.5">{icon}</div>
+
       <div>
-        <p className="text-sm text-gray-400">{label}</p>
-        <p className="text-white">{value}</p>
+        <p className="text-sm text-gray-600 dark:text-gray-400">{label}</p>
+        <p className="text-gray-900 dark:text-white">{value}</p>
       </div>
+
     </div>
   );
 }

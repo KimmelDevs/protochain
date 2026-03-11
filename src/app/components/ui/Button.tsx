@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'default' | 'outline' | 'ghost' | 'danger' | 'orange';
+  variant?: 'default' | 'outline' | 'ghost' | 'danger' | 'orange' | 'rejection';
   size?: 'sm' | 'md' | 'lg';
   children: React.ReactNode;
   className?: string;
@@ -22,13 +22,15 @@ export default function Button({
     default:
       'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-black dark:text-white shadow-lg hover:shadow-xl',
     outline:
-      'border-2 border-purple-500/50 text-black dark:text-white hover:bg-purple-500/10 hover:border-purple-500',
+      'border-2 border-orange-500/50 text-black dark:text-white hover:bg-orange-500/10 hover:border-orange-500',
     ghost:
       'text-black dark:text-white hover:bg-gray-100 dark:hover:bg-white/5 hover:text-black dark:hover:text-white',
     danger:
       'bg-red-500 hover:bg-red-600 text-black dark:text-white shadow-lg',
     orange:
       'bg-orange-600 hover:bg-orange-500 text-white shadow-lg hover:opacity-90',
+    rejection:
+      'bg-red-600 hover:bg-red-500 dark:bg-red-700 dark:hover:bg-red-600 text-white shadow-lg',
   };
 
   // Button sizes
