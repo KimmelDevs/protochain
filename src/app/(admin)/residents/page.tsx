@@ -130,20 +130,20 @@ export default function ResidentsPage() {
         >
           {[
             { label: 'Total Residents', value: residents.length, color: 'text-gray-900 dark:text-white' },
-            { label: 'New This Month', value: residents.filter(r => isThisMonth(r.created_at)).length, color: 'text-blue-400 dark:text-blue-500' },
-            { label: 'Total Requests', value: residents.reduce((sum, r) => sum + (r.totalRequests ?? 0), 0), color: 'text-green-400 dark:text-green-500' },
-            { label: 'Avg. Requests', value: residents.length ? Math.round(residents.reduce((sum, r) => sum + (r.totalRequests ?? 0), 0) / residents.length) : 0, color: 'text-purple-400 dark:text-purple-500' },
+            { label: 'New This Month', value: residents.filter(r => isThisMonth(r.created_at)).length, color: 'text-blue-600 dark:text-blue-500' },
+            { label: 'Total Requests', value: residents.reduce((sum, r) => sum + (r.totalRequests ?? 0), 0), color: 'text-green-600 dark:text-green-500' },
+            { label: 'Avg. Requests', value: residents.length ? Math.round(residents.reduce((sum, r) => sum + (r.totalRequests ?? 0), 0) / residents.length) : 0, color: 'text-purple-600 dark:text-purple-500' },
           ].map(s => (
             <Card key={s.label}><CardContent className="p-4">
               <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">{s.label}</div>
+              <div className="text-sm text-gray-700 dark:text-gray-400">{s.label}</div>
             </CardContent></Card>
           ))}
         </motion.div>
 
         {/* Filters */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <Card className="mb-6">
+          <Card className="mb-6 bg-white/10 dark:bg-gray-800">
             <CardContent className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="relative">
@@ -152,7 +152,7 @@ export default function ResidentsPage() {
                     placeholder="Search by name, email, or ID..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 text-gray-900 dark:text-gray-100"
                   />
                 </div>
                 <Select
@@ -170,37 +170,37 @@ export default function ResidentsPage() {
 
         {/* Table */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <Card>
+          <Card className="bg-white/10 dark:bg-gray-800">
             <CardHeader><CardTitle>All Residents ({filtered.length})</CardTitle></CardHeader>
             <CardContent>
               {residents.length === 0 ? (
                 <div className="text-center py-16">
                   <User className="w-12 h-12 text-gray-500 dark:text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-900 dark:text-white font-medium mb-1">No residents yet</p>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm">Registered residents will appear here.</p>
+                  <p className="text-gray-700 dark:text-gray-400 text-sm">Registered residents will appear here.</p>
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Resident</TableHead>
-                      <TableHead>Contact</TableHead>
-                      <TableHead>Address</TableHead>
-                      <TableHead>Registered</TableHead>
-                      <TableHead>Requests</TableHead>
-                      <TableHead>Action</TableHead>
+                      <TableHead className="text-gray-900 dark:text-gray-100">Resident</TableHead>
+                      <TableHead className="text-gray-900 dark:text-gray-100">Contact</TableHead>
+                      <TableHead className="text-gray-900 dark:text-gray-100">Address</TableHead>
+                      <TableHead className="text-gray-900 dark:text-gray-100">Registered</TableHead>
+                      <TableHead className="text-gray-900 dark:text-gray-100">Requests</TableHead>
+                      <TableHead className="text-gray-900 dark:text-gray-100">Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filtered.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-gray-400 dark:text-gray-500">
+                        <TableCell colSpan={6} className="text-center py-8 text-gray-500 dark:text-gray-400">
                           No residents match your search
                         </TableCell>
                       </TableRow>
                     ) : (
                       filtered.map((resident) => (
-                        <TableRow key={resident.id}>
+                        <TableRow key={resident.id} className="hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                           <TableCell>
                             <div className="flex items-center gap-3">
                               {resident.avatar_base64 ? (
@@ -212,37 +212,28 @@ export default function ResidentsPage() {
                               )}
                               <div>
                                 <p className="text-gray-900 dark:text-white font-medium">{resident.firstName} {resident.lastName}</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">{resident.id.slice(0, 8).toUpperCase()}</p>
+                                <p className="text-xs text-gray-600 dark:text-gray-400 font-mono">{resident.id.slice(0, 8).toUpperCase()}</p>
                               </div>
                             </div>
                           </TableCell>
                           <TableCell>
                             <div className="space-y-1">
-                              <div className="flex items-center gap-2 text-sm">
+                              <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                                 <Mail className="w-3 h-3 text-gray-400 dark:text-gray-400 shrink-0" />
-                                <span className="text-gray-400 dark:text-gray-300">{resident.email}</span>
+                                {resident.email}
                               </div>
-                              <div className="flex items-center gap-2 text-sm">
+                              <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                                 <Phone className="w-3 h-3 text-gray-400 dark:text-gray-400 shrink-0" />
-                                <span className="text-gray-400 dark:text-gray-300">{resident.phone || '—'}</span>
+                                {resident.phone || '—'}
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <MapPin className="w-4 h-4 text-gray-400 dark:text-gray-400 shrink-0" />
-                              <span className="text-sm text-gray-400 dark:text-gray-300">{resident.address || '—'}</span>
-                            </div>
+                          <TableCell className="text-gray-700 dark:text-gray-300">{resident.address || '—'}</TableCell>
+                          <TableCell className="text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                            <Calendar className="w-4 h-4" />
+                            {new Date(resident.created_at).toLocaleDateString()}
                           </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1 text-gray-400 dark:text-gray-300">
-                              <Calendar className="w-4 h-4" />
-                              {new Date(resident.created_at).toLocaleDateString()}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-gray-900 dark:text-white font-medium">{resident.totalRequests}</span>
-                          </TableCell>
+                          <TableCell className="text-gray-900 dark:text-gray-100 font-medium">{resident.totalRequests}</TableCell>
                           <TableCell>
                             <Link href={`/residents/${resident.id}`}>
                               <Button variant="orange" size="sm" className="gap-2">

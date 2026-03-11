@@ -134,147 +134,147 @@ export default function ResidentDetailPage({ params }: { params: Promise<{ id: s
   };
 
   return (
-    <div className="min-h-screen p-4 lg:p-8">
-      <div className="max-w-5xl mx-auto">
+  <div className="min-h-screen p-4 lg:p-8 bg-gray-50 dark:bg-[#0f0f23] transition-colors">
+    <div className="max-w-5xl mx-auto">
 
-        <Link href="/residents">
-          <Button variant="ghost" className="mb-6 gap-2">
-            <ArrowLeft className="w-4 h-4" />Back to Residents
-          </Button>
-        </Link>
+      <Link href="/residents">
+        <Button variant="ghost" className="mb-6 gap-2">
+          <ArrowLeft className="w-4 h-4" />Back to Residents
+        </Button>
+      </Link>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-          <h1 className="text-3xl font-bold text-white mb-1">
-            {profile.firstName} {profile.lastName}
-          </h1>
-          <p className="text-gray-400 font-mono text-sm">ID: {id.toUpperCase()}</p>
-        </motion.div>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
+          {profile.firstName} {profile.lastName}
+        </h1>
+        <p className="text-gray-600 dark:text-gray-400 font-mono text-sm">ID: {id.toUpperCase()}</p>
+      </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          {/* Left sidebar */}
-          <div className="space-y-6">
-            <Card>
-              <CardContent className="p-6 text-center">
-                {profile.avatar_base64 ? (
-                  <img src={profile.avatar_base64} alt="Profile"
-                    className="w-28 h-28 rounded-full object-cover border-4 border-white/10 mx-auto mb-4" />
-                ) : (
-                  <div className="w-28 h-28 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-4xl font-bold mx-auto mb-4">
-                    {getInitials(profile.firstName, profile.lastName)}
-                  </div>
-                )}
-                <h2 className="text-xl font-bold text-white">{profile.firstName} {profile.lastName}</h2>
-                {profile.username && <p className="text-sm text-gray-500 mt-1">@{profile.username}</p>}
-                <div className="mt-3"><Badge variant="approved">resident</Badge></div>
-                <p className="text-xs text-gray-400 mt-3">Member since {memberSince}</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader><CardTitle>Request Summary</CardTitle></CardHeader>
-              <CardContent className="space-y-3">
-                {[
-                  { label: 'Total', value: stats.total, color: 'text-white' },
-                  { label: 'Approved', value: stats.approved, color: 'text-green-400' },
-                  { label: 'Pending', value: stats.pending, color: 'text-yellow-400' },
-                  { label: 'Rejected', value: stats.rejected, color: 'text-red-400' },
-                ].map(s => (
-                  <div key={s.label} className="flex items-center justify-between">
-                    <span className="text-sm text-gray-400">{s.label}</span>
-                    <span className={`font-bold ${s.color}`}>{s.value}</span>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Main content */}
-          <div className="lg:col-span-2 space-y-6">
-
-            {/* Personal Info */}
-            <Card>
-              <CardHeader><CardTitle>Personal Information</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <IconRow icon={<Mail className="w-4 h-4 text-gray-400" />} label="Email" value={profile.email} />
-                  <IconRow icon={<Phone className="w-4 h-4 text-gray-400" />} label="Phone" value={profile.phone || '—'} />
-                  <IconRow icon={<MapPin className="w-4 h-4 text-gray-400" />} label="Address" value={profile.address || '—'} />
-                  <IconRow icon={<Calendar className="w-4 h-4 text-gray-400" />} label="Birthday"
-                    value={profile.birthday ? new Date(profile.birthday).toLocaleDateString() : '—'} />
+        {/* Left sidebar */}
+        <div className="space-y-6">
+          <Card>
+            <CardContent className="p-6 text-center">
+              {profile.avatar_base64 ? (
+                <img src={profile.avatar_base64} alt="Profile"
+                  className="w-28 h-28 rounded-full object-cover border-4 border-gray-200/20 dark:border-white/10 mx-auto mb-4" />
+              ) : (
+                <div className="w-28 h-28 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-4xl font-bold mx-auto mb-4">
+                  {getInitials(profile.firstName, profile.lastName)}
                 </div>
-                {profile.civilStatus && <DetailRow label="Civil Status" value={profile.civilStatus} />}
-              </CardContent>
-            </Card>
+              )}
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">{profile.firstName} {profile.lastName}</h2>
+              {profile.username && <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">@{profile.username}</p>}
+              <div className="mt-3"><Badge variant="approved">resident</Badge></div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">Member since {memberSince}</p>
+            </CardContent>
+          </Card>
 
-            {/* Request History */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-blue-400" />
-                  Request History ({requests.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {requests.length === 0 ? (
-                  <div className="text-center py-10">
-                    <FileText className="w-10 h-10 text-gray-600 mx-auto mb-3" />
-                    <p className="text-gray-400 text-sm">No requests submitted yet.</p>
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Document</TableHead>
-                        <TableHead>Purpose</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Action</TableHead>
+          <Card>
+            <CardHeader><CardTitle>Request Summary</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              {[
+                { label: 'Total', value: stats.total, color: 'text-gray-900 dark:text-white' },
+                { label: 'Approved', value: stats.approved, color: 'text-green-600 dark:text-green-400' },
+                { label: 'Pending', value: stats.pending, color: 'text-yellow-600 dark:text-yellow-400' },
+                { label: 'Rejected', value: stats.rejected, color: 'text-red-600 dark:text-red-400' },
+              ].map(s => (
+                <div key={s.label} className="flex items-center justify-between">
+                  <span className="text-sm text-gray-700 dark:text-gray-400">{s.label}</span>
+                  <span className={`font-bold ${s.color}`}>{s.value}</span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Main content */}
+        <div className="lg:col-span-2 space-y-6">
+
+          {/* Personal Info */}
+          <Card>
+            <CardHeader><CardTitle>Personal Information</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <IconRow icon={<Mail className="w-4 h-4 text-gray-500 dark:text-gray-400" />} label="Email" value={profile.email} />
+                <IconRow icon={<Phone className="w-4 h-4 text-gray-500 dark:text-gray-400" />} label="Phone" value={profile.phone || '—'} />
+                <IconRow icon={<MapPin className="w-4 h-4 text-gray-500 dark:text-gray-400" />} label="Address" value={profile.address || '—'} />
+                <IconRow icon={<Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400" />} label="Birthday"
+                  value={profile.birthday ? new Date(profile.birthday).toLocaleDateString() : '—'} />
+              </div>
+              {profile.civilStatus && <DetailRow label="Civil Status" value={profile.civilStatus} />}
+            </CardContent>
+          </Card>
+
+          {/* Request History */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                Request History ({requests.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {requests.length === 0 ? (
+                <div className="text-center py-10">
+                  <FileText className="w-10 h-10 text-gray-400 dark:text-gray-500 mx-auto mb-3" />
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">No requests submitted yet.</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-gray-900 dark:text-white">Document</TableHead>
+                      <TableHead className="text-gray-900 dark:text-white">Purpose</TableHead>
+                      <TableHead className="text-gray-900 dark:text-white">Date</TableHead>
+                      <TableHead className="text-gray-900 dark:text-white">Status</TableHead>
+                      <TableHead className="text-gray-900 dark:text-white">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {requests.map((req) => (
+                      <TableRow key={req.id} className="hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" />
+                            <span className="text-gray-900 dark:text-white text-sm">{req.type ?? req.document_type ?? '—'}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-gray-700 dark:text-gray-300 capitalize">{displayPurpose(req)}</TableCell>
+                        <TableCell className="text-sm text-gray-700 dark:text-gray-300">{new Date(req.created_at).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            {statusIcon(req.status)}
+                            <Badge variant={req.status as any}>{req.status}</Badge>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Link href={requestLink(req)}>
+                            <Button variant="ghost" size="sm" className="gap-1">
+                              <Eye className="w-4 h-4" />View
+                            </Button>
+                          </Link>
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {requests.map((req) => (
-                        <TableRow key={req.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <FileText className="w-4 h-4 text-purple-400 shrink-0" />
-                              <span className="text-white text-sm">{req.type ?? req.document_type ?? '—'}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-sm text-gray-400 capitalize">{displayPurpose(req)}</TableCell>
-                          <TableCell className="text-sm text-gray-400">{new Date(req.created_at).toLocaleDateString()}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1">
-                              {statusIcon(req.status)}
-                              <Badge variant={req.status as any}>{req.status}</Badge>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Link href={requestLink(req)}>
-                              <Button variant="ghost" size="sm" className="gap-1">
-                                <Eye className="w-4 h-4" />View
-                              </Button>
-                            </Link>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
+  </div>
   );
 }
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-sm text-gray-400 mb-1">{label}</p>
-      <p className="text-white font-medium">{value}</p>
+      <p className="text-sm text-gray-700 dark:text-gray-400 mb-1">{label}</p>
+      <p className="text-gray-900 dark:text-white font-medium">{value}</p>
     </div>
   );
 }
@@ -284,8 +284,8 @@ function IconRow({ icon, label, value }: { icon: React.ReactNode; label: string;
     <div className="flex items-start gap-3">
       <div className="mt-0.5 shrink-0">{icon}</div>
       <div>
-        <p className="text-xs text-gray-400">{label}</p>
-        <p className="text-white text-sm">{value}</p>
+        <p className="text-xs text-gray-700 dark:text-gray-400">{label}</p>
+        <p className="text-gray-900 dark:text-white text-sm">{value}</p>
       </div>
     </div>
   );
