@@ -24,7 +24,7 @@ export default function Input({ label, error, className = '', ...props }: InputP
           bg-white border border-gray-300 text-gray-900
           placeholder-gray-500
           dark:bg-[#1a1a2e] dark:border-white/10 dark:text-white dark:placeholder-gray-400
-          focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500
+          focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500
           transition-all duration-200
           ${error ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : ''}
           ${className}
