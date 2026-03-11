@@ -213,7 +213,7 @@ export default function SettingsPage() {
 
   const generalContent = loadingInfo ? (
     <div className="flex items-center justify-center py-20">
-      <Loader2 className="w-8 h-8 animate-spin text-blue-400 dark:text-blue-500" />
+      <Loader2 className="w-8 h-8 animate-spin text-orange-400 dark:text-orange-500" />
     </div>
   ) : (
     <div className="space-y-6">

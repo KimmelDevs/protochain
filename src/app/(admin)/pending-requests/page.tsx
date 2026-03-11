@@ -111,7 +111,7 @@ export default function PendingRequestsPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f0f23]">
-        <Loader2 className="w-8 h-8 text-blue-500 dark:text-blue-400 animate-spin" />
+        <Loader2 className="w-8 h-8 text-orange-500 dark:text-orange-400 animate-spin" />
       </div>
     );
   }

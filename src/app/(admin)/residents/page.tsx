@@ -109,7 +109,7 @@ export default function ResidentsPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f0f23]">
-        <Loader2 className="w-8 h-8 text-blue-400 dark:text-blue-500 animate-spin" />
+        <Loader2 className="w-8 h-8 text-orange-400 dark:text-orange-500 animate-spin" />
       </div>
     );
   }

@@ -175,7 +175,7 @@ export default function ApprovedDocumentsPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f0f23]">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500 dark:text-blue-400" />
+        <Loader2 className="w-8 h-8 animate-spin text-orange-500 dark:text-orange-400" />
       </div>
     );
   }
