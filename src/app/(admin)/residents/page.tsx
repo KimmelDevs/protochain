@@ -143,7 +143,7 @@ export default function ResidentsPage() {
 
         {/* Filters */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <Card className="mb-6 bg-white/10 dark:bg-gray-800">
+          <Card className="mb-6 bg-white/10 dark:bg-[#0f0f23]">
             <CardContent className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="relative">
@@ -170,7 +170,7 @@ export default function ResidentsPage() {
 
         {/* Table */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <Card className="bg-white/10 dark:bg-gray-800">
+          <Card className="bg-white/10 dark:bg-[#0f0f23]">
             <CardHeader><CardTitle>All Residents ({filtered.length})</CardTitle></CardHeader>
             <CardContent>
               {residents.length === 0 ? (
