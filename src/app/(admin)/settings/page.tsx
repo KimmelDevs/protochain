@@ -197,14 +197,7 @@ export default function SettingsPage() {
     showSuccess('System settings updated successfully!');
   };
 
-  // ── Toggle helper ───────────────────────────────────────────────────────────
-  const Toggle = ({
-    checked,
-    onChange,
-  }: {
-    checked: boolean;
-    onChange: (checked: boolean) => void;
-  }) => (
+  const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (checked: boolean) => void }) => (
     <label className="relative inline-flex items-center cursor-pointer">
       <input
         type="checkbox"
@@ -212,7 +205,7 @@ export default function SettingsPage() {
         onChange={e => onChange(e.target.checked)}
         className="sr-only peer"
       />
-      <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
+      <div className="w-11 h-6 bg-gray-700 dark:bg-gray-400 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
     </label>
   );
 
@@ -220,14 +213,13 @@ export default function SettingsPage() {
 
   const generalContent = loadingInfo ? (
     <div className="flex items-center justify-center py-20">
-      <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
+      <Loader2 className="w-8 h-8 animate-spin text-blue-400 dark:text-blue-500" />
     </div>
   ) : (
     <div className="space-y-6">
-      {/* Barangay Info Card */}
-      <Card>
+      <Card className="bg-white/5 dark:bg-white/5">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
             <Building2 className="w-5 h-5" />
             Barangay Information
           </CardTitle>
@@ -273,21 +265,28 @@ export default function SettingsPage() {
             rows={3}
           />
           <div className="flex justify-end">
-            <Button onClick={handleSaveBarangayInfo} disabled={savingInfo} className="gap-2">
+            <Button
+              onClick={handleSaveBarangayInfo}
+              disabled={savingInfo}
+              className="gap-2 text-white bg-gradient-to-r from-orange-500 to-red-500 hover:from-red-500 hover:to-orange-500 disabled:opacity-50"
+            >
               {savingInfo ? (
-                <><Loader2 className="w-4 h-4 animate-spin" />Saving...</>
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />Saving...
+                </>
               ) : (
-                <><Save className="w-4 h-4" />Save Changes</>
+                <>
+                  <Save className="w-4 h-4" />Save Changes
+                </>
               )}
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Logo Upload Card */}
-      <Card>
+      <Card className="bg-white/5 dark:bg-white/5">
         <CardHeader>
-          <CardTitle>Barangay Logo</CardTitle>
+          <CardTitle className="text-gray-900 dark:text-white">Barangay Logo</CardTitle>
         </CardHeader>
         <CardContent>
           <input
@@ -298,7 +297,7 @@ export default function SettingsPage() {
             onChange={handleLogoUpload}
           />
           <div className="flex items-center gap-6">
-            <div className="w-32 h-32 bg-white/5 rounded-lg flex items-center justify-center border-2 border-dashed border-white/20 overflow-hidden shrink-0">
+            <div className="w-32 h-32 bg-white/5 dark:bg-white/10 rounded-lg flex items-center justify-center border-2 border-dashed border-white/20 dark:border-white/10 overflow-hidden shrink-0">
               {barangayInfo.logo_url ? (
                 <img
                   src={barangayInfo.logo_url}
@@ -306,12 +305,12 @@ export default function SettingsPage() {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <Building2 className="w-16 h-16 text-gray-400" />
+                <Building2 className="w-16 h-16 text-gray-400 dark:text-gray-500" />
               )}
             </div>
             <div>
-              <p className="text-sm text-gray-400 mb-1">Upload your barangay logo</p>
-              <p className="text-xs text-gray-500 mb-3">PNG or JPG — stored in documents bucket</p>
+              <p className="text-sm text-gray-400 dark:text-gray-400 mb-1">Upload your barangay logo</p>
+              <p className="text-xs text-gray-500 dark:text-gray-500 mb-3">PNG or JPG — stored in documents bucket</p>
               <Button
                 variant="outline"
                 className="gap-2"
@@ -332,9 +331,9 @@ export default function SettingsPage() {
   );
 
   const notificationsContent = (
-    <Card>
+    <Card className="bg-white/5 dark:bg-white/5">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
           <Bell className="w-5 h-5" />
           Notification Preferences
         </CardTitle>
@@ -347,10 +346,10 @@ export default function SettingsPage() {
           { key: 'approvalNotifications', label: 'Approval Notifications', desc: 'Notify residents when documents are approved' },
           { key: 'reminderNotifications', label: 'Reminder Notifications', desc: 'Send reminders for pending requests' },
         ].map(({ key, label, desc }) => (
-          <div key={key} className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
+          <div key={key} className="flex items-center justify-between p-4 bg-white/5 dark:bg-white/10 rounded-lg">
             <div>
-              <p className="text-white font-medium">{label}</p>
-              <p className="text-sm text-gray-400">{desc}</p>
+              <p className="text-gray-900 dark:text-white font-medium">{label}</p>
+              <p className="text-sm text-gray-400 dark:text-gray-400">{desc}</p>
             </div>
             <Toggle
               checked={notificationSettings[key as keyof typeof notificationSettings] as boolean}
@@ -359,7 +358,10 @@ export default function SettingsPage() {
           </div>
         ))}
         <div className="flex justify-end pt-4">
-          <Button onClick={handleSaveNotifications} className="gap-2">
+          <Button
+            onClick={handleSaveNotifications}
+            className="gap-2 text-white bg-gradient-to-r from-orange-500 to-red-500 hover:from-red-500 hover:to-orange-500"
+          >
             <Save className="w-4 h-4" />Save Changes
           </Button>
         </div>
@@ -369,9 +371,9 @@ export default function SettingsPage() {
 
   const systemContent = (
     <div className="space-y-6">
-      <Card>
+      <Card className="bg-white/5 dark:bg-white/5">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
             <SettingsIcon className="w-5 h-5" />
             System Configuration
           </CardTitle>
@@ -396,10 +398,10 @@ export default function SettingsPage() {
             value={systemSettings.allowedFileTypes}
             onChange={e => setSystemSettings({ ...systemSettings, allowedFileTypes: e.target.value })}
           />
-          <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
+          <div className="flex items-center justify-between p-4 bg-white/5 dark:bg-white/10 rounded-lg">
             <div>
-              <p className="text-white font-medium">Require Email Verification</p>
-              <p className="text-sm text-gray-400">Users must verify email before making requests</p>
+              <p className="text-gray-900 dark:text-white font-medium">Require Email Verification</p>
+              <p className="text-sm text-gray-400 dark:text-gray-400">Users must verify email before making requests</p>
             </div>
             <Toggle
               checked={systemSettings.requireVerification}
@@ -407,36 +409,57 @@ export default function SettingsPage() {
             />
           </div>
           <div className="flex justify-end">
-            <Button onClick={handleSaveSystem} className="gap-2">
-              <Save className="w-4 h-4" />Save Changes
+            <Button
+              onClick={handleSaveBarangayInfo}
+              disabled={savingInfo}
+              className="gap-2 text-white bg-gradient-to-r from-orange-500 to-red-500 hover:from-red-500 hover:to-orange-500 disabled:opacity-50"
+            >
+              {savingInfo ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />Save Changes
+                </>
+              )}
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="bg-white/5 dark:bg-white/5">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
             <Shield className="w-5 h-5" />
             Security Settings
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Alert variant="warning" title="Blockchain Configuration">
+          {/* Alert visible in both light and dark mode */}
+          <Alert
+            variant="warning"
+            className="bg-orange-100 text-orange-900 dark:bg-orange-600 dark:text-white"
+          >
             Blockchain settings should only be modified by system administrators.
             Contact your IT department for assistance.
           </Alert>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-gray-400 mb-2">Blockchain Network</p>
-              <p className="text-white font-medium">Ethereum Sepolia Testnet</p>
+              <p className="text-sm text-gray-700 dark:text-gray-400 mb-2">Blockchain Network</p>
+              <p className="text-gray-900 dark:text-white font-medium">Ethereum Sepolia Testnet</p>
             </div>
             <div>
-              <p className="text-sm text-gray-400 mb-2">Smart Contract</p>
-              <p className="text-white font-mono text-xs">0x1234...5678</p>
+              <p className="text-sm text-gray-700 dark:text-gray-400 mb-2">Smart Contract</p>
+              <p className="text-gray-900 dark:text-white font-mono text-xs">0x1234...5678</p>
             </div>
           </div>
-          <Button variant="outline" className="gap-2">
+
+          <Button
+            variant="outline"
+            className="gap-2 text-black dark:text-white border-gray-400 dark:border-gray-600 hover:bg-orange-100 dark:hover:bg-orange-700"
+          >
             <Key className="w-4 h-4" />
             Manage API Keys
           </Button>
@@ -452,49 +475,31 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="min-h-screen p-4 lg:p-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0f0f23] p-4 lg:p-8 transition-colors">
       <div className="max-w-5xl mx-auto">
 
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">Settings</h1>
-          <p className="text-gray-400">Manage system configuration and preferences</p>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">Settings</h1>
+          <p className="text-gray-600 dark:text-gray-400">Manage system configuration and preferences</p>
         </motion.div>
 
         {/* Alerts */}
         {successMessage && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6"
-          >
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
             <Alert variant="success" onClose={() => setSuccessMessage('')}>
               {successMessage}
             </Alert>
           </motion.div>
         )}
         {errorMessage && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6"
-          >
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
             <Alert variant="error" onClose={() => setErrorMessage('')}>
               {errorMessage}
             </Alert>
           </motion.div>
         )}
 
-        {/* Tabs */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <Tabs tabs={tabs} defaultValue="general" />
         </motion.div>
 
