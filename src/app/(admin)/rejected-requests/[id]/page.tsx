@@ -38,14 +38,12 @@ export default function RejectedRequestDetailPage({ params }: { params: Promise<
   useEffect(() => {
     const load = async () => {
       try {
-        // ✅ Fetch request via API route — decrypts sensitive fields
         const reqRes = await fetch(`/api/requests?id=${id}&status=rejected`);
         if (!reqRes.ok) { setNotFound(true); return; }
         const reqJson = await reqRes.json();
         if (!reqJson.data?.[0]) { setNotFound(true); return; }
         setRequest(reqJson.data[0]);
 
-        // ✅ Fetch profile via API route — decrypts phone, address, birthday
         const profileRes = await fetch(`/api/profile?id=${reqJson.data[0].user_id}`);
         if (profileRes.ok) {
           const profileJson = await profileRes.json();
@@ -61,17 +59,21 @@ export default function RejectedRequestDetailPage({ params }: { params: Promise<
   }, [id]);
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
       <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
     </div>
   );
 
   if (notFound || !request) return (
-    <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center">
-      <Card><CardContent className="p-8 text-center">
-        <p className="text-gray-400 mb-4">Request not found</p>
-        <Link href="/rejected-requests"><Button>Back to Rejected Requests</Button></Link>
-      </CardContent></Card>
+    <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <Card className="bg-white dark:bg-gray-800">
+        <CardContent className="p-8 text-center">
+          <p className="text-gray-700 dark:text-gray-300 mb-4">Request not found</p>
+          <Link href="/rejected-requests">
+            <Button variant="orange">Back to Rejected Requests</Button>
+          </Link>
+        </CardContent>
+      </Card>
     </div>
   );
 
@@ -99,39 +101,41 @@ export default function RejectedRequestDetailPage({ params }: { params: Promise<
   );
 
   return (
-    <div className="min-h-screen p-4 lg:p-8">
+    <div className="min-h-screen p-4 lg:p-8 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       <div className="max-w-5xl mx-auto">
 
         <Link href="/rejected-requests">
-          <Button variant="ghost" className="mb-6 gap-2"><ArrowLeft className="w-4 h-4" />Back to Rejected Requests</Button>
+          <Button variant="ghost" className="mb-6 gap-2">
+            <ArrowLeft className="w-4 h-4" />Back to Rejected Requests
+          </Button>
         </Link>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
           <div className="flex items-center justify-between mb-2">
-            <h1 className="text-3xl font-bold text-white">{request.type ?? request.document_type}</h1>
+            <h1 className="text-3xl font-bold">{request.type ?? request.document_type}</h1>
             <Badge variant="rejected">rejected</Badge>
           </div>
-          <p className="text-gray-400 font-mono text-sm">ID: {request.id.toUpperCase()}</p>
+          <p className="text-gray-500 dark:text-gray-400 font-mono text-sm">ID: {request.id.toUpperCase()}</p>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
 
             {/* Rejection Reason */}
-            <Card className="border border-red-500/30">
+            <Card className="border border-red-500/30 dark:border-red-400/60">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-red-400">
+                <CardTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
                   <XCircle className="w-5 h-5" />Reason for Rejection
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-white bg-red-500/10 p-4 rounded-lg">
+                <p className="bg-red-100 dark:bg-red-600/20 text-red-900 dark:text-red-100 p-4 rounded-lg">
                   {request.notes ?? 'No reason provided.'}
                 </p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-white/10 dark:bg-gray-800">
               <CardHeader><CardTitle>Request Information</CardTitle></CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4">
@@ -140,8 +144,8 @@ export default function RejectedRequestDetailPage({ params }: { params: Promise<
                   <DetailRow label="Date Requested" value={new Date(request.created_at).toLocaleDateString()} />
                   {request.additional_info && (
                     <div className="col-span-2">
-                      <p className="text-sm text-gray-400 mb-2">Additional Information</p>
-                      <p className="text-white bg-white/5 p-3 rounded-lg">{request.additional_info}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Additional Information</p>
+                      <p className="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg text-gray-900 dark:text-gray-100">{request.additional_info}</p>
                     </div>
                   )}
                 </div>
@@ -149,7 +153,7 @@ export default function RejectedRequestDetailPage({ params }: { params: Promise<
             </Card>
 
             {extraDetails.length > 0 && (
-              <Card>
+              <Card className="bg-white/10 dark:bg-gray-800">
                 <CardHeader><CardTitle>Submitted Information</CardTitle></CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-4">
@@ -160,13 +164,13 @@ export default function RejectedRequestDetailPage({ params }: { params: Promise<
             )}
 
             {profile && (
-              <Card>
+              <Card className="bg-white/10 dark:bg-gray-800">
                 <CardHeader><CardTitle>Applicant Information</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
-                  <IconRow icon={<User className="w-5 h-5 text-gray-400" />} label="Full Name" value={`${profile.firstName} ${profile.lastName}`} />
-                  <IconRow icon={<Mail className="w-5 h-5 text-gray-400" />} label="Email" value={profile.email} />
-                  <IconRow icon={<Phone className="w-5 h-5 text-gray-400" />} label="Phone" value={profile.phone} />
-                  <IconRow icon={<MapPin className="w-5 h-5 text-gray-400" />} label="Address" value={profile.address} />
+                  <IconRow icon={<User className="w-5 h-5 text-gray-500 dark:text-gray-400" />} label="Full Name" value={`${profile.firstName} ${profile.lastName}`} />
+                  <IconRow icon={<Mail className="w-5 h-5 text-gray-500 dark:text-gray-400" />} label="Email" value={profile.email} />
+                  <IconRow icon={<Phone className="w-5 h-5 text-gray-500 dark:text-gray-400" />} label="Phone" value={profile.phone} />
+                  <IconRow icon={<MapPin className="w-5 h-5 text-gray-500 dark:text-gray-400" />} label="Address" value={profile.address} />
                   {profile.birthday && (
                     <div className="grid grid-cols-2 gap-4 pt-2">
                       <DetailRow label="Birthday" value={new Date(profile.birthday).toLocaleDateString()} />
@@ -179,16 +183,25 @@ export default function RejectedRequestDetailPage({ params }: { params: Promise<
           </div>
 
           <div className="space-y-6">
-            <Card>
-              <CardHeader><CardTitle className="flex items-center gap-2"><XCircle className="w-5 h-5 text-red-400" />Status</CardTitle></CardHeader>
+            <Card className="bg-white/10 dark:bg-gray-800">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                  <XCircle className="w-5 h-5" />Status
+                </CardTitle>
+              </CardHeader>
               <CardContent>
-                <div className="flex items-center gap-2 text-red-400">
+                <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
                   <XCircle className="w-5 h-5" /><span className="font-medium">Rejected</span>
                 </div>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader><CardTitle className="flex items-center gap-2"><Clock className="w-5 h-5 text-blue-400" />Timeline</CardTitle></CardHeader>
+
+            <Card className="bg-white/10 dark:bg-gray-800">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                  <Clock className="w-5 h-5" />Timeline
+                </CardTitle>
+              </CardHeader>
               <CardContent className="space-y-3">
                 <DetailRow label="Date Submitted" value={new Date(request.created_at).toLocaleString()} />
                 <DetailRow label="Date Rejected" value={new Date(request.created_at).toLocaleString()} />
@@ -204,8 +217,8 @@ export default function RejectedRequestDetailPage({ params }: { params: Promise<
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-sm text-gray-400 mb-1">{label}</p>
-      <p className="text-white font-medium">{value}</p>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{label}</p>
+      <p className="font-medium text-gray-900 dark:text-gray-100">{value}</p>
     </div>
   );
 }
@@ -215,8 +228,8 @@ function IconRow({ icon, label, value }: { icon: React.ReactNode; label: string;
     <div className="flex items-start gap-3">
       <div className="mt-0.5">{icon}</div>
       <div>
-        <p className="text-sm text-gray-400">{label}</p>
-        <p className="text-white">{value}</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
+        <p className="text-gray-900 dark:text-gray-100">{value}</p>
       </div>
     </div>
   );
