@@ -35,11 +35,11 @@ interface Request {
 
 export default function ApprovedDocumentsPage() {
   const router = useRouter();
-  const [requests, setRequests] = useState<Request[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [requests, setRequests]       = useState<Request[]>([]);
+  const [loading, setLoading]         = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState('all');
-  const [dateFilter, setDateFilter] = useState('all');
+  const [typeFilter, setTypeFilter]   = useState('all');
+  const [dateFilter, setDateFilter]   = useState('all');
 
   useEffect(() => {
     const load = async () => {
@@ -47,50 +47,69 @@ export default function ApprovedDocumentsPage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { router.push('/login'); return; }
 
-        const { data: reqData, error: reqError } = await supabase
-          .from('requests')
-          .select('*')
-          .order('created_at', { ascending: false });
+        // ── Step 1: fetch approved requests through the decrypting API ──────
+        const reqRes = await fetch('/api/requests?status=approved');
+        if (!reqRes.ok) throw new Error('Failed to fetch approved requests');
+        const reqJson = await reqRes.json();
+        const approved: any[] = reqJson.data ?? [];
 
-        console.log('[approved] total rows fetched:', reqData?.length ?? 0, '| error:', reqError);
-        console.log('[approved] all statuses:', [...new Set((reqData ?? []).map((r: any) => r.status))]);
-
-        if (reqError) throw reqError;
-
-        const approved = (reqData ?? []).filter((r: any) => r.status === 'approved');
-        console.log('[approved] approved count after filter:', approved.length);
+        console.log('[approved] approved count:', approved.length);
 
         if (approved.length === 0) {
           setRequests([]);
           return;
         }
 
-        const userIds = [...new Set(approved.map((r: any) => r.user_id))];
-        const { data: profilesData } = await supabase
-          .from('profiles')
-          .select('id, firstName, lastName, email')
-          .in('id', userIds);
+        // ── Step 2: fetch each unique user's profile through the decrypting API ──
+        // Direct Supabase client queries return raw (encrypted) column values.
+        // Routing through /api/profile ensures AES fields are decrypted server-side.
+        const userIds = [...new Set(approved.map((r: any) => r.user_id as string))];
 
-        const profileMap: Record<string, Profile> = Object.fromEntries(
-          (profilesData ?? []).map((p: Profile) => [p.id, p])
+        const profileEntries = await Promise.all(
+          userIds.map(async (uid) => {
+            try {
+              const res = await fetch(`/api/profile?id=${uid}`);
+              if (!res.ok) return null;
+              const json = await res.json();
+              const p = json.data;
+              if (!p) return null;
+              const profile: Profile = {
+                id:        uid,
+                // Normalise both camelCase (API-remapped) and snake_case (raw) shapes
+                firstName: p.firstName ?? p.first_name ?? '',
+                lastName:  p.lastName  ?? p.last_name  ?? '',
+                email:     p.email     ?? '',
+              };
+              return [uid, profile] as [string, Profile];
+            } catch {
+              return null;
+            }
+          })
         );
 
-        setRequests(approved.map((r: any) => ({
-          ...r,
-          profiles: profileMap[r.user_id] ?? null,
-        })));
+        const profileMap: Record<string, Profile> = Object.fromEntries(
+          (profileEntries.filter(Boolean) as [string, Profile][])
+        );
+
+        setRequests(
+          approved.map((r: any) => ({
+            ...r,
+            profiles: profileMap[r.user_id] ?? null,
+          }))
+        );
       } catch (err: any) {
-        console.error("[approved] error message:", err?.message);
-        console.error("[approved] error code:", err?.code);
-        console.error("[approved] error details:", err?.details);
-        console.error("[approved] error hint:", err?.hint);
-        console.error("[approved] full:", JSON.stringify(err, null, 2));
+        console.error('[approved] error:', err?.message);
       } finally {
         setLoading(false);
       }
     };
     load();
   }, [router]);
+
+  // ── Date helpers ────────────────────────────────────────────────────────────
+
+  const isToday = (dateStr: string) =>
+    new Date(dateStr).toDateString() === new Date().toDateString();
 
   const isThisWeek = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -110,29 +129,35 @@ export default function ApprovedDocumentsPage() {
   const isThisYear = (dateStr: string) =>
     new Date(dateStr).getFullYear() === new Date().getFullYear();
 
-  const isToday = (dateStr: string) =>
-    new Date(dateStr).toDateString() === new Date().toDateString();
+  // ── Filtering ───────────────────────────────────────────────────────────────
 
   const filtered = requests.filter((r) => {
     const name = r.profiles ? `${r.profiles.firstName} ${r.profiles.lastName}` : '';
     const q = searchQuery.toLowerCase();
+
     const matchesSearch =
       r.id.toLowerCase().includes(q) ||
       name.toLowerCase().includes(q) ||
       (r.type ?? '').toLowerCase().includes(q);
+
     const matchesType = typeFilter === 'all' || r.type === typeFilter;
+
     const dateRef = r.processed_at ?? r.created_at;
     const matchesDate =
-      dateFilter === 'all' ||
+      dateFilter === 'all'                         ||
       (dateFilter === 'today' && isToday(dateRef)) ||
-      (dateFilter === 'week' && isThisWeek(dateRef)) ||
+      (dateFilter === 'week'  && isThisWeek(dateRef)) ||
       (dateFilter === 'month' && isThisMonth(dateRef));
+
     return matchesSearch && matchesType && matchesDate;
   });
 
   const uniqueTypes = ['all', ...Array.from(new Set(requests.map(r => r.type).filter(Boolean)))];
+
   const displayPurpose = (r: Request) =>
     r.purpose === 'others' && r.custom_purpose ? r.custom_purpose : r.purpose ?? '—';
+
+  // ── Loading state ───────────────────────────────────────────────────────────
 
   if (loading) {
     return (
@@ -142,35 +167,46 @@ export default function ApprovedDocumentsPage() {
     );
   }
 
+  // ── Render ──────────────────────────────────────────────────────────────────
+
   return (
     <div className="min-h-screen p-4 lg:p-8">
       <div className="max-w-7xl mx-auto">
 
+        {/* Page heading */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">Approved Documents</h1>
           <p className="text-gray-400">View and manage all approved barangay documents</p>
         </motion.div>
 
-        {/* Stats */}
+        {/* Stats row */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
           className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"
         >
           {[
-            { label: 'Total Approved', value: requests.length, color: 'text-white' },
-            { label: 'This Week', value: requests.filter(r => isThisWeek(r.processed_at ?? r.created_at)).length, color: 'text-green-400' },
-            { label: 'This Month', value: requests.filter(r => isThisMonth(r.processed_at ?? r.created_at)).length, color: 'text-blue-400' },
-            { label: 'This Year', value: requests.filter(r => isThisYear(r.processed_at ?? r.created_at)).length, color: 'text-purple-400' },
+            { label: 'Total Approved', value: requests.length,                                                          color: 'text-white' },
+            { label: 'This Week',      value: requests.filter(r => isThisWeek(r.processed_at ?? r.created_at)).length,  color: 'text-green-400' },
+            { label: 'This Month',     value: requests.filter(r => isThisMonth(r.processed_at ?? r.created_at)).length, color: 'text-blue-400' },
+            { label: 'This Year',      value: requests.filter(r => isThisYear(r.processed_at ?? r.created_at)).length,  color: 'text-purple-400' },
           ].map(s => (
-            <Card key={s.label}><CardContent className="p-4">
-              <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
-              <div className="text-sm text-gray-400">{s.label}</div>
-            </CardContent></Card>
+            <Card key={s.label}>
+              <CardContent className="p-4">
+                <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
+                <div className="text-sm text-gray-400">{s.label}</div>
+              </CardContent>
+            </Card>
           ))}
         </motion.div>
 
         {/* Filters */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
           <Card className="mb-6">
             <CardContent className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -195,9 +231,9 @@ export default function ApprovedDocumentsPage() {
                   value={dateFilter}
                   onChange={(e) => setDateFilter(e.target.value)}
                   options={[
-                    { value: 'all', label: 'All Time' },
+                    { value: 'all',   label: 'All Time' },
                     { value: 'today', label: 'Today' },
-                    { value: 'week', label: 'This Week' },
+                    { value: 'week',  label: 'This Week' },
                     { value: 'month', label: 'This Month' },
                   ]}
                 />
@@ -207,9 +243,15 @@ export default function ApprovedDocumentsPage() {
         </motion.div>
 
         {/* Table */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
           <Card>
-            <CardHeader><CardTitle>All Approved Documents ({filtered.length})</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>All Approved Documents ({filtered.length})</CardTitle>
+            </CardHeader>
             <CardContent>
               {requests.length === 0 ? (
                 <div className="text-center py-16">
@@ -239,15 +281,19 @@ export default function ApprovedDocumentsPage() {
                       </TableRow>
                     ) : (
                       filtered.map((req) => {
-                        const name = req.profiles
+                        const name         = req.profiles
                           ? `${req.profiles.firstName} ${req.profiles.lastName}`
                           : 'Unknown';
                         const approvedDate = req.processed_at ?? req.created_at;
+
                         return (
                           <TableRow key={req.id}>
+                            {/* ID */}
                             <TableCell className="font-mono text-xs text-gray-400">
                               {req.id.slice(0, 8).toUpperCase()}
                             </TableCell>
+
+                            {/* Resident */}
                             <TableCell>
                               <div className="flex items-center gap-2">
                                 <User className="w-4 h-4 text-blue-400 shrink-0" />
@@ -257,19 +303,29 @@ export default function ApprovedDocumentsPage() {
                                 </div>
                               </div>
                             </TableCell>
+
+                            {/* Document type */}
                             <TableCell>
                               <div className="flex items-center gap-2">
                                 <FileText className="w-4 h-4 text-green-400 shrink-0" />
                                 {req.type ?? req.document_type ?? '—'}
                               </div>
                             </TableCell>
-                            <TableCell className="capitalize">{displayPurpose(req)}</TableCell>
+
+                            {/* Purpose */}
+                            <TableCell className="capitalize">
+                              {displayPurpose(req)}
+                            </TableCell>
+
+                            {/* Date approved */}
                             <TableCell>
                               <div className="flex items-center gap-1 text-gray-400">
                                 <Calendar className="w-4 h-4" />
                                 {new Date(approvedDate).toLocaleDateString()}
                               </div>
                             </TableCell>
+
+                            {/* File download */}
                             <TableCell>
                               {req.file_url ? (
                                 <a href={req.file_url} target="_blank" rel="noopener noreferrer" download>
@@ -282,6 +338,8 @@ export default function ApprovedDocumentsPage() {
                                 <span className="text-xs text-gray-500">No file</span>
                               )}
                             </TableCell>
+
+                            {/* View detail */}
                             <TableCell>
                               <Link href={`/approved-documents/${req.id}`}>
                                 <Button size="sm" className="gap-2">

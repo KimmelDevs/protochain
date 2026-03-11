@@ -7,10 +7,25 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const SENSITIVE_FIELDS = ['phone', 'address', 'birthday'] as const;
+// ALL profile fields that are encrypted at rest.
+// first_name / last_name cover snake_case columns; firstName / lastName cover
+// camelCase aliases — include both so decryption works regardless of which
+// column name Supabase returns.
+const SENSITIVE_FIELDS = [
+  'first_name',
+  'last_name',
+  'firstName',
+  'lastName',
+  'email',
+  'phone',
+  'address',
+  'birthday',
+  'civil_status',
+  'civilStatus',
+] as const;
 
-// ── GET /api/profile?id=xxx ──────────────────────────────────────────────────
-// Fetches and decrypts a profile row.
+// ── GET /api/profile?id=xxx ───────────────────────────────────────────────────
+// Fetches and decrypts ALL sensitive profile fields.
 export async function GET(req: NextRequest) {
   try {
     const id = new URL(req.url).searchParams.get('id');
@@ -31,7 +46,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// ── PATCH /api/profile?id=xxx ────────────────────────────────────────────────
+// ── PATCH /api/profile?id=xxx ─────────────────────────────────────────────────
 // Encrypts PII fields then updates the profile row.
 export async function PATCH(req: NextRequest) {
   try {
@@ -40,7 +55,7 @@ export async function PATCH(req: NextRequest) {
 
     const body = await req.json();
 
-    // Only encrypt fields that are present in the update payload
+    // Only encrypt fields that are actually present in the update payload
     const fieldsToEncrypt = SENSITIVE_FIELDS.filter(f => f in body);
     const encrypted = encryptFields(body, fieldsToEncrypt);
 
