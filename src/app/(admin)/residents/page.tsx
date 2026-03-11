@@ -245,8 +245,9 @@ export default function ResidentsPage() {
                           </TableCell>
                           <TableCell>
                             <Link href={`/residents/${resident.id}`}>
-                              <Button size="sm" className="gap-2 text-white bg-gradient-to-r from-orange-500 to-red-600 hover:opacity-90">
-                                <Eye className="w-4 h-4" />View
+                              <Button variant="orange" size="sm" className="gap-2">
+                                <Eye className="w-4 h-4" />
+                                View
                               </Button>
                             </Link>
                           </TableCell>

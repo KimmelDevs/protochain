@@ -150,8 +150,9 @@ export default function ReportsPage() {
               <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">Reports & Analytics</h1>
               <p className="text-gray-600 dark:text-gray-400">View statistics and generate reports</p>
             </div>
-            <Button className="gap-2 bg-gradient-to-r from-orange-500 to-red-600 text-white hover:opacity-90" onClick={handleExport}>
-              <Download className="w-4 h-4" />Export CSV
+            <Button variant="orange" size="sm" className="gap-2" onClick={handleExport}>
+              <Download className="w-4 h-4" />
+              Export CSV
             </Button>
           </div>
         </motion.div>

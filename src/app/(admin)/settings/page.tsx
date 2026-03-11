@@ -266,17 +266,19 @@ export default function SettingsPage() {
           />
           <div className="flex justify-end">
             <Button
+              variant="orange"
+              size="sm"
               onClick={handleSaveBarangayInfo}
               disabled={savingInfo}
-              className="gap-2 text-white bg-gradient-to-r from-orange-500 to-red-500 hover:from-red-500 hover:to-orange-500 disabled:opacity-50"
+              className="gap-2 disabled:opacity-50"
             >
               {savingInfo ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />Saving...
+                  <Loader2 className="w-4 h-4 animate-spin" /> Saving...
                 </>
               ) : (
                 <>
-                  <Save className="w-4 h-4" />Save Changes
+                  <Save className="w-4 h-4" /> Save Changes
                 </>
               )}
             </Button>
@@ -359,10 +361,12 @@ export default function SettingsPage() {
         ))}
         <div className="flex justify-end pt-4">
           <Button
+            variant="orange"
+            size="sm"
+            className="gap-2"
             onClick={handleSaveNotifications}
-            className="gap-2 text-white bg-gradient-to-r from-orange-500 to-red-500 hover:from-red-500 hover:to-orange-500"
           >
-            <Save className="w-4 h-4" />Save Changes
+            <Save className="w-4 h-4" /> Save Changes
           </Button>
         </div>
       </CardContent>
@@ -410,17 +414,19 @@ export default function SettingsPage() {
           </div>
           <div className="flex justify-end">
             <Button
+              variant="orange"
+              size="sm"
               onClick={handleSaveBarangayInfo}
               disabled={savingInfo}
-              className="gap-2 text-white bg-gradient-to-r from-orange-500 to-red-500 hover:from-red-500 hover:to-orange-500 disabled:opacity-50"
+              className="gap-2 disabled:opacity-50"
             >
               {savingInfo ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />Saving...
+                  <Loader2 className="w-4 h-4 animate-spin" /> Saving...
                 </>
               ) : (
                 <>
-                  <Save className="w-4 h-4" />Save Changes
+                  <Save className="w-4 h-4" /> Save Changes
                 </>
               )}
             </Button>

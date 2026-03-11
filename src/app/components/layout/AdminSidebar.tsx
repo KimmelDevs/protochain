@@ -139,7 +139,7 @@ export default function AdminSidebar() {
                     flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200
                     ${
                       isActive
-                        ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-lg'
+                        ? 'bg-orange-600 hover:bg-orange-500 text-white shadow-lg'
                         : 'text-gray-700 dark:text-gray-400 hover:text-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5'
                     }
                   `}

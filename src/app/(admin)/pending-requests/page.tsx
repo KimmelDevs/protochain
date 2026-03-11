@@ -283,10 +283,7 @@ export default function PendingRequestsPage() {
 
                           <TableCell>
                             <Link href={`/pending-requests/${req.id}`}>
-                              <Button
-                                size="sm"
-                                className="gap-2 text-white bg-gradient-to-r from-orange-500 to-red-600 hover:opacity-90"
-                              >
+                              <Button variant="orange" size="sm" className="gap-2">
                                 <Eye className="w-4 h-4" />
                                 Review
                               </Button>

@@ -306,7 +306,7 @@ export default function DashboardPage() {
                       </p>
 
                       <Link href="/pending-requests">
-                        <Button size="sm" className="gap-2 text-white bg-gradient-to-r from-orange-500 to-red-600 hover:opacity-90">
+                        <Button variant="orange" size="sm">
                           Review Now
                         </Button>
                       </Link>
