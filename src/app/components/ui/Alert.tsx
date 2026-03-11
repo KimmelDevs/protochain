@@ -18,27 +18,27 @@ export default function Alert({
 }: AlertProps) {
   const variants = {
     info: {
-      bg: 'bg-blue-500/10',
-      border: 'border-blue-500/30',
-      text: 'text-blue-400',
+      bg: 'bg-blue-100 dark:bg-blue-500/20',
+      border: 'border-blue-300 dark:border-blue-500/30',
+      text: 'text-blue-700 dark:text-blue-400',
       icon: Info,
     },
     success: {
-      bg: 'bg-green-500/10',
-      border: 'border-green-500/30',
-      text: 'text-green-400',
+      bg: 'bg-green-100 dark:bg-green-500/20',
+      border: 'border-green-300 dark:border-green-500/30',
+      text: 'text-green-700 dark:text-green-400',
       icon: CheckCircle,
     },
     warning: {
-      bg: 'bg-yellow-500/10',
-      border: 'border-yellow-500/30',
-      text: 'text-yellow-400',
+      bg: 'bg-yellow-100 dark:bg-yellow-500/20',
+      border: 'border-yellow-300 dark:border-yellow-500/30',
+      text: 'text-yellow-700 dark:text-yellow-400',
       icon: AlertTriangle,
     },
     error: {
-      bg: 'bg-red-500/10',
-      border: 'border-red-500/30',
-      text: 'text-red-400',
+      bg: 'bg-red-100 dark:bg-red-500/20',
+      border: 'border-red-300 dark:border-red-500/30',
+      text: 'text-red-700 dark:text-red-400',
       icon: AlertCircle,
     },
   };
@@ -62,7 +62,7 @@ export default function Alert({
               {title}
             </h5>
           )}
-          <div className="text-sm text-gray-300">
+          <div className="text-sm text-gray-800 dark:text-gray-300">
             {children}
           </div>
         </div>
