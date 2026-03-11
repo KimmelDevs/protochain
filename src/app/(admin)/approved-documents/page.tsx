@@ -34,56 +34,67 @@ interface Request {
 }
 
 export default function ApprovedDocumentsPage() {
+
   const router = useRouter();
-  const [requests, setRequests]       = useState<Request[]>([]);
-  const [loading, setLoading]         = useState(true);
+
+  const [requests, setRequests] = useState<Request[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [searchQuery, setSearchQuery] = useState('');
-  const [typeFilter, setTypeFilter]   = useState('all');
-  const [dateFilter, setDateFilter]   = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('all');
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) { router.push('/login'); return; }
 
-        // ── Step 1: fetch approved requests through the decrypting API ──────
+    const load = async () => {
+
+      try {
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          router.push('/login');
+          return;
+        }
+
         const reqRes = await fetch('/api/requests?status=approved');
         if (!reqRes.ok) throw new Error('Failed to fetch approved requests');
+
         const reqJson = await reqRes.json();
         const approved: any[] = reqJson.data ?? [];
-
-        console.log('[approved] approved count:', approved.length);
 
         if (approved.length === 0) {
           setRequests([]);
           return;
         }
 
-        // ── Step 2: fetch each unique user's profile through the decrypting API ──
-        // Direct Supabase client queries return raw (encrypted) column values.
-        // Routing through /api/profile ensures AES fields are decrypted server-side.
-        const userIds = [...new Set(approved.map((r: any) => r.user_id as string))];
+        const userIds = [...new Set(approved.map((r: any) => r.user_id))];
 
         const profileEntries = await Promise.all(
           userIds.map(async (uid) => {
+
             try {
+
               const res = await fetch(`/api/profile?id=${uid}`);
               if (!res.ok) return null;
+
               const json = await res.json();
               const p = json.data;
+
               if (!p) return null;
+
               const profile: Profile = {
-                id:        uid,
-                // Normalise both camelCase (API-remapped) and snake_case (raw) shapes
+                id: uid,
                 firstName: p.firstName ?? p.first_name ?? '',
-                lastName:  p.lastName  ?? p.last_name  ?? '',
-                email:     p.email     ?? '',
+                lastName: p.lastName ?? p.last_name ?? '',
+                email: p.email ?? '',
               };
+
               return [uid, profile] as [string, Profile];
+
             } catch {
               return null;
             }
+
           })
         );
 
@@ -97,16 +108,18 @@ export default function ApprovedDocumentsPage() {
             profiles: profileMap[r.user_id] ?? null,
           }))
         );
+
       } catch (err: any) {
         console.error('[approved] error:', err?.message);
       } finally {
         setLoading(false);
       }
-    };
-    load();
-  }, [router]);
 
-  // ── Date helpers ────────────────────────────────────────────────────────────
+    };
+
+    load();
+
+  }, [router]);
 
   const isToday = (dateStr: string) =>
     new Date(dateStr).toDateString() === new Date().toDateString();
@@ -129,9 +142,8 @@ export default function ApprovedDocumentsPage() {
   const isThisYear = (dateStr: string) =>
     new Date(dateStr).getFullYear() === new Date().getFullYear();
 
-  // ── Filtering ───────────────────────────────────────────────────────────────
-
   const filtered = requests.filter((r) => {
+
     const name = r.profiles ? `${r.profiles.firstName} ${r.profiles.lastName}` : '';
     const q = searchQuery.toLowerCase();
 
@@ -140,16 +152,19 @@ export default function ApprovedDocumentsPage() {
       name.toLowerCase().includes(q) ||
       (r.type ?? '').toLowerCase().includes(q);
 
-    const matchesType = typeFilter === 'all' || r.type === typeFilter;
+    const matchesType =
+      typeFilter === 'all' || r.type === typeFilter;
 
     const dateRef = r.processed_at ?? r.created_at;
+
     const matchesDate =
-      dateFilter === 'all'                         ||
+      dateFilter === 'all' ||
       (dateFilter === 'today' && isToday(dateRef)) ||
-      (dateFilter === 'week'  && isThisWeek(dateRef)) ||
+      (dateFilter === 'week' && isThisWeek(dateRef)) ||
       (dateFilter === 'month' && isThisMonth(dateRef));
 
     return matchesSearch && matchesType && matchesDate;
+
   });
 
   const uniqueTypes = ['all', ...Array.from(new Set(requests.map(r => r.type).filter(Boolean)))];
@@ -157,209 +172,219 @@ export default function ApprovedDocumentsPage() {
   const displayPurpose = (r: Request) =>
     r.purpose === 'others' && r.custom_purpose ? r.custom_purpose : r.purpose ?? '—';
 
-  // ── Loading state ───────────────────────────────────────────────────────────
-
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f0f23]">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500 dark:text-blue-400" />
       </div>
     );
   }
 
-  // ── Render ──────────────────────────────────────────────────────────────────
-
   return (
-    <div className="min-h-screen p-4 lg:p-8">
+
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0f0f23] p-4 lg:p-8 transition-colors">
+
       <div className="max-w-7xl mx-auto">
 
-        {/* Page heading */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">Approved Documents</h1>
-          <p className="text-gray-400">View and manage all approved barangay documents</p>
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">
+            Approved Documents
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            View and manage all approved barangay documents
+          </p>
         </motion.div>
 
-        {/* Stats row */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
           className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"
         >
+
           {[
-            { label: 'Total Approved', value: requests.length,                                                          color: 'text-white' },
-            { label: 'This Week',      value: requests.filter(r => isThisWeek(r.processed_at ?? r.created_at)).length,  color: 'text-green-400' },
-            { label: 'This Month',     value: requests.filter(r => isThisMonth(r.processed_at ?? r.created_at)).length, color: 'text-blue-400' },
-            { label: 'This Year',      value: requests.filter(r => isThisYear(r.processed_at ?? r.created_at)).length,  color: 'text-purple-400' },
+            { label: 'Total Approved', value: requests.length, color: 'text-gray-900 dark:text-white' },
+            { label: 'This Week', value: requests.filter(r => isThisWeek(r.processed_at ?? r.created_at)).length, color: 'text-green-500 dark:text-green-400' },
+            { label: 'This Month', value: requests.filter(r => isThisMonth(r.processed_at ?? r.created_at)).length, color: 'text-blue-500 dark:text-blue-400' },
+            { label: 'This Year', value: requests.filter(r => isThisYear(r.processed_at ?? r.created_at)).length, color: 'text-purple-500 dark:text-purple-400' },
           ].map(s => (
             <Card key={s.label}>
               <CardContent className="p-4">
                 <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
-                <div className="text-sm text-gray-400">{s.label}</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">{s.label}</div>
               </CardContent>
             </Card>
           ))}
+
         </motion.div>
 
-        {/* Filters */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Card className="mb-6">
-            <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <Input
-                    placeholder="Search by name, ID, or document type..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <Select
-                  value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value)}
-                  options={uniqueTypes.map(t => ({
-                    value: t,
-                    label: t === 'all' ? 'All Document Types' : t,
-                  }))}
-                />
-                <Select
-                  value={dateFilter}
-                  onChange={(e) => setDateFilter(e.target.value)}
-                  options={[
-                    { value: 'all',   label: 'All Time' },
-                    { value: 'today', label: 'Today' },
-                    { value: 'week',  label: 'This Week' },
-                    { value: 'month', label: 'This Month' },
-                  ]}
+        <Card className="mb-6">
+          <CardContent className="p-6">
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 w-5 h-5" />
+                <Input
+                  placeholder="Search by name, ID, or document type..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
                 />
               </div>
-            </CardContent>
-          </Card>
-        </motion.div>
 
-        {/* Table */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Card>
-            <CardHeader>
-              <CardTitle>All Approved Documents ({filtered.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {requests.length === 0 ? (
-                <div className="text-center py-16">
-                  <FileText className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-                  <p className="text-white font-medium mb-1">No approved documents yet</p>
-                  <p className="text-gray-400 text-sm">Approved requests will appear here.</p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Request ID</TableHead>
-                      <TableHead>Resident</TableHead>
-                      <TableHead>Document Type</TableHead>
-                      <TableHead>Purpose</TableHead>
-                      <TableHead>Date Approved</TableHead>
-                      <TableHead>File</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filtered.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-gray-400">
-                          No documents match your search
+              <Select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                options={uniqueTypes.map(t => ({
+                  value: t,
+                  label: t === 'all' ? 'All Document Types' : t,
+                }))}
+              />
+
+              <Select
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                options={[
+                  { value: 'all', label: 'All Time' },
+                  { value: 'today', label: 'Today' },
+                  { value: 'week', label: 'This Week' },
+                  { value: 'month', label: 'This Month' },
+                ]}
+              />
+
+            </div>
+
+          </CardContent>
+        </Card>
+
+        <Card>
+
+          <CardHeader>
+            <CardTitle>All Approved Documents ({filtered.length})</CardTitle>
+          </CardHeader>
+
+          <CardContent>
+
+            {requests.length === 0 ? (
+
+              <div className="text-center py-16">
+                <FileText className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+                <p className="text-gray-900 dark:text-white font-medium mb-1">
+                  No approved documents yet
+                </p>
+                <p className="text-gray-600 dark:text-gray-400 text-sm">
+                  Approved requests will appear here.
+                </p>
+              </div>
+
+            ) : (
+
+              <Table>
+
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Request ID</TableHead>
+                    <TableHead>Resident</TableHead>
+                    <TableHead>Document Type</TableHead>
+                    <TableHead>Purpose</TableHead>
+                    <TableHead>Date Approved</TableHead>
+                    <TableHead>File</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+
+                <TableBody>
+
+                  {filtered.map((req) => {
+
+                    const name = req.profiles
+                      ? `${req.profiles.firstName} ${req.profiles.lastName}`
+                      : 'Unknown';
+
+                    const approvedDate = req.processed_at ?? req.created_at;
+
+                    return (
+
+                      <TableRow key={req.id}>
+
+                        <TableCell className="font-mono text-xs text-gray-500 dark:text-gray-400">
+                          {req.id.slice(0, 8).toUpperCase()}
                         </TableCell>
+
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <User className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+                            <div>
+                              <p className="text-gray-900 dark:text-white">{name}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{req.profiles?.email ?? ''}</p>
+                            </div>
+                          </div>
+                        </TableCell>
+
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-green-500 dark:text-green-400" />
+                            {req.type ?? req.document_type ?? '—'}
+                          </div>
+                        </TableCell>
+
+                        <TableCell className="capitalize">
+                          {displayPurpose(req)}
+                        </TableCell>
+
+                        <TableCell>
+                          <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
+                            <Calendar className="w-4 h-4" />
+                            {new Date(approvedDate).toLocaleDateString()}
+                          </div>
+                        </TableCell>
+
+                        <TableCell>
+                          {req.file_url ? (
+                            <a href={req.file_url} target="_blank" rel="noopener noreferrer" download>
+                              <Button variant="ghost" size="sm" className="gap-1 text-green-500 dark:text-green-400">
+                                <Download className="w-4 h-4" />
+                                Download
+                              </Button>
+                            </a>
+                          ) : (
+                            <span className="text-xs text-gray-500">No file</span>
+                          )}
+                        </TableCell>
+
+                        <TableCell>
+                          <Link href={`/approved-documents/${req.id}`}>
+                            <Button
+                              size="sm"
+                              className="gap-2 text-white bg-gradient-to-r from-orange-500 to-red-600 hover:opacity-90"
+                            >
+                              <Eye className="w-4 h-4" />
+                              View
+                            </Button>
+                          </Link>
+                        </TableCell>
+
                       </TableRow>
-                    ) : (
-                      filtered.map((req) => {
-                        const name         = req.profiles
-                          ? `${req.profiles.firstName} ${req.profiles.lastName}`
-                          : 'Unknown';
-                        const approvedDate = req.processed_at ?? req.created_at;
 
-                        return (
-                          <TableRow key={req.id}>
-                            {/* ID */}
-                            <TableCell className="font-mono text-xs text-gray-400">
-                              {req.id.slice(0, 8).toUpperCase()}
-                            </TableCell>
+                    );
 
-                            {/* Resident */}
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <User className="w-4 h-4 text-blue-400 shrink-0" />
-                                <div>
-                                  <p className="text-white">{name}</p>
-                                  <p className="text-xs text-gray-400">{req.profiles?.email ?? ''}</p>
-                                </div>
-                              </div>
-                            </TableCell>
+                  })}
 
-                            {/* Document type */}
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <FileText className="w-4 h-4 text-green-400 shrink-0" />
-                                {req.type ?? req.document_type ?? '—'}
-                              </div>
-                            </TableCell>
+                </TableBody>
 
-                            {/* Purpose */}
-                            <TableCell className="capitalize">
-                              {displayPurpose(req)}
-                            </TableCell>
+              </Table>
 
-                            {/* Date approved */}
-                            <TableCell>
-                              <div className="flex items-center gap-1 text-gray-400">
-                                <Calendar className="w-4 h-4" />
-                                {new Date(approvedDate).toLocaleDateString()}
-                              </div>
-                            </TableCell>
+            )}
 
-                            {/* File download */}
-                            <TableCell>
-                              {req.file_url ? (
-                                <a href={req.file_url} target="_blank" rel="noopener noreferrer" download>
-                                  <Button variant="ghost" size="sm" className="gap-1 text-green-400">
-                                    <Download className="w-4 h-4" />
-                                    Download
-                                  </Button>
-                                </a>
-                              ) : (
-                                <span className="text-xs text-gray-500">No file</span>
-                              )}
-                            </TableCell>
+          </CardContent>
 
-                            {/* View detail */}
-                            <TableCell>
-                              <Link href={`/approved-documents/${req.id}`}>
-                                <Button size="sm" className="gap-2">
-                                  <Eye className="w-4 h-4" />
-                                  View
-                                </Button>
-                              </Link>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
+        </Card>
 
       </div>
+
     </div>
+
   );
+
 }
