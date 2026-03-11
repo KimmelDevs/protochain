@@ -210,21 +210,23 @@ export default function ReportsPage() {
               <CardHeader><CardTitle>Document Types</CardTitle></CardHeader>
               <CardContent>
                 {typeData.length === 0 ? (
-                  <p className="text-gray-400 dark:text-gray-500 text-sm text-center py-8">No data for this period.</p>
+                  <p className="text-gray-400 dark:text-gray-300 text-sm text-center py-8">
+                    No data for this period.
+                  </p>
                 ) : (
                   <div className="space-y-4">
                     {typeData.map(item => (
                       <div key={item.type}>
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm text-gray-400 dark:text-gray-400">{item.type}</span>
+                          <span className="text-gray-700 dark:text-gray-200 text-sm">{item.type}</span>
                           <div className="flex items-center gap-3">
-                            <span className="text-sm text-gray-400 dark:text-gray-400">{item.percentage}%</span>
-                            <span className="text-sm font-medium text-gray-900 dark:text-white w-6 text-right">{item.count}</span>
+                            <span className="text-gray-700 dark:text-gray-300 text-sm">{item.percentage}%</span>
+                            <span className="text-gray-900 dark:text-white text-sm font-medium w-6 text-right">{item.count}</span>
                           </div>
                         </div>
                         <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-2">
                           <div
-                            className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full transition-all"
+                            className="bg-gradient-to-r from-blue-700 via-purple-600 to-purple-500 h-2 rounded-full transition-all dark:from-blue-500 dark:via-purple-400 dark:to-purple-400"
                             style={{ width: `${item.percentage}%` }}
                           />
                         </div>
@@ -239,22 +241,24 @@ export default function ReportsPage() {
           {/* Monthly trends */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
             <Card className="bg-white/5 dark:bg-white/5">
-              <CardHeader><CardTitle>Monthly Trends (Last 6 Months)</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle>Monthly Trends (Last 6 Months)</CardTitle>
+              </CardHeader>
               <CardContent>
-                <div className="space-y-3">
+                <div className="space-y-3"> 
                   {monthlyData.map(data => (
                     <div key={data.month}>
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-sm font-medium text-gray-900 dark:text-white w-16">{data.month}</span>
                         <div className="flex gap-3 text-xs">
-                          <span className="text-blue-400">{data.requests} total</span>
-                          <span className="text-green-400">{data.approved} approved</span>
-                          <span className="text-red-400">{data.rejected} rejected</span>
+                          <span className="text-blue-700 dark:text-blue-400">{data.requests} total</span>
+                          <span className="text-green-700 dark:text-green-400">{data.approved} approved</span>
+                          <span className="text-red-700 dark:text-red-400">{data.rejected} rejected</span>
                         </div>
                       </div>
                       <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-2">
                         <div
-                          className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all"
+                          className="bg-gradient-to-r from-blue-700 via-green-700 to-green-500 h-2 rounded-full transition-all dark:from-blue-500 dark:via-green-400"
                           style={{ width: `${(data.requests / maxMonthly) * 100}%` }}
                         />
                       </div>
@@ -272,16 +276,16 @@ export default function ReportsPage() {
             <CardHeader><CardTitle>Performance Summary</CardTitle></CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                {[ 
-                  { label: 'Approval Rate', value: `${approvalRate}%`, color: 'text-green-400', sub: 'Of all requests' },
-                  { label: 'Rejection Rate', value: total > 0 ? `${Math.round((rejected / total) * 100)}%` : '0%', color: 'text-red-400', sub: 'Of all requests' },
-                  { label: 'Pending Rate', value: total > 0 ? `${Math.round((pending / total) * 100)}%` : '0%', color: 'text-yellow-400', sub: 'Awaiting review' },
-                  { label: 'Total Processed', value: approved + rejected, color: 'text-blue-400', sub: 'Approved + Rejected' },
+                {[
+                  { label: 'Approval Rate', value: `${approvalRate}%`, color: 'text-green-600 dark:text-green-400', sub: 'Of all requests' },
+                  { label: 'Rejection Rate', value: total > 0 ? `${Math.round((rejected / total) * 100)}%` : '0%', color: 'text-red-600 dark:text-red-400', sub: 'Of all requests' },
+                  { label: 'Pending Rate', value: total > 0 ? `${Math.round((pending / total) * 100)}%` : '0%', color: 'text-yellow-600 dark:text-yellow-400', sub: 'Awaiting review' },
+                  { label: 'Total Processed', value: approved + rejected, color: 'text-blue-600 dark:text-blue-400', sub: 'Approved + Rejected' },
                 ].map(s => (
                   <div key={s.label} className="text-center p-6 bg-gray-200/10 dark:bg-white/10 rounded-lg">
-                    <div className={`text-4xl font-bold ${s.color} mb-2`}>{s.value}</div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">{s.label}</div>
-                    <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">{s.sub}</div>
+                    <div className={`text-4xl font-bold mb-2 ${s.color}`}>{s.value}</div>
+                    <div className="text-sm font-medium text-gray-700 dark:text-gray-200">{s.label}</div>
+                    <div className="text-xs mt-1 text-gray-500 dark:text-gray-400">{s.sub}</div>
                   </div>
                 ))}
               </div>
