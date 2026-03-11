@@ -66,8 +66,8 @@ export default function RejectedRequestDetailPage({ params }: { params: Promise<
 
   if (notFound || !request) return (
     <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-      <Card className="bg-white dark:bg-gray-800">
-        <CardContent className="p-8 text-center">
+      <Card>
+        <CardContent className="text-center">
           <p className="text-gray-700 dark:text-gray-300 mb-4">Request not found</p>
           <Link href="/rejected-requests">
             <Button variant="orange">Back to Rejected Requests</Button>
@@ -101,7 +101,7 @@ export default function RejectedRequestDetailPage({ params }: { params: Promise<
   );
 
   return (
-    <div className="min-h-screen p-4 lg:p-8 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+    <div className="min-h-screen p-4 lg:p-8 bg-gray-50 dark:bg-[#0f0f23] text-gray-900 dark:text-gray-100">
       <div className="max-w-5xl mx-auto">
 
         <Link href="/rejected-requests">
@@ -122,20 +122,21 @@ export default function RejectedRequestDetailPage({ params }: { params: Promise<
           <div className="lg:col-span-2 space-y-6">
 
             {/* Rejection Reason */}
-            <Card className="border border-red-500/30 dark:border-red-400/60">
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
                   <XCircle className="w-5 h-5" />Reason for Rejection
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="bg-red-100 dark:bg-red-600/20 text-red-900 dark:text-red-100 p-4 rounded-lg">
+                <p className="bg-red-100 dark:bg-red-600/20 p-4 rounded-lg text-red-900 dark:text-red-100">
                   {request.notes ?? 'No reason provided.'}
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="bg-white/10 dark:bg-gray-800">
+            {/* Request Information */}
+            <Card>
               <CardHeader><CardTitle>Request Information</CardTitle></CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4">
@@ -144,8 +145,8 @@ export default function RejectedRequestDetailPage({ params }: { params: Promise<
                   <DetailRow label="Date Requested" value={new Date(request.created_at).toLocaleDateString()} />
                   {request.additional_info && (
                     <div className="col-span-2">
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Additional Information</p>
-                      <p className="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg text-gray-900 dark:text-gray-100">{request.additional_info}</p>
+                      <p className="text-sm text-gray-700 dark:text-gray-400 mb-2">Additional Information</p>
+                      <p className="p-3 rounded-lg text-gray-900 dark:text-gray-100">{request.additional_info}</p>
                     </div>
                   )}
                 </div>
@@ -153,7 +154,7 @@ export default function RejectedRequestDetailPage({ params }: { params: Promise<
             </Card>
 
             {extraDetails.length > 0 && (
-              <Card className="bg-white/10 dark:bg-gray-800">
+              <Card>
                 <CardHeader><CardTitle>Submitted Information</CardTitle></CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-4">
@@ -164,7 +165,7 @@ export default function RejectedRequestDetailPage({ params }: { params: Promise<
             )}
 
             {profile && (
-              <Card className="bg-white/10 dark:bg-gray-800">
+              <Card>
                 <CardHeader><CardTitle>Applicant Information</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
                   <IconRow icon={<User className="w-5 h-5 text-gray-500 dark:text-gray-400" />} label="Full Name" value={`${profile.firstName} ${profile.lastName}`} />
@@ -182,8 +183,9 @@ export default function RejectedRequestDetailPage({ params }: { params: Promise<
             )}
           </div>
 
+          {/* Right sidebar */}
           <div className="space-y-6">
-            <Card className="bg-white/10 dark:bg-gray-800">
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
                   <XCircle className="w-5 h-5" />Status
@@ -196,7 +198,7 @@ export default function RejectedRequestDetailPage({ params }: { params: Promise<
               </CardContent>
             </Card>
 
-            <Card className="bg-white/10 dark:bg-gray-800">
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
                   <Clock className="w-5 h-5" />Timeline
@@ -217,7 +219,7 @@ export default function RejectedRequestDetailPage({ params }: { params: Promise<
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{label}</p>
+      <p className="text-sm text-gray-700 dark:text-gray-400 mb-1">{label}</p>
       <p className="font-medium text-gray-900 dark:text-gray-100">{value}</p>
     </div>
   );
@@ -226,9 +228,9 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 function IconRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="flex items-start gap-3">
-      <div className="mt-0.5">{icon}</div>
+      <div className="mt-0.5 shrink-0">{icon}</div>
       <div>
-        <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
+        <p className="text-sm text-gray-700 dark:text-gray-400">{label}</p>
         <p className="text-gray-900 dark:text-gray-100">{value}</p>
       </div>
     </div>
