@@ -280,13 +280,40 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Generate the document using the resident's data, then upload it so they can download it.</p>
-                    <GenerateButton generating={generating} label="Step 1: Generate & Download .docx" onClick={handleGenerate} />
-                    {generatedBlob && <UploadButton uploading={uploading} label={`Step 2: Upload "${generatedFileName}" to Supabase`} onClick={handleUploadGenerated} />}
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Generate the document using the resident's data, then upload it so they can download it.
+                    </p>
+
+                    {/* Step 1: Generate & Download */}
+                    <GenerateButton
+                      generating={generating}
+                      label="Step 1: Generate & Download .docx"
+                      onClick={handleGenerate}
+                      variant="orange"
+                    />
+
+                    {/* Step 2: Upload Generated File */}
+                    {generatedBlob && (
+                      <UploadButton
+                        uploading={uploading}
+                        label={`Step 2: Upload "${generatedFileName}" to Supabase`}
+                        onClick={handleUploadGenerated}
+                      />
+                    )}
+
                     <Divider label="or upload manually" />
-                    <Button variant="outline" className="w-full gap-2" onClick={() => uploadRef.current?.click()} disabled={uploading}>
+
+                    {/* Upload Existing File */}
+                    <Button
+                      variant="outline"
+                      className="w-full gap-2"
+                      onClick={() => uploadRef.current?.click()}
+                      disabled={uploading}
+                    >
                       <Upload className="w-4 h-4" />Upload Existing File (.docx or .pdf)
                     </Button>
+
+                    {/* Display SHA-256 Hash if available */}
                     {uploadedHash && <HashDisplay hash={uploadedHash} />}
                   </div>
                 )}
