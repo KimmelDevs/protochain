@@ -143,7 +143,7 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
   const extraDetails = buildExtraDetails(request);
 
   return (
-    <div className="min-h-screen p-4 lg:p-8">
+    <div className="min-h-screen p-4 lg:p-8 bg-gray-50 dark:bg-[#0f0f23]">
       <div className="max-w-5xl mx-auto">
         <input ref={uploadRef} type="file" accept=".docx,.pdf" className="hidden" onChange={handleManualUpload} />
 
@@ -155,64 +155,93 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
           <div className="flex items-center justify-between mb-2">
-            <h1 className="text-3xl font-bold text-white">{request.type ?? request.document_type}</h1>
-            <Badge variant="approved">approved</Badge>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{request.type ?? request.document_type}</h1>
+            <Badge variant="approved">{request.status}</Badge>
           </div>
-          <p className="text-gray-400 font-mono text-sm">ID: {request.id.toUpperCase()}</p>
+          <p className="text-gray-500 dark:text-gray-400 font-mono text-sm">ID: {request.id.toUpperCase()}</p>
         </motion.div>
 
-        {error   && <div className="mb-6"><Alert variant="error"   onClose={() => setError('')}>{error}</Alert></div>}
-        {success && <div className="mb-6"><Alert variant="success" onClose={() => setSuccess('')}>{success}</Alert></div>}
+        {error && (
+          <div className="mb-6">
+            <Alert variant="error" onClose={() => setError('')}>
+              {error}
+            </Alert>
+          </div>
+        )}
+        {success && (
+          <div className="mb-6">
+            <Alert variant="success" onClose={() => setSuccess('')}>
+              {success}
+            </Alert>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-
-            <Card>
-              <CardHeader><CardTitle>Request Information</CardTitle></CardHeader>
+            {/* Request Info Card */}
+            <Card className="bg-white dark:bg-[#1a1a2e]">
+              <CardHeader>
+                <CardTitle>Request Information</CardTitle>
+              </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4">
-                  <DetailRow label="Document Type"  value={request.type ?? request.document_type} />
-                  <DetailRow label="Purpose"         value={displayPurpose ?? '—'} />
-                  <DetailRow label="Date Requested"  value={new Date(request.created_at).toLocaleDateString()} />
-                  <DetailRow label="Date Approved"   value={new Date(approvedDate).toLocaleDateString()} />
+                  <DetailRow label="Document Type" value={request.type ?? request.document_type} />
+                  <DetailRow label="Purpose" value={displayPurpose ?? '—'} />
+                  <DetailRow label="Date Requested" value={new Date(request.created_at).toLocaleDateString()} />
+                  <DetailRow label="Date Approved" value={new Date(approvedDate).toLocaleDateString()} />
+
                   {request.additional_info && (
                     <div className="col-span-2">
-                      <p className="text-sm text-gray-400 mb-2">Additional Information</p>
-                      <p className="text-white bg-white/5 p-3 rounded-lg">{request.additional_info}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Additional Information</p>
+                      <p className="text-gray-900 dark:text-white bg-gray-100 dark:bg-white/5 p-3 rounded-lg">
+                        {request.additional_info}
+                      </p>
                     </div>
                   )}
+
                   {request.notes && (
                     <div className="col-span-2">
-                      <p className="text-sm text-gray-400 mb-2">Approval Notes</p>
-                      <p className="text-white bg-white/5 p-3 rounded-lg">{request.notes}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Approval Notes</p>
+                      <p className="text-gray-900 dark:text-white bg-gray-100 dark:bg-white/5 p-3 rounded-lg">
+                        {request.notes}
+                      </p>
                     </div>
                   )}
                 </div>
               </CardContent>
             </Card>
 
+            {/* Extra Submitted Info */}
             {extraDetails.length > 0 && (
-              <Card>
-                <CardHeader><CardTitle>Submitted Information</CardTitle></CardHeader>
+              <Card className="bg-white dark:bg-[#1a1a2e]">
+                <CardHeader>
+                  <CardTitle>Submitted Information</CardTitle>
+                </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-4">
-                    {extraDetails.map(d => <DetailRow key={d.label} label={d.label} value={d.value ?? '—'} />)}
+                    {extraDetails.map(d => (
+                      <DetailRow key={d.label} label={d.label} value={d.value ?? '—'} />
+                    ))}
                   </div>
                 </CardContent>
               </Card>
             )}
 
+            {/* Applicant Info */}
             {profile && (
-              <Card>
-                <CardHeader><CardTitle>Applicant Information</CardTitle></CardHeader>
+              <Card className="bg-white dark:bg-[#1a1a2e]">
+                <CardHeader>
+                  <CardTitle>Applicant Information</CardTitle>
+                </CardHeader>
                 <CardContent className="space-y-3">
-                  <IconRow icon={<User   className="w-5 h-5 text-gray-400" />} label="Full Name" value={`${profile.firstName} ${profile.lastName}`} />
-                  <IconRow icon={<Mail   className="w-5 h-5 text-gray-400" />} label="Email"     value={profile.email} />
-                  <IconRow icon={<Phone  className="w-5 h-5 text-gray-400" />} label="Phone"     value={profile.phone} />
-                  <IconRow icon={<MapPin className="w-5 h-5 text-gray-400" />} label="Address"   value={profile.address} />
+                  <IconRow icon={<User className="w-5 h-5 text-gray-500 dark:text-gray-400" />} label="Full Name" value={`${profile.firstName} ${profile.lastName}`} />
+                  <IconRow icon={<Mail className="w-5 h-5 text-gray-500 dark:text-gray-400" />} label="Email" value={profile.email} />
+                  <IconRow icon={<Phone className="w-5 h-5 text-gray-500 dark:text-gray-400" />} label="Phone" value={profile.phone} />
+                  <IconRow icon={<MapPin className="w-5 h-5 text-gray-500 dark:text-gray-400" />} label="Address" value={profile.address} />
+
                   {profile.birthday && (
                     <div className="grid grid-cols-2 gap-4 pt-2">
-                      <DetailRow label="Birthday"     value={new Date(profile.birthday).toLocaleDateString()} />
+                      <DetailRow label="Birthday" value={new Date(profile.birthday).toLocaleDateString()} />
                       <DetailRow label="Civil Status" value={profile.civilStatus ?? '—'} />
                     </div>
                   )}
@@ -220,10 +249,11 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
               </Card>
             )}
 
-            <Card>
+            {/* Document Generation */}
+            <Card className="bg-white dark:bg-[#1a1a2e]">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-blue-400" />Document Generation
+                  <FileText className="w-5 h-5 text-blue-500 dark:text-blue-400" />Document Generation
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -237,7 +267,12 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
                     </a>
                     {uploadedHash && <HashDisplay hash={uploadedHash} />}
                     <Divider label="or replace document" />
-                    <GenerateButton generating={generating} label="Re-generate & Download .docx" onClick={handleGenerate} />
+                    <GenerateButton
+                      generating={generating}
+                      label="Re-generate & Download .docx"
+                      onClick={handleGenerate}
+                      variant="orange"
+                    />
                     {generatedBlob && <UploadButton uploading={uploading} label={`Upload "${generatedFileName}"`} onClick={handleUploadGenerated} />}
                     <Button variant="outline" className="w-full gap-2" onClick={() => uploadRef.current?.click()} disabled={uploading}>
                       <Upload className="w-4 h-4" />Upload Existing File (.docx or .pdf)
@@ -245,7 +280,7 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <p className="text-sm text-gray-400">Generate the document using the resident's data, then upload it so they can download it.</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Generate the document using the resident's data, then upload it so they can download it.</p>
                     <GenerateButton generating={generating} label="Step 1: Generate & Download .docx" onClick={handleGenerate} />
                     {generatedBlob && <UploadButton uploading={uploading} label={`Step 2: Upload "${generatedFileName}" to Supabase`} onClick={handleUploadGenerated} />}
                     <Divider label="or upload manually" />
@@ -259,21 +294,30 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
             </Card>
           </div>
 
+          {/* Right Sidebar */}
           <div className="space-y-6">
-            <Card>
-              <CardHeader><CardTitle className="flex items-center gap-2"><CheckCircle className="w-5 h-5 text-green-400" />Status</CardTitle></CardHeader>
+            <Card className="bg-white dark:bg-[#1a1a2e]">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 dark:text-green-400" />Status
+                </CardTitle>
+              </CardHeader>
               <CardContent>
-                <div className="flex items-center gap-2 text-green-400">
+                <div className="flex items-center gap-2 text-green-500 dark:text-green-400">
                   <CheckCircle className="w-5 h-5" /><span className="font-medium">Approved</span>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader><CardTitle className="flex items-center gap-2"><Clock className="w-5 h-5 text-blue-400" />Processing Info</CardTitle></CardHeader>
+            <Card className="bg-white dark:bg-[#1a1a2e]">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-blue-500 dark:text-blue-400" />Processing Info
+                </CardTitle>
+              </CardHeader>
               <CardContent className="space-y-3">
                 <DetailRow label="Date Submitted" value={new Date(request.created_at).toLocaleString()} />
-                <DetailRow label="Date Approved"  value={new Date(approvedDate).toLocaleString()} />
+                <DetailRow label="Date Approved" value={new Date(approvedDate).toLocaleString()} />
               </CardContent>
             </Card>
           </div>
@@ -283,10 +327,31 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
   );
 }
 
-function GenerateButton({ generating, label, onClick }: { generating: boolean; label: string; onClick: () => void }) {
+function GenerateButton({
+  generating,
+  label,
+  onClick,
+  className = '',
+  variant = 'default',
+}: {
+  generating: boolean;
+  label: string;
+  onClick: () => void;
+  className?: string;
+  variant?: 'default' | 'outline' | 'ghost' | 'danger' | 'orange';
+}) {
   return (
-    <Button className="w-full gap-2" onClick={onClick} disabled={generating}>
-      {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+    <Button
+      className={`w-full gap-2 ${className}`}
+      onClick={onClick}
+      disabled={generating}
+      variant={variant}
+    >
+      {generating ? (
+        <Loader2 className="w-4 h-4 animate-spin" />
+      ) : (
+        <Wand2 className="w-4 h-4" />
+      )}
       {generating ? 'Generating...' : label}
     </Button>
   );
@@ -301,29 +366,39 @@ function UploadButton({ uploading, label, onClick }: { uploading: boolean; label
   );
 }
 
-function Divider({ label }: { label: string }) {
+export function Divider({ label }: { label: string }) {
   return (
     <div className="relative">
-      <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10" /></div>
+      <div className="absolute inset-0 flex items-center">
+        <div className="w-full border-t border-gray-300/20 dark:border-white/10" />
+      </div>
       <div className="relative flex justify-center text-xs">
-        <span className="bg-[#0f0f23] px-2 text-gray-500">{label}</span>
+        <span className="bg-gray-50 dark:bg-[#0f0f23] px-2 text-gray-500 dark:text-gray-400">
+          {label}
+        </span>
       </div>
     </div>
   );
 }
 
-function HashDisplay({ hash }: { hash: string }) {
+export function HashDisplay({ hash }: { hash: string }) {
   const [copied, setCopied] = useState(false);
   return (
-    <div className="rounded-lg border border-green-500/30 bg-green-500/5 p-3 space-y-2">
+    <div className="rounded-lg border border-green-500/30 bg-green-500/10 dark:bg-green-500/20 p-3 space-y-2">
       <div className="flex items-center gap-2">
-        <ShieldCheck className="w-4 h-4 text-green-400 shrink-0" />
-        <span className="text-xs font-medium text-green-400">SHA-256 Document Hash</span>
+        <ShieldCheck className="w-4 h-4 text-green-500 dark:text-green-400 shrink-0" />
+        <span className="text-xs font-medium text-green-500 dark:text-green-400">
+          SHA-256 Document Hash
+        </span>
       </div>
-      <p className="font-mono text-xs text-gray-300 break-all leading-relaxed">{hash}</p>
+      <p className="font-mono text-xs text-gray-700 dark:text-gray-300 break-all leading-relaxed">{hash}</p>
       <button
-        onClick={() => { navigator.clipboard.writeText(hash); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-        className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+        onClick={() => {
+          navigator.clipboard.writeText(hash);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        }}
+        className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors"
       >
         {copied ? '✓ Copied!' : 'Copy hash'}
       </button>
@@ -331,22 +406,22 @@ function HashDisplay({ hash }: { hash: string }) {
   );
 }
 
-function DetailRow({ label, value }: { label: string; value: string }) {
+export function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-sm text-gray-400 mb-1">{label}</p>
-      <p className="text-white font-medium">{value}</p>
+      <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{label}</p>
+      <p className="text-gray-900 dark:text-white font-medium">{value}</p>
     </div>
   );
 }
 
-function IconRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+export function IconRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="flex items-start gap-3">
       <div className="mt-0.5">{icon}</div>
       <div>
-        <p className="text-sm text-gray-400">{label}</p>
-        <p className="text-white">{value}</p>
+        <p className="text-sm text-gray-600 dark:text-gray-400">{label}</p>
+        <p className="text-gray-900 dark:text-white">{value}</p>
       </div>
     </div>
   );
