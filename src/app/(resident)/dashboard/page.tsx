@@ -148,7 +148,7 @@ export default function ResidentDashboard() {
 
             {loading ? (
               <div className="flex items-center justify-center py-10">
-                <Loader2 className="w-6 h-6 text-blue-500 dark:text-blue-400 animate-spin" />
+                <Loader2 className="w-6 h-6 text-orange-500 dark:text-orange-400 animate-spin" />
               </div>
             ) : recent.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
