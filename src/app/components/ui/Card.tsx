@@ -12,7 +12,11 @@ export function Card({ children, className = '', hover = false }: CardProps) {
       className={`
         rounded-xl bg-white dark:bg-white/5 border border-gray-300 dark:border-white/10 backdrop-blur-sm
         transition-colors duration-300
-        ${hover ? 'hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/20 transition-all duration-300' : ''}
+        ${
+          hover
+            ? 'hover:border-orange-600/50 hover:shadow-lg hover:shadow-orange-600/20 transition-all duration-300'
+            : ''
+        }
         ${className}
       `}
     >

@@ -30,25 +30,6 @@ export default function MyDocumentsPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
-  const [darkMode, setDarkMode] = useState(false);
-
-  // Listen for theme changes from localStorage (sidebar or other tabs)
-  useEffect(() => {
-    const handleStorage = () => {
-      const savedTheme = localStorage.getItem('theme');
-      setDarkMode(savedTheme === 'dark');
-    };
-
-    handleStorage();
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, []);
-
-  // Apply theme reactively
-  useEffect(() => {
-    if (darkMode) document.documentElement.classList.add('dark');
-    else document.documentElement.classList.remove('dark');
-  }, [darkMode]);
 
   // Load approved documents
   useEffect(() => {
