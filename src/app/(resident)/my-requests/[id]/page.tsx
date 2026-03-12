@@ -35,6 +35,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -60,6 +61,13 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
         setNotFound(true);
       } finally {
         setLoading(false);
+      }
+      const savedTheme = localStorage.getItem("theme");
+      if (savedTheme === "dark") {
+        setDarkMode(true);
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
       }
     };
     load();
@@ -121,8 +129,8 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
     );
   }
 
-  return (
-    <div className="min-h-screen p-4 lg:p-8">
+return (
+  <div className="min-h-screen p-4 lg:p-8 bg-gray-50 dark:bg-[#0f0f23] text-gray-900 dark:text-white transition-colors duration-300">
       <div className="max-w-5xl mx-auto">
         <Link href="/my-requests">
           <Button variant="ghost" className="mb-6 gap-2">
@@ -132,10 +140,10 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
           <div className="flex items-center justify-between mb-2">
-            <h1 className="text-3xl font-bold text-white">{request.type ?? request.document_type}</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{request.type ?? request.document_type}</h1>
             <Badge variant={request.status as any}>{request.status}</Badge>
           </div>
-          <p className="text-gray-400 font-mono text-sm">ID: {request.id.toUpperCase()}</p>
+          <p className="text-gray-500 dark:text-gray-400 font-mono text-sm">ID: {request.id.toUpperCase()}</p>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -174,11 +182,11 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
               <Card>
                 <CardHeader><CardTitle>Applicant Information</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
-                  <IconRow icon={<User className="w-5 h-5 text-gray-400" />} label="Name"
+                  <IconRow icon={<User className="w-5 h-5 text-gray-500 dark:text-gray-400" />} label="Name"
                     value={`${profile.firstName} ${profile.lastName}`} />
-                  <IconRow icon={<Mail className="w-5 h-5 text-gray-400" />} label="Email" value={profile.email} />
-                  <IconRow icon={<Phone className="w-5 h-5 text-gray-400" />} label="Phone" value={profile.phone} />
-                  <IconRow icon={<MapPin className="w-5 h-5 text-gray-400" />} label="Address" value={profile.address} />
+                  <IconRow icon={<Mail className="w-5 h-5 text-gray-500 dark:text-gray-400" />} label="Email" value={profile.email} />
+                  <IconRow icon={<Phone className="w-5 h-5 text-gray-500 dark:text-gray-400" />} label="Phone" value={profile.phone} />
+                  <IconRow icon={<MapPin className="w-5 h-5 text-gray-500 dark:text-gray-400" />} label="Address" value={profile.address} />
                 </CardContent>
               </Card>
             )}
@@ -188,13 +196,13 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
             <Card>
               <CardHeader><CardTitle>Status</CardTitle></CardHeader>
               <CardContent>
-                <div className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
+                <div className="flex items-center gap-3 p-3 bg-gray-100 dark:bg-white/5 rounded-lg">
                   {request.status === 'approved' && <CheckCircle className="w-6 h-6 text-green-400" />}
                   {request.status === 'pending'  && <Clock className="w-6 h-6 text-yellow-400" />}
                   {request.status === 'rejected' && <XCircle className="w-6 h-6 text-red-400" />}
                   <div>
-                    <p className="text-white font-medium capitalize">{request.status}</p>
-                    <p className="text-gray-400 text-xs">
+                    <p className="text-gray-900 dark:text-white font-medium capitalize">{request.status}</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-xs">
                       {request.status === 'pending'  && 'Your request is being reviewed.'}
                       {request.status === 'approved' && 'Your document is ready.'}
                       {request.status === 'rejected' && 'Your request was not approved.'}
@@ -219,7 +227,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
 
             {request.status === 'approved' && !request.file_url && (
               <Card><CardContent className="p-4">
-                <p className="text-gray-400 text-sm text-center">
+                <p className="text-gray-500 dark:text-gray-400 text-sm text-center">
                   Your request is approved. Please visit the barangay office to claim your document.
                 </p>
               </CardContent></Card>
@@ -234,8 +242,8 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-sm text-gray-400 mb-1">{label}</p>
-      <p className="text-white font-medium">{value}</p>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{label}</p>
+      <p className="text-gray-900 dark:text-white font-medium">{value}</p>
     </div>
   );
 }
@@ -245,8 +253,8 @@ function IconRow({ icon, label, value }: { icon: React.ReactNode; label: string;
     <div className="flex items-start gap-3">
       <div className="mt-0.5">{icon}</div>
       <div>
-        <p className="text-sm text-gray-400">{label}</p>
-        <p className="text-white">{value}</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
+        <p className="text-gray-900 dark:text-white">{value}</p>
       </div>
     </div>
   );

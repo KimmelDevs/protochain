@@ -188,9 +188,9 @@ export default function MyRequestsPage() {
                           </TableCell>
                           <TableCell>
                             <Link href={`/my-requests/${req.id}`}>
-                              <button className="flex items-center gap-1 text-blue-400 hover:text-blue-300 transition-colors text-sm">
-                                <Eye className="w-4 h-4" />View
-                              </button>
+                              <Button variant="orange">
+                                <Eye className="w-4 h-4" /> View
+                              </Button>
                             </Link>
                           </TableCell>
                         </TableRow>

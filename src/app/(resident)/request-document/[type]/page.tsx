@@ -195,7 +195,7 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
               You'll be notified once it's ready.
             </p>
             <div className="flex flex-col gap-3">
-              <Link href="/my-requests"><Button className="w-full">View My Requests</Button></Link>
+              <Link href="/my-requests"><Button variant= 'orange' className="w-full">View My Requests</Button></Link>
               <Link href="/request-document"><Button variant="outline" className="w-full">Request Another</Button></Link>
             </div>
           </CardContent>
