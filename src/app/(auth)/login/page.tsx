@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { useAuthActions } from '@/app/lib/hooks/useAuth';
+import Button from "@/app/components/ui/Button";
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) {
@@ -111,17 +112,40 @@ export default function SignInPage() {
             <Link href="/forgot-password" className="text-primary-500 hover:underline">Forgot password?</Link>
           </div>
 
-          <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-lg shadow-lg hover:shadow-xl hover:opacity-90 transition-all duration-300 font-semibold disabled:opacity-50 disabled:cursor-not-allowed">
+          <Button
+            type="submit"
+            variant="orange"
+            disabled={loading}
+            className="w-full px-6 py-3 rounded-lg font-semibold"
+          >
             {loading ? (
               <span className="flex items-center justify-center gap-2">
-                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                <svg
+                  className="animate-spin h-5 w-5 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
                 </svg>
                 Logging in...
               </span>
-            ) : 'Log In'}
-          </button>
+            ) : (
+              'Log In'
+            )}
+          </Button>
         </form>
 
         <div className="text-center space-y-2">
