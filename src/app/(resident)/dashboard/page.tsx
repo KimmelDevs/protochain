@@ -262,7 +262,7 @@ export default function ResidentDashboard() {
               </div>
             )}
 
-            <div className="bg-gradient-to-br from-blue-500/10 to-purple-600/10 border border-blue-500/20 rounded-xl p-5 transition-colors duration-300">
+            <div className="bg-white dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-xl p-5 transition-colors duration-300">
               <h3 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm transition-colors duration-300">Need Help?</h3>
               <p className="text-xs text-gray-600 dark:text-gray-400 mb-3 transition-colors duration-300">Contact the barangay office for assistance.</p>
               <div className="space-y-1.5 text-xs">

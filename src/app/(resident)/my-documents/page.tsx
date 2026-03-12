@@ -201,7 +201,7 @@ export default function MyDocumentsPage() {
 
               <div className="flex gap-2">
                 <Link href={`/my-documents/${doc.id}`} className="flex-1">
-                  <Button variant="outline" size="sm" className="w-full gap-2">
+                  <Button variant="orange" size="sm" className="w-full gap-2">
                     <Eye className="w-4 h-4" />View
                   </Button>
                 </Link>

@@ -55,6 +55,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -87,7 +88,14 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
       }
     };
     load();
-  }, [id, router]);
+    const savedTheme = localStorage.getItem("theme");
+      if (savedTheme === "dark") {
+        setDarkMode(true);
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+      }, [id, router]);
 
   if (loading) {
     return (
@@ -152,7 +160,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
   }
 
   return (
-    <div className="min-h-screen p-4 lg:p-8">
+    <div className="min-h-screen p-4 lg:p-8 bg-gray-50 dark:bg-[#0f0f23] text-gray-900 dark:text-white transition-colors duration-300">
       <div className="max-w-5xl mx-auto">
 
         <Link href="/my-documents">
@@ -163,10 +171,10 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
           <div className="flex items-center justify-between mb-2">
-            <h1 className="text-3xl font-bold text-white">{doc.type ?? doc.document_type}</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{doc.type ?? doc.document_type}</h1>
             <Badge variant="approved">approved</Badge>
           </div>
-          <p className="text-gray-400 font-mono text-sm">ID: {doc.id.toUpperCase()}</p>
+          <p className="text-gray-500 dark:text-gray-400 font-mono text-sm">ID: {doc.id.toUpperCase()}</p>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -183,14 +191,14 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                   <DetailRow label="Status" value="Approved" />
                   {doc.additional_info && (
                     <div className="col-span-2">
-                      <p className="text-sm text-gray-400 mb-2">Additional Information</p>
-                      <p className="text-white bg-white/5 p-3 rounded-lg">{doc.additional_info}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Additional Information</p>
+                      <p className="text-gray-900 dark:text-white bg-gray-100 dark:bg-white/5 p-3 rounded-lg">{doc.additional_info}</p>
                     </div>
                   )}
                   {doc.notes && (
                     <div className="col-span-2">
-                      <p className="text-sm text-gray-400 mb-2">Notes from Barangay</p>
-                      <p className="text-white bg-white/5 p-3 rounded-lg">{doc.notes}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Notes from Barangay</p>
+                      <p className="text-gray-900 dark:text-white bg-gray-100 dark:bg-white/5 p-3 rounded-lg">{doc.notes}</p>
                     </div>
                   )}
                 </div>
@@ -216,12 +224,12 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
               <Card>
                 <CardHeader><CardTitle>Your Information</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
-                  <IconRow icon={<User className="w-4 h-4 text-gray-400" />} label="Full Name"
+                  <IconRow icon={<User className="w-4 h-4 text-gray-500 dark:text-gray-400" />} label="Full Name"
                     value={`${profile.firstName} ${profile.lastName}`} />
-                  <IconRow icon={<MapPin className="w-4 h-4 text-gray-400" />} label="Address"
+                  <IconRow icon={<MapPin className="w-4 h-4 text-gray-500 dark:text-gray-400" />} label="Address"
                     value={profile.address || '—'} />
                   {profile.birthday && (
-                    <IconRow icon={<Calendar className="w-4 h-4 text-gray-400" />} label="Birthday"
+                    <IconRow icon={<Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400" />} label="Birthday"
                       value={new Date(profile.birthday).toLocaleDateString()} />
                   )}
                   {profile.civilStatus && (
@@ -256,7 +264,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                     </a>
                   </>
                 ) : (
-                  <p className="text-sm text-gray-400 text-center py-2">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-2">
                     The barangay hasn't uploaded your document file yet. Please check back later.
                   </p>
                 )}
@@ -280,25 +288,25 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
       </div>
     </div>
   );
-}
 
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-sm text-gray-400 mb-1">{label}</p>
-      <p className="text-white font-medium">{value}</p>
-    </div>
-  );
-}
-
-function IconRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <div className="flex items-start gap-3">
-      <div className="mt-0.5 shrink-0">{icon}</div>
+  function DetailRow({ label, value }: { label: string; value: string }) {
+    return (
       <div>
-        <p className="text-xs text-gray-400">{label}</p>
-        <p className="text-white text-sm">{value}</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{label}</p>
+        <p className="text-gray-900 dark:text-white font-medium">{value}</p>
       </div>
-    </div>
-  );
+    );
+  }
+
+  function IconRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+    return (
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 shrink-0">{icon}</div>
+        <div>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
+          <p className="text-gray-900 dark:text-white text-sm">{value}</p>
+        </div>
+      </div>
+    );
+  }
 }
