@@ -67,7 +67,7 @@ function FloatInput({ label, value, onChange, type = 'text', required = false }:
       <input type={type} value={value} onChange={(e) => onChange(e.target.value)}
         placeholder=" " required={required}
         className={`peer w-full px-4 pt-6 pb-2 rounded-lg bg-white dark:bg-[#1c1c34] border border-gray-300 dark:border-white/20 text-black dark:text-white
-          focus:outline-none focus:ring-2 focus:ring-primary-500
+          focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500
           ${type === 'date' ? '[&::-webkit-calendar-picker-indicator]:invert' : ''}`}
       />
       <label className={`absolute left-4 text-gray-500 dark:text-gray-400 text-sm transition-all pointer-events-none
@@ -326,6 +326,7 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
                   type="submit"
                   disabled={submitting}
                   className="flex-1 gap-2 text-white"
+                  variant='orange'
                 >
                   {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
                   {submitting ? 'Submitting...' : 'Submit Request'}
