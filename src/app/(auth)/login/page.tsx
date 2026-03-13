@@ -82,7 +82,7 @@ export default function SignInPage() {
               type="email" id="email" value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder=" " required
-              className="peer w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="peer w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
             <label htmlFor="email" className={`absolute left-4 top-2 text-gray-400 text-sm transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:-translate-y-1/2 peer-focus:top-2 peer-focus:text-xs peer-focus:-translate-y-1 ${email ? 'top-2 text-xs -translate-y-1' : ''}`}>
               Email
@@ -94,7 +94,7 @@ export default function SignInPage() {
               type={showPassword ? 'text' : 'password'} id="password" value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder=" " required
-              className="peer w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="peer w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
             <label htmlFor="password" className={`absolute left-4 top-2 text-gray-400 text-sm transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:-translate-y-1/2 peer-focus:top-2 peer-focus:text-xs peer-focus:-translate-y-1 ${password ? 'top-2 text-xs -translate-y-1' : ''}`}>
               Password
