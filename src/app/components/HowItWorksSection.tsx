@@ -45,7 +45,7 @@ export default function HowItWorksSection() {
           transition={{ duration: 0.6 }}
           className="text-center max-w-2xl mx-auto mb-16"
         >
-          <span className="text-sm font-semibold text-purple-400 uppercase tracking-wider">
+          <span className="text-sm font-semibold text-orange-400 uppercase tracking-wider">
             Process
           </span>
           <h2 className="text-3xl md:text-4xl font-bold text-white mt-2 mb-4">
@@ -72,9 +72,9 @@ export default function HowItWorksSection() {
                 <div className="hidden lg:block absolute top-10 left-[60%] w-[80%] h-px bg-white/10" />
               )}
 
-              <div className="relative inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-r from-blue-500 to-purple-600 mb-6 shadow-lg shadow-purple-500/30">
+              <div className="relative inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-orange-500 mb-6 shadow-lg shadow-yellow-500/30">
                 <step.icon className="w-8 h-8 text-white" />
-                <div className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 flex items-center justify-center">
+                <div className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-orange-700 flex items-center justify-center">
                   <span className="text-[10px] font-bold text-white">
                     {step.step}
                   </span>

@@ -48,7 +48,7 @@ export default function DocumentTypesSection() {
           transition={{ duration: 0.6 }}
           className="text-center max-w-2xl mx-auto mb-16"
         >
-          <span className="text-sm font-semibold text-purple-400 uppercase tracking-wider">
+          <span className="text-sm font-semibold text-orange-400 uppercase tracking-wider">
             Documents
           </span>
           <h2 className="text-3xl md:text-4xl font-bold text-white mt-2 mb-4">
@@ -67,10 +67,10 @@ export default function DocumentTypesSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4, delay: index * 0.08 }}
-              className="group p-5 rounded-xl bg-white/5 border border-white/10 hover:border-purple-500/50 shadow-lg hover:shadow-purple-500/20 transition-all duration-300"
+              className="group p-5 rounded-xl bg-white/5 border border-white/10 hover:border-orange-500/50 shadow-lg hover:shadow-orange-500/20 transition-all duration-300"
             >
               <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-lg bg-orange-500 flex items-center justify-center flex-shrink-0">
                   <FileText className="w-5 h-5 text-white" />
                 </div>
                 <div className="flex-1">

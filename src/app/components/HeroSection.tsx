@@ -36,7 +36,7 @@ export default function HeroSection() {
             </div>
 
             {/* App Name */}
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold mb-4 bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold mb-4 bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
               ProtoChain
             </h1>
 
@@ -67,7 +67,7 @@ export default function HeroSection() {
               </Link>
 
               <Link href="/verify">
-                <button className="flex items-center justify-center gap-2 bg-white/5 border border-white/10 hover:border-purple-500 text-white font-semibold py-3 px-8 rounded-lg transition">
+                <button className="flex items-center justify-center gap-2 bg-white/5 border border-white/10 hover:border-orange-500 text-white font-semibold py-3 px-8 rounded-lg transition">
                   <QrCode className="w-5 h-5" />
                   Verify a Document
                 </button>
