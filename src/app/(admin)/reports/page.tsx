@@ -226,7 +226,7 @@ export default function ReportsPage() {
                         </div>
                         <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-2">
                           <div
-                            className="bg-gradient-to-r from-blue-700 via-purple-600 to-purple-500 h-2 rounded-full transition-all dark:from-blue-500 dark:via-purple-400 dark:to-purple-400"
+                            className="bg-gradient-to-r from-orange-700 via-orange-600 to-yellow-500 h-2 rounded-full transition-all dark:from-blue-500 dark:via-purple-400 dark:to-purple-400"
                             style={{ width: `${item.percentage}%` }}
                           />
                         </div>
