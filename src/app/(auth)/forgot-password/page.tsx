@@ -1,5 +1,6 @@
 'use client';
 
+import Button from "@/app/components/ui/Button";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
@@ -70,7 +71,7 @@ export default function ForgotPasswordPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder=" "
                   required
-                  className="peer w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="peer w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
 
                 <label
@@ -89,10 +90,11 @@ export default function ForgotPasswordPage() {
               </div>
 
               {/* Button */}
-              <button
+              <Button
                 type="submit"
+                variant="orange"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-lg shadow-lg hover:shadow-xl hover:opacity-90 transition-all duration-300 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full px-6 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 font-semibold"
               >
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
@@ -119,9 +121,9 @@ export default function ForgotPasswordPage() {
                     Sending...
                   </span>
                 ) : (
-                  "Send Reset Link"
+                  "Send"
                 )}
-              </button>
+              </Button>
             </form>
 
             {/* Back */}
