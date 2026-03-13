@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState, useRef } from "react";
 import { EyeIcon, EyeSlashIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
 import { useAuthActions } from '@/app/lib/hooks/useAuth';
+import Button from "@/app/components/ui/Button";
 
 export default function SignUpPage() {
   const { register } = useAuthActions();
@@ -248,7 +249,7 @@ export default function SignUpPage() {
                 value={formData.birthday}
                 onChange={handleChange}
                 onClick={() => dateRef.current?.showPicker()}
-                className={`w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border text-white focus:outline-none focus:ring-2 focus:ring-primary-500 [&::-webkit-calendar-picker-indicator]:invert
+                className={`w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border text-white focus:outline-none focus:ring-2 focus:ring-orange-500 [&::-webkit-calendar-picker-indicator]:invert
                   ${fieldErrors.birthday ? 'border-red-500' : 'border-white/20'}`}
               />
               <label className="absolute left-4 top-2 text-xs text-gray-400 pointer-events-none">
@@ -267,7 +268,7 @@ export default function SignUpPage() {
                 name="civilStatus"
                 value={formData.civilStatus}
                 onChange={handleChange}
-                className={`peer w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border text-white focus:outline-none focus:ring-2 focus:ring-primary-500
+                className={`peer w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border text-white focus:outline-none focus:ring-2 focus:ring-orange-500
                   ${fieldErrors.civilStatus ? 'border-red-500' : 'border-white/20'}`}
               >
                 <option value="" disabled hidden></option>
@@ -309,7 +310,7 @@ export default function SignUpPage() {
                 onChange={handlePhoneChange}
                 onFocus={handlePhoneFocus}
                 placeholder=" "
-                className={`peer w-full pl-16 pr-4 pt-6 pb-2 rounded-lg bg-white/10 border text-white focus:outline-none focus:ring-2 focus:ring-primary-500
+                className={`peer w-full pl-16 pr-4 pt-6 pb-2 rounded-lg bg-white/10 border text-white focus:outline-none focus:ring-2 focus:ring-orange-500
                   ${fieldErrors.phone ? 'border-red-500' : 'border-white/20'}`}
               />
               <label
@@ -357,7 +358,7 @@ export default function SignUpPage() {
                 value={formData.password}
                 onChange={handleChange}
                 placeholder=" "
-                className={`peer w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border text-white focus:outline-none focus:ring-2 focus:ring-primary-500
+                className={`peer w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border text-white focus:outline-none focus:ring-2 focus:ring-orange-500
                   ${fieldErrors.password ? 'border-red-500' : 'border-white/20'}`}
               />
               <label
@@ -403,7 +404,7 @@ export default function SignUpPage() {
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 placeholder=" "
-                className={`peer w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border text-white focus:outline-none focus:ring-2 focus:ring-primary-500
+                className={`peer w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border text-white focus:outline-none focus:ring-2 focus:ring-orange-500
                   ${fieldErrors.confirmPassword ? 'border-red-500' : 'border-white/20'}`}
               />
               <label
@@ -429,23 +430,40 @@ export default function SignUpPage() {
             )}
           </div>
 
-          <button
+          <Button
             type="submit"
+            variant="orange"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-6 py-3 rounded-lg font-semibold"
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">
-                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                <svg
+                  className="animate-spin h-5 w-5 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
                 </svg>
                 Creating Account...
               </span>
             ) : (
-              'Create Account'
+              "Create Account"
             )}
-          </button>
+          </Button>
         </form>
 
         <p className="text-center text-sm text-gray-400">
@@ -477,7 +495,7 @@ function FloatingInput({ label, name, value, handleChange, type = "text", error 
           value={value}
           onChange={handleChange}
           placeholder=" "
-          className={`peer w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border text-white focus:outline-none focus:ring-2 focus:ring-primary-500
+          className={`peer w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border text-white focus:outline-none focus:ring-2 focus:ring-orange-500
             ${error ? 'border-red-500' : 'border-white/20'}`}
         />
         <label
