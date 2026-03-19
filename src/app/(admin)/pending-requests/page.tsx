@@ -127,7 +127,7 @@ export default function PendingRequestsPage() {
       `}</style>
 
       <div className="pg min-h-screen bg-[#f5f4f0] dark:bg-[#16161a] transition-colors duration-200">
-        <div className="max-w-6xl mx-auto px-6 lg:px-10 pb-14">
+        <div className="max-w-6xl mx-auto px-6 lg:px-10 pt-6 pb-14">
 
           {/* ── MASTHEAD ───────────────────────────────────────────────── */}
           <motion.div

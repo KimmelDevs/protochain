@@ -1,17 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/Card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/app/components/ui/Table';
-import Input from '@/app/components/ui/Input';
-import Select from '@/app/components/ui/Select';
-import Button from '@/app/components/ui/Button';
-import { Search, Eye, FileText, User, Calendar, Loader2, Download } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Search, Eye, FileText, Download, AlertCircle,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 
+/* ─────────────────────────── types ─────────────────────────────────────── */
 interface Profile {
   id: string;
   firstName: string;
@@ -33,355 +31,306 @@ interface Request {
   profiles: Profile | null;
 }
 
+/* ─────────────────────────── helpers ───────────────────────────────────── */
+const fmt = (d: string) =>
+  new Date(d).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+
+const toSentenceCase = (s: string) =>
+  s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : '—';
+
+const fmtDocType = (s: string) =>
+  (s ?? '—').split(/[\s-]/).map(toSentenceCase).join(' ');
+
+const displayPurpose = (r: Request) =>
+  r.purpose === 'others' && r.custom_purpose ? r.custom_purpose : (r.purpose ?? '—');
+
+const isThisWeek = (d: string) => {
+  const dt = new Date(d), now = new Date();
+  const start = new Date(now); start.setDate(now.getDate() - now.getDay()); start.setHours(0,0,0,0);
+  return dt >= start;
+};
+const isThisMonth = (d: string) => {
+  const dt = new Date(d), now = new Date();
+  return dt.getMonth() === now.getMonth() && dt.getFullYear() === now.getFullYear();
+};
+const isThisYear = (d: string) =>
+  new Date(d).getFullYear() === new Date().getFullYear();
+
+/* ─────────────────────────── page ──────────────────────────────────────── */
 export default function ApprovedDocumentsPage() {
-
   const router = useRouter();
-
-  const [requests, setRequests] = useState<Request[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const [searchQuery, setSearchQuery] = useState('');
+  const [requests,   setRequests]   = useState<Request[]>([]);
+  const [loading,    setLoading]    = useState(true);
+  const [search,     setSearch]     = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
 
   useEffect(() => {
-
-    const load = async () => {
-
+    (async () => {
       try {
-
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          router.push('/login');
-          return;
-        }
+        if (!user) { router.push('/login'); return; }
 
-        const reqRes = await fetch('/api/requests?status=approved');
-        if (!reqRes.ok) throw new Error('Failed to fetch approved requests');
+        const res = await fetch('/api/requests?status=approved');
+        if (!res.ok) throw new Error('Failed to fetch');
+        const j = await res.json();
+        const approved: any[] = j.data ?? [];
+        if (!approved.length) { setRequests([]); return; }
 
-        const reqJson = await reqRes.json();
-        const approved: any[] = reqJson.data ?? [];
-
-        if (approved.length === 0) {
-          setRequests([]);
-          return;
-        }
-
-        const userIds = [...new Set(approved.map((r: any) => r.user_id))];
-
-        const profileEntries = await Promise.all(
-          userIds.map(async (uid) => {
-
-            try {
-
-              const res = await fetch(`/api/profile?id=${uid}`);
-              if (!res.ok) return null;
-
-              const json = await res.json();
-              const p = json.data;
-
-              if (!p) return null;
-
-              const profile: Profile = {
-                id: uid,
-                firstName: p.firstName ?? p.first_name ?? '',
-                lastName: p.lastName ?? p.last_name ?? '',
-                email: p.email ?? '',
-              };
-
-              return [uid, profile] as [string, Profile];
-
-            } catch {
-              return null;
-            }
-
-          })
-        );
-
-        const profileMap: Record<string, Profile> = Object.fromEntries(
-          (profileEntries.filter(Boolean) as [string, Profile][])
-        );
-
-        setRequests(
-          approved.map((r: any) => ({
-            ...r,
-            profiles: profileMap[r.user_id] ?? null,
-          }))
-        );
-
-      } catch (err: any) {
-        console.error('[approved] error:', err?.message);
-      } finally {
-        setLoading(false);
-      }
-
-    };
-
-    load();
-
+        const uids = [...new Set(approved.map((r: any) => r.user_id))];
+        const entries = await Promise.all(uids.map(async (uid) => {
+          try {
+            const r = await fetch(`/api/profile?id=${uid}`);
+            if (!r.ok) return null;
+            const pj = await r.json();
+            const p = pj.data;
+            if (!p) return null;
+            return [uid, {
+              id: uid,
+              firstName: p.firstName ?? p.first_name ?? '',
+              lastName:  p.lastName  ?? p.last_name  ?? '',
+              email:     p.email ?? '',
+            }] as [string, Profile];
+          } catch { return null; }
+        }));
+        const pm = Object.fromEntries((entries.filter(Boolean) as [string, Profile][]));
+        setRequests(approved.map((r: any) => ({ ...r, profiles: pm[r.user_id] ?? null })));
+      } catch (e) { console.error(e); }
+      finally     { setLoading(false); }
+    })();
   }, [router]);
-
-  const isToday = (dateStr: string) =>
-    new Date(dateStr).toDateString() === new Date().toDateString();
-
-  const isThisWeek = (dateStr: string) => {
-    const d = new Date(dateStr);
-    const now = new Date();
-    const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - now.getDay());
-    startOfWeek.setHours(0, 0, 0, 0);
-    return d >= startOfWeek;
-  };
-
-  const isThisMonth = (dateStr: string) => {
-    const d = new Date(dateStr);
-    const now = new Date();
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-  };
-
-  const isThisYear = (dateStr: string) =>
-    new Date(dateStr).getFullYear() === new Date().getFullYear();
-
-  const filtered = requests.filter((r) => {
-
-    const name = r.profiles ? `${r.profiles.firstName} ${r.profiles.lastName}` : '';
-    const q = searchQuery.toLowerCase();
-
-    const matchesSearch =
-      r.id.toLowerCase().includes(q) ||
-      name.toLowerCase().includes(q) ||
-      (r.type ?? '').toLowerCase().includes(q);
-
-    const matchesType =
-      typeFilter === 'all' || r.type === typeFilter;
-
-    const dateRef = r.processed_at ?? r.created_at;
-
-    const matchesDate =
-      dateFilter === 'all' ||
-      (dateFilter === 'today' && isToday(dateRef)) ||
-      (dateFilter === 'week' && isThisWeek(dateRef)) ||
-      (dateFilter === 'month' && isThisMonth(dateRef));
-
-    return matchesSearch && matchesType && matchesDate;
-
-  });
 
   const uniqueTypes = ['all', ...Array.from(new Set(requests.map(r => r.type).filter(Boolean)))];
 
-  const displayPurpose = (r: Request) =>
-    r.purpose === 'others' && r.custom_purpose ? r.custom_purpose : r.purpose ?? '—';
+  const filtered = requests.filter(r => {
+    const name = r.profiles ? `${r.profiles.firstName} ${r.profiles.lastName}` : '';
+    const q = search.toLowerCase();
+    const matchSearch =
+      r.id.toLowerCase().includes(q) ||
+      name.toLowerCase().includes(q) ||
+      (r.type ?? '').toLowerCase().includes(q);
+    const matchType = typeFilter === 'all' || r.type === typeFilter;
+    const ref = r.processed_at ?? r.created_at;
+    const matchDate =
+      dateFilter === 'all'   ||
+      (dateFilter === 'week'  && isThisWeek(ref))  ||
+      (dateFilter === 'month' && isThisMonth(ref)) ||
+      (dateFilter === 'year'  && isThisYear(ref));
+    return matchSearch && matchType && matchDate;
+  });
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f0f23]">
-        <Loader2 className="w-8 h-8 animate-spin text-orange-500 dark:text-orange-400" />
-      </div>
-    );
-  }
+  const stats = [
+    { label: 'Total Approved', value: requests.length },
+    { label: 'This Week',      value: requests.filter(r => isThisWeek(r.processed_at ?? r.created_at)).length },
+    { label: 'This Month',     value: requests.filter(r => isThisMonth(r.processed_at ?? r.created_at)).length },
+    { label: 'With Document',  value: requests.filter(r => !!r.file_url).length },
+  ];
 
-  return (
-
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0f0f23] p-4 lg:p-8 transition-colors">
-
-      <div className="max-w-7xl mx-auto">
-
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">
-            Approved Documents
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            View and manage all approved barangay documents
-          </p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"
-        >
-
-          {[
-            { label: 'Total Approved', value: requests.length, color: 'text-gray-900 dark:text-white' },
-            { label: 'This Week', value: requests.filter(r => isThisWeek(r.processed_at ?? r.created_at)).length, color: 'text-green-500 dark:text-green-400' },
-            { label: 'This Month', value: requests.filter(r => isThisMonth(r.processed_at ?? r.created_at)).length, color: 'text-blue-500 dark:text-blue-400' },
-            { label: 'This Year', value: requests.filter(r => isThisYear(r.processed_at ?? r.created_at)).length, color: 'text-purple-500 dark:text-purple-400' },
-          ].map(s => (
-            <Card key={s.label}>
-              <CardContent className="p-4">
-                <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">{s.label}</div>
-              </CardContent>
-            </Card>
-          ))}
-
-        </motion.div>
-
-        <Card className="mb-6">
-          <CardContent className="p-6">
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 w-5 h-5" />
-                <Input
-                  placeholder="Search by name, ID, or document type..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-
-              <Select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-                options={uniqueTypes.map(t => ({
-                  value: t,
-                  label: t === 'all' ? 'All Document Types' : t,
-                }))}
-              />
-
-              <Select
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
-                options={[
-                  { value: 'all', label: 'All Time' },
-                  { value: 'today', label: 'Today' },
-                  { value: 'week', label: 'This Week' },
-                  { value: 'month', label: 'This Month' },
-                ]}
-              />
-
-            </div>
-
-          </CardContent>
-        </Card>
-
-        <Card>
-
-          <CardHeader>
-            <CardTitle>All Approved Documents ({filtered.length})</CardTitle>
-          </CardHeader>
-
-          <CardContent>
-
-            {requests.length === 0 ? (
-
-              <div className="text-center py-16">
-                <FileText className="w-12 h-12 text-gray-500 mx-auto mb-4" />
-                <p className="text-gray-900 dark:text-white font-medium mb-1">
-                  No approved documents yet
-                </p>
-                <p className="text-gray-600 dark:text-gray-400 text-sm">
-                  Approved requests will appear here.
-                </p>
-              </div>
-
-            ) : (
-
-              <Table>
-
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Request ID</TableHead>
-                    <TableHead>Resident</TableHead>
-                    <TableHead>Document Type</TableHead>
-                    <TableHead>Purpose</TableHead>
-                    <TableHead>Date Approved</TableHead>
-                    <TableHead>File</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-
-                <TableBody>
-
-                  {filtered.map((req) => {
-
-                    const name = req.profiles
-                      ? `${req.profiles.firstName} ${req.profiles.lastName}`
-                      : 'Unknown';
-
-                    const approvedDate = req.processed_at ?? req.created_at;
-
-                    return (
-
-                      <TableRow key={req.id}>
-
-                        <TableCell className="font-mono text-xs text-gray-500 dark:text-gray-400">
-                          {req.id.slice(0, 8).toUpperCase()}
-                        </TableCell>
-
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <User className="w-4 h-4 text-blue-500 dark:text-blue-400" />
-                            <div>
-                              <p className="text-gray-900 dark:text-white">{name}</p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">{req.profiles?.email ?? ''}</p>
-                            </div>
-                          </div>
-                        </TableCell>
-
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-green-500 dark:text-green-400" />
-                            {req.type ?? req.document_type ?? '—'}
-                          </div>
-                        </TableCell>
-
-                        <TableCell className="capitalize">
-                          {displayPurpose(req)}
-                        </TableCell>
-
-                        <TableCell>
-                          <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                            <Calendar className="w-4 h-4" />
-                            {new Date(approvedDate).toLocaleDateString()}
-                          </div>
-                        </TableCell>
-
-                        <TableCell>
-                          {req.file_url ? (
-                            <a href={req.file_url} target="_blank" rel="noopener noreferrer" download>
-                              <Button variant="ghost" size="sm" className="gap-1 text-green-500 dark:text-green-400">
-                                <Download className="w-4 h-4" />
-                                Download
-                              </Button>
-                            </a>
-                          ) : (
-                            <span className="text-xs text-gray-500">No file</span>
-                          )}
-                        </TableCell>
-
-                        <TableCell>
-                          <Link href={`/approved-documents/${req.id}`}>
-                            <Button variant="orange" size="sm" className="gap-2">
-                              <Eye className="w-4 h-4" />
-                              View
-                            </Button>
-                          </Link>
-                        </TableCell>
-
-                      </TableRow>
-
-                    );
-
-                  })}
-
-                </TableBody>
-
-              </Table>
-
-            )}
-
-          </CardContent>
-
-        </Card>
-
-      </div>
-
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-[#f5f4f0] dark:bg-[#16161a]">
+      <span className="mono text-[12px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] uppercase animate-pulse">
+        Loading…
+      </span>
     </div>
-
   );
 
+  return (
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+        .pg   { font-family: 'IBM Plex Sans', sans-serif; }
+        .mono { font-family: 'IBM Plex Mono', monospace; }
+      `}</style>
+
+      <div className="pg min-h-screen bg-[#f5f4f0] dark:bg-[#16161a] transition-colors duration-200">
+        <div className="max-w-6xl mx-auto px-6 lg:px-10 pt-6 pb-14">
+
+          {/* ── MASTHEAD ───────────────────────────────────────────────── */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="border-b-2 border-[#1a1917] dark:border-[#f0eee8] pb-5 mb-10"
+          >
+            <div className="flex items-end justify-between">
+              <div>
+                <p className="mono text-[11px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] mb-2 uppercase">
+                  Documents
+                </p>
+                <h1 className="mono text-2xl md:text-3xl font-bold text-[#1a1917] dark:text-[#f0eee8] tracking-tight leading-none">
+                  APPROVED DOCUMENTS
+                </h1>
+              </div>
+              <Link
+                href="/admindashboard"
+                className="mono text-[11px] tracking-[0.1em] uppercase text-orange-600 dark:text-orange-400 hover:text-orange-700 transition-colors"
+              >
+                ← Dashboard
+              </Link>
+            </div>
+          </motion.div>
+
+          {/* ── STAT STRIP ─────────────────────────────────────────────── */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.07 }}
+            className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-6 mb-12"
+          >
+            {stats.map(({ label, value }) => (
+              <div key={label} className="border-t-2 border-[#1a1917] dark:border-[#f0eee8] pt-3 pb-4">
+                <p className="mono text-[11px] tracking-[0.15em] uppercase text-[#5c5a54] dark:text-[#9e9b94] mb-2">
+                  {label}
+                </p>
+                <p className="mono text-4xl font-bold tabular-nums text-[#1a1917] dark:text-[#f0eee8] leading-none">
+                  {value}
+                </p>
+              </div>
+            ))}
+          </motion.div>
+
+          {/* ── SEARCH + FILTERS ───────────────────────────────────────── */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="flex flex-col sm:flex-row gap-3 mb-6"
+          >
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7a7870] dark:text-[#7e7b75]" />
+              <input
+                type="text"
+                placeholder="Search by name, ID, or document type…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="w-full pl-9 pr-4 py-2.5 text-[13px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] placeholder-[#7a7870] dark:placeholder-[#7e7b75] focus:outline-none focus:border-[#1a1917] dark:focus:border-[#f0eee8] transition-colors"
+              />
+            </div>
+            <select
+              value={typeFilter}
+              onChange={e => setTypeFilter(e.target.value)}
+              className="mono text-[12px] px-3 py-2.5 bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] focus:outline-none focus:border-[#1a1917] dark:focus:border-[#f0eee8] transition-colors sm:w-48"
+            >
+              {uniqueTypes.map(t => (
+                <option key={t} value={t}>{t === 'all' ? 'All Types' : fmtDocType(t)}</option>
+              ))}
+            </select>
+            <select
+              value={dateFilter}
+              onChange={e => setDateFilter(e.target.value)}
+              className="mono text-[12px] px-3 py-2.5 bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] focus:outline-none focus:border-[#1a1917] dark:focus:border-[#f0eee8] transition-colors sm:w-36"
+            >
+              {[['all','All Time'],['week','This Week'],['month','This Month'],['year','This Year']].map(([v,l]) => (
+                <option key={v} value={v}>{l}</option>
+              ))}
+            </select>
+          </motion.div>
+
+          {/* ── TABLE ──────────────────────────────────────────────────── */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.13 }}
+          >
+            {/* col headers */}
+            <div className="grid grid-cols-[1fr_160px_100px_110px_52px_52px] py-2 border-b border-[#e0deda] dark:border-[#222228]">
+              {['Resident','Document Type','Purpose','Approved','File',''].map(h => (
+                <span key={h} className="mono text-[11px] tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75]">
+                  {h}
+                </span>
+              ))}
+            </div>
+
+            {requests.length === 0 ? (
+              <div className="py-20 flex flex-col items-center gap-3">
+                <FileText className="w-6 h-6 text-[#c8c6c0] dark:text-[#3a3845]" />
+                <p className="mono text-[12px] tracking-widest uppercase text-[#7a7870] dark:text-[#7e7b75]">
+                  No approved documents yet
+                </p>
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="py-20 flex flex-col items-center gap-3">
+                <Search className="w-6 h-6 text-[#c8c6c0] dark:text-[#3a3845]" />
+                <p className="mono text-[12px] tracking-widest uppercase text-[#7a7870] dark:text-[#7e7b75]">
+                  No results match
+                </p>
+              </div>
+            ) : (
+              <AnimatePresence>
+                {filtered.map((req, i) => {
+                  const name = req.profiles
+                    ? `${req.profiles.firstName} ${req.profiles.lastName}`
+                    : 'Unknown';
+                  const approvedDate = req.processed_at ?? req.created_at;
+
+                  return (
+                    <motion.div
+                      key={req.id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.025 * i }}
+                      className="group grid grid-cols-[1fr_160px_100px_110px_52px_52px] items-center py-3.5 border-b border-[#e8e5e0] dark:border-[#222228] last:border-0 hover:bg-black/[0.025] dark:hover:bg-[#1e1e24] -mx-2 px-2 transition-colors duration-100"
+                    >
+                      {/* resident */}
+                      <div className="min-w-0 pr-4">
+                        <p className="text-[14px] font-medium text-[#1a1917] dark:text-[#f0eee8] truncate leading-none">
+                          {name}
+                        </p>
+                        <p className="mono text-[11px] text-[#7a7870] dark:text-[#7e7b75] mt-1.5 truncate">
+                          {req.id.slice(0, 8).toUpperCase()}
+                        </p>
+                      </div>
+
+                      {/* doc type */}
+                      <p className="text-[13px] text-[#3d3b36] dark:text-[#c9c6be] truncate pr-3">
+                        {fmtDocType(req.type ?? req.document_type)}
+                      </p>
+
+                      {/* purpose */}
+                      <p className="text-[12px] text-[#5c5a54] dark:text-[#9e9b94] capitalize truncate pr-3">
+                        {displayPurpose(req)}
+                      </p>
+
+                      {/* approved date */}
+                      <span className="mono text-[11px] text-[#5c5a54] dark:text-[#9e9b94]">
+                        {fmt(approvedDate)}
+                      </span>
+
+                      {/* file download */}
+                      <div className="flex justify-start">
+                        {req.file_url ? (
+                          <a href={req.file_url} target="_blank" rel="noopener noreferrer" download>
+                            <span className="flex items-center justify-center w-7 h-7 border border-emerald-400 dark:border-emerald-700 hover:bg-emerald-600 hover:border-emerald-600 group/dl transition-colors duration-150">
+                              <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 group-hover/dl:text-white transition-colors" />
+                            </span>
+                          </a>
+                        ) : (
+                          <span className="flex items-center justify-center w-7 h-7">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#c8c6c0] dark:bg-[#3a3845]" />
+                          </span>
+                        )}
+                      </div>
+
+                      {/* view */}
+                      <Link href={`/approved-documents/${req.id}`} className="flex justify-end">
+                        <span className="flex items-center justify-center w-7 h-7 border border-[#c8c6c0] dark:border-[#2a2a32] hover:bg-[#1a1917] dark:hover:bg-[#f0eee8] hover:border-[#1a1917] dark:hover:border-[#f0eee8] group/btn transition-colors duration-150">
+                          <Eye className="w-3.5 h-3.5 text-[#5c5a54] dark:text-[#9e9b94] group-hover/btn:text-white dark:group-hover/btn:text-[#1a1917] transition-colors" />
+                        </span>
+                      </Link>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+            )}
+
+            {filtered.length > 0 && (
+              <p className="mono text-[11px] text-[#7a7870] dark:text-[#7e7b75] mt-3">
+                Showing {filtered.length} of {requests.length} approved document{requests.length !== 1 ? 's' : ''}
+              </p>
+            )}
+          </motion.div>
+
+        </div>
+      </div>
+    </>
+  );
 }
