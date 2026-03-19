@@ -97,12 +97,12 @@ export default function AdminSidebar() {
       `}</style>
 
       <aside className="sidebar-root w-56 h-screen flex flex-col sticky top-0
-        bg-[#fafaf9] dark:bg-[#0e0e0e]
-        border-r border-gray-200 dark:border-white/[0.06]
+        bg-[#fafaf9] dark:bg-[#16161a]
+        border-r border-gray-200 dark:border-[#2a2a32]
         transition-colors duration-200">
 
         {/* ── LOGO ─────────────────────────────────────────── */}
-        <div className="px-5 pt-6 pb-5 border-b border-gray-200 dark:border-white/[0.06]">
+        <div className="px-5 pt-6 pb-5 border-b border-gray-200 dark:border-[#2a2a32]">
           <Link href="/" className="flex items-center gap-2.5 group">
             <div className="w-7 h-7 rounded overflow-hidden flex-shrink-0">
               <Image
@@ -115,7 +115,7 @@ export default function AdminSidebar() {
             </div>
 
             <div>
-              <p className="font-mono text-[13px] font-medium text-gray-900 dark:text-white leading-none tracking-tight">
+              <p className="font-mono text-[13px] font-medium text-gray-900 dark:text-[#e8e6f0] leading-none tracking-tight">
                 ProtoChain
               </p>
               <p className="font-mono text-[9px] tracking-[0.16em] uppercase text-orange-500 leading-none mt-0.5">
@@ -127,7 +127,7 @@ export default function AdminSidebar() {
 
         {/* ── PRIMARY NAV ──────────────────────────────────── */}
         <nav className="flex-1 overflow-y-auto px-3 pt-4">
-          <p className="font-mono text-[9px] tracking-[0.18em] uppercase text-gray-400 dark:text-gray-600 px-2 mb-2">
+          <p className="font-mono text-[9px] tracking-[0.18em] uppercase text-gray-400 dark:text-[#3a3845] px-2 mb-2">
             Main
           </p>
 
@@ -142,8 +142,8 @@ export default function AdminSidebar() {
                       relative flex items-center gap-2.5 px-2 py-2 rounded text-sm
                       transition-colors duration-150
                       ${active
-                        ? 'text-gray-900 dark:text-white bg-gray-100 dark:bg-white/[0.07]'
-                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/[0.04]'
+                        ? 'text-gray-900 dark:text-[#e8e6f0] bg-gray-100 dark:bg-[#1e1e24]'
+                        : 'text-gray-500 dark:text-[#6b6880] hover:text-gray-900 dark:hover:text-[#e8e6f0] hover:bg-gray-100 dark:hover:bg-[#1e1e24]'
                       }
                     `}
                   >
@@ -163,7 +163,7 @@ export default function AdminSidebar() {
           </ul>
 
           {/* secondary group */}
-          <p className="font-mono text-[9px] tracking-[0.18em] uppercase text-gray-400 dark:text-gray-600 px-2 mt-5 mb-2">
+          <p className="font-mono text-[9px] tracking-[0.18em] uppercase text-gray-400 dark:text-[#3a3845] px-2 mt-5 mb-2">
             System
           </p>
 
@@ -178,8 +178,8 @@ export default function AdminSidebar() {
                       relative flex items-center gap-2.5 px-2 py-2 rounded text-sm
                       transition-colors duration-150
                       ${active
-                        ? 'text-gray-900 dark:text-white bg-gray-100 dark:bg-white/[0.07]'
-                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/[0.04]'
+                        ? 'text-gray-900 dark:text-[#e8e6f0] bg-gray-100 dark:bg-[#1e1e24]'
+                        : 'text-gray-500 dark:text-[#6b6880] hover:text-gray-900 dark:hover:text-[#e8e6f0] hover:bg-gray-100 dark:hover:bg-[#1e1e24]'
                       }
                     `}
                   >
@@ -202,9 +202,9 @@ export default function AdminSidebar() {
           <button
             onClick={() => setDarkMode(d => !d)}
             className="flex items-center gap-2.5 px-2 py-2 w-full rounded text-[13px]
-              text-gray-400 dark:text-gray-500
-              hover:text-gray-700 dark:hover:text-gray-300
-              hover:bg-gray-100 dark:hover:bg-white/[0.04]
+              text-gray-400 dark:text-[#6b6880]
+              hover:text-gray-700 dark:hover:text-[#e8e6f0]
+              hover:bg-gray-100 dark:hover:bg-[#1e1e24]
               transition-colors duration-150"
           >
             {darkMode
@@ -215,7 +215,7 @@ export default function AdminSidebar() {
         </div>
 
         {/* ── PROFILE + LOGOUT ─────────────────────────────── */}
-        <div className="px-3 pb-4 pt-3 border-t border-gray-200 dark:border-white/[0.06] space-y-0.5">
+        <div className="px-3 pb-4 pt-3 border-t border-gray-200 dark:border-[#2a2a32] space-y-0.5">
 
           {/* avatar row */}
           <div className="flex items-center gap-2.5 px-2 py-2">
@@ -227,10 +227,10 @@ export default function AdminSidebar() {
             </div>
 
             <div className="min-w-0 flex-1">
-              <p className="text-[12px] font-medium text-gray-900 dark:text-white truncate leading-none">
+              <p className="text-[12px] font-medium text-gray-900 dark:text-[#e8e6f0] truncate leading-none">
                 {fullName}
               </p>
-              <p className="font-mono text-[9px] text-gray-400 dark:text-gray-500 leading-none mt-0.5 capitalize">
+              <p className="font-mono text-[9px] text-gray-400 dark:text-[#6b6880] leading-none mt-0.5 capitalize">
                 {roleLabel}
               </p>
             </div>
@@ -240,7 +240,7 @@ export default function AdminSidebar() {
           <button
             onClick={handleLogout}
             className="flex items-center gap-2.5 px-2 py-2 w-full rounded text-[13px]
-              text-gray-500 dark:text-gray-400
+              text-gray-500 dark:text-[#6b6880]
               hover:text-red-500 dark:hover:text-red-400
               hover:bg-red-50 dark:hover:bg-red-500/10
               transition-colors duration-150"
