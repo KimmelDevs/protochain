@@ -210,7 +210,7 @@ export default function DashboardPage() {
       `}</style>
 
       <div className="dash min-h-screen bg-[#f5f4f0] dark:bg-[#16161a] transition-colors duration-200">
-        <div className="max-w-6xl mx-auto px-6 lg:px-10 py-10 lg:py-14">
+        <div className="max-w-6xl mx-auto px-6 lg:px-10 pt-0 pb-10 lg:pb-14">
 
           {/* ── MASTHEAD ───────────────────────────────────────────────── */}
           <motion.div
