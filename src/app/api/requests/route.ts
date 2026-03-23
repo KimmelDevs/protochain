@@ -21,17 +21,9 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const encrypted = encryptFields(body, [...SENSITIVE_FIELDS]);
-
-    const { data, error } = await supabase
-      .from('requests')
-      .insert(encrypted)
-      .select()
-      .single();
-
+    const { data, error } = await supabase.from('requests').insert(encrypted).select().single();
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-
-    const decrypted = decryptFields(data, [...SENSITIVE_FIELDS]);
-    return NextResponse.json({ data: decrypted }, { status: 201 });
+    return NextResponse.json({ data: decryptFields(data, [...SENSITIVE_FIELDS]) }, { status: 201 });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
@@ -62,8 +54,6 @@ export async function GET(req: NextRequest) {
 }
 
 // ── PATCH /api/requests ───────────────────────────────────────────────────────
-// Handles: approve, reject, file upload.
-// Writes an audit_log row for every status change and file upload.
 export async function PATCH(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -72,14 +62,12 @@ export async function PATCH(req: NextRequest) {
 
     const body = await req.json();
 
-    // ── Resolve the acting admin ──────────────────────────────────────────────
-    // The client passes `admin_id` in the body (set from supabase.auth.getUser()
-    // on the client). We use it only for audit logging — never for access control.
+    // ── Extract audit identity fields (never written to requests table) ──────
     const adminId    = body.admin_id    ?? null;
     const adminEmail = body.admin_email ?? null;
+    const adminName  = body.admin_name  ?? null;   // ← decrypted real name
 
-    // Strip audit meta fields before writing to requests table
-    const { admin_id: _aid, admin_email: _aem, ...updatePayload } = body;
+    const { admin_id: _a, admin_email: _b, admin_name: _c, ...updatePayload } = body;
 
     // ── Encrypt sensitive fields ──────────────────────────────────────────────
     const fieldsToEncrypt = SENSITIVE_FIELDS.filter(f => f in updatePayload);
@@ -87,28 +75,18 @@ export async function PATCH(req: NextRequest) {
       ? encryptFields(updatePayload, fieldsToEncrypt)
       : updatePayload;
 
-    // ── Track approved_by / rejected_by ───────────────────────────────────────
-    if (updatePayload.status === 'approved' && adminId) {
-      (payload as any).approved_by = adminId;
-    }
-    if (updatePayload.status === 'rejected' && adminId) {
-      (payload as any).rejected_by = adminId;
-    }
+    // Track approved_by / rejected_by on the request row itself
+    if (updatePayload.status === 'approved' && adminId) (payload as any).approved_by = adminId;
+    if (updatePayload.status === 'rejected' && adminId) (payload as any).rejected_by = adminId;
 
-    // ── Update the request row ────────────────────────────────────────────────
+    // ── Update request row ────────────────────────────────────────────────────
     const { data, error } = await supabase
-      .from('requests')
-      .update(payload)
-      .eq('id', id)
-      .select()
-      .single();
-
+      .from('requests').update(payload).eq('id', id).select().single();
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
     // ── Write audit log ───────────────────────────────────────────────────────
-    // Determine what action was taken
     let action: string | null = null;
-    let notes: string | null  = null;
+    let notes:  string | null = null;
 
     if (updatePayload.status === 'approved') {
       action = 'approved';
@@ -122,20 +100,19 @@ export async function PATCH(req: NextRequest) {
     }
 
     if (action) {
-      // Fire-and-forget — don't block the response on audit write
       supabase.from('audit_logs').insert({
         request_id:      id,
         action,
         performed_by:    adminId,
         performer_email: adminEmail,
+        performer_name:  adminName,   // ← stored so the list page can show the real name
         notes,
       }).then(({ error: auditErr }) => {
-        if (auditErr) console.error('[audit] Failed to write log:', auditErr.message);
+        if (auditErr) console.error('[audit] write failed:', auditErr.message);
       });
     }
 
-    const decrypted = decryptFields(data, [...SENSITIVE_FIELDS]);
-    return NextResponse.json({ data: decrypted });
+    return NextResponse.json({ data: decryptFields(data, [...SENSITIVE_FIELDS]) });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
