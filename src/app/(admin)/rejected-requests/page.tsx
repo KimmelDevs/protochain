@@ -2,16 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/Card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/app/components/ui/Table';
-import Input from '@/app/components/ui/Input';
-import Select from '@/app/components/ui/Select';
-import Button from '@/app/components/ui/Button';
-import { Search, Eye, FileText, User, Calendar, Loader2 } from 'lucide-react';
+import { Search, Eye, FileText, User, XCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 
+/* ─────────────────────────── types ─────────────────────────────────────── */
 interface Profile {
   id: string;
   firstName: string;
@@ -31,238 +27,254 @@ interface Request {
   profiles: Profile | null;
 }
 
+/* ─────────────────────────── helpers ───────────────────────────────────── */
+const fmtDocType = (s: string | null) =>
+  (s ?? '—').split(/[\s_-]/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+
+const isToday   = (d: string) => new Date(d).toDateString() === new Date().toDateString();
+const isThisWeek = (d: string) => {
+  const now = new Date(), start = new Date(now);
+  start.setDate(now.getDate() - now.getDay()); start.setHours(0, 0, 0, 0);
+  return new Date(d) >= start;
+};
+const isThisMonth = (d: string) => {
+  const n = new Date(), d2 = new Date(d);
+  return d2.getMonth() === n.getMonth() && d2.getFullYear() === n.getFullYear();
+};
+
+/* ─────────────────────────── sub-components ────────────────────────────── */
+const SectionLabel = ({ label }: { label: string }) => (
+  <p className="mono text-[11px] tracking-[0.2em] uppercase text-[#5c5a54] dark:text-[#9e9b94] border-b border-[#c8c6c0] dark:border-[#2a2a32] pb-2 mb-4">
+    {label}
+  </p>
+);
+
+/* ─────────────────────────── page ──────────────────────────────────────── */
 export default function RejectedRequestsPage() {
   const router = useRouter();
-  const [requests, setRequests] = useState<Request[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState('all');
-  const [dateFilter, setDateFilter] = useState('all');
+  const [requests,    setRequests]    = useState<Request[]>([]);
+  const [loading,     setLoading]     = useState(true);
+  const [search,      setSearch]      = useState('');
+  const [typeFilter,  setTypeFilter]  = useState('all');
+  const [dateFilter,  setDateFilter]  = useState<'all' | 'today' | 'week' | 'month'>('all');
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) { router.push('/login'); return; }
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { router.push('/login'); return; }
 
-        const { data: reqData, error: reqError } = await supabase
-          .from('requests')
-          .select('*')
-          .eq('status', 'rejected')
-          .order('created_at', { ascending: false });
+      const { data: reqData, error } = await supabase
+        .from('requests')
+        .select('*')
+        .eq('status', 'rejected')
+        .order('created_at', { ascending: false });
 
-        if (reqError) throw reqError;
-        if (!reqData || reqData.length === 0) { setRequests([]); return; }
+      if (error || !reqData?.length) { setLoading(false); return; }
 
-        const userIds = [...new Set(reqData.map((r: any) => r.user_id))];
-        const { data: profilesData } = await supabase
-          .from('profiles')
-          .select('id, firstName, lastName, email')
-          .in('id', userIds);
+      const userIds = [...new Set(reqData.map((r: any) => r.user_id))];
+      const { data: profilesData } = await supabase
+        .from('profiles').select('id, firstName, lastName, email').in('id', userIds);
 
-        const profileMap: Record<string, Profile> = Object.fromEntries(
-          (profilesData ?? []).map((p: Profile) => [p.id, p])
-        );
+      const profileMap = Object.fromEntries((profilesData ?? []).map((p: Profile) => [p.id, p]));
 
-        setRequests(reqData.map((r: any) => ({
-          ...r,
-          profiles: profileMap[r.user_id] ?? null,
-        })));
-      } catch (err) {
-        console.error('Error loading rejected requests:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+      setRequests(reqData.map((r: any) => ({ ...r, profiles: profileMap[r.user_id] ?? null })));
+      setLoading(false);
+    })();
   }, [router]);
 
-  const isThisWeek = (dateStr: string) => {
-    const d = new Date(dateStr);
-    const now = new Date();
-    const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - now.getDay());
-    startOfWeek.setHours(0, 0, 0, 0);
-    return d >= startOfWeek;
-  };
-
-  const isThisMonth = (dateStr: string) => {
-    const d = new Date(dateStr);
-    const now = new Date();
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-  };
-
-  const isToday = (dateStr: string) =>
-    new Date(dateStr).toDateString() === new Date().toDateString();
-
-  const filtered = requests.filter((r) => {
+  /* ── filtering ──────────────────────────────────────────────────────────── */
+  const filtered = requests.filter(r => {
     const name = r.profiles ? `${r.profiles.firstName} ${r.profiles.lastName}` : '';
-    const q = searchQuery.toLowerCase();
-    const matchesSearch =
+    const q    = search.toLowerCase();
+    const matchSearch =
       r.id.toLowerCase().includes(q) ||
       name.toLowerCase().includes(q) ||
-      (r.type ?? '').toLowerCase().includes(q);
-    const matchesType = typeFilter === 'all' || r.type === typeFilter;
-    const matchesDate =
-      dateFilter === 'all' ||
-      (dateFilter === 'today' && isToday(r.created_at)) ||
-      (dateFilter === 'week' && isThisWeek(r.created_at)) ||
-      (dateFilter === 'month' && isThisMonth(r.created_at));
-    return matchesSearch && matchesType && matchesDate;
+      (r.type ?? '').toLowerCase().includes(q) ||
+      (r.document_type ?? '').toLowerCase().includes(q);
+    const matchType = typeFilter === 'all' || (r.type ?? r.document_type) === typeFilter;
+    const matchDate =
+      dateFilter === 'all'   ? true :
+      dateFilter === 'today' ? isToday(r.created_at) :
+      dateFilter === 'week'  ? isThisWeek(r.created_at) :
+      isThisMonth(r.created_at);
+    return matchSearch && matchType && matchDate;
   });
 
-  const uniqueTypes = ['all', ...Array.from(new Set(requests.map(r => r.type).filter(Boolean)))];
+  const uniqueTypes = [...new Set(requests.map(r => r.type ?? r.document_type).filter(Boolean))];
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f0f23]">
-        <Loader2 className="w-8 h-8 text-orange-400 dark:text-orange-500 animate-spin" />
-      </div>
-    );
-  }
+  /* ── loading ────────────────────────────────────────────────────────────── */
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-[#f5f4f0] dark:bg-[#16161a]">
+      <span className="mono text-[12px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] uppercase animate-pulse">Loading…</span>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0f0f23] p-4 lg:p-8 transition-colors">
-      <div className="max-w-7xl mx-auto">
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+        .pg   { font-family: 'IBM Plex Sans', sans-serif; }
+        .mono { font-family: 'IBM Plex Mono', monospace; }
+      `}</style>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">Rejected Requests</h1>
-          <p className="text-gray-600 dark:text-gray-400">View all rejected document requests</p>
-        </motion.div>
+      <div className="pg min-h-screen bg-[#f5f4f0] dark:bg-[#16161a] transition-colors duration-200">
+        <div className="max-w-6xl mx-auto px-6 lg:px-10 pt-6 pb-14">
 
-        {/* Stats */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"
-        >
-          {[
-            { label: 'Total Rejected', value: requests.length, color: 'text-gray-900 dark:text-white' },
-            { label: 'This Week', value: requests.filter(r => isThisWeek(r.created_at)).length, color: 'text-red-500 dark:text-red-400' },
-            { label: 'This Month', value: requests.filter(r => isThisMonth(r.created_at)).length, color: 'text-orange-500 dark:text-orange-400' },
-            { label: 'Document Types', value: new Set(requests.map(r => r.type)).size, color: 'text-purple-500 dark:text-purple-400' },
-          ].map(s => (
-            <Card key={s.label}>
-              <CardContent className="p-4">
-                <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">{s.label}</div>
-              </CardContent>
-            </Card>
-          ))}
-        </motion.div>
+          {/* MASTHEAD */}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            className="border-b-2 border-[#1a1917] dark:border-[#f0eee8] pb-5 mb-10">
+            <div className="flex items-end justify-between flex-wrap gap-4">
+              <div>
+                <p className="mono text-[11px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] uppercase mb-2">Admin Panel</p>
+                <h1 className="mono text-2xl md:text-3xl font-bold text-[#1a1917] dark:text-[#f0eee8] tracking-tight leading-none">
+                  REJECTED REQUESTS
+                </h1>
+              </div>
+              <p className="mono text-[11px] text-[#7a7870] dark:text-[#7e7b75]">
+                {requests.length} total rejected
+              </p>
+            </div>
+          </motion.div>
 
-        {/* Filters */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <Card className="mb-6">
-            <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-400 w-5 h-5" />
-                  <Input
-                    placeholder="Search by name, ID, or document type..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <Select
-                  value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value)}
-                  options={uniqueTypes.map(t => ({ value: t, label: t === 'all' ? 'All Document Types' : t }))}
-                />
-                <Select
-                  value={dateFilter}
-                  onChange={(e) => setDateFilter(e.target.value)}
-                  options={[
-                    { value: 'all', label: 'All Time' },
-                    { value: 'today', label: 'Today' },
-                    { value: 'week', label: 'This Week' },
-                    { value: 'month', label: 'This Month' },
-                  ]}
+          {/* STATS */}
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}
+            className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-6 mb-12">
+            {[
+              { label: 'Total Rejected',   value: requests.length,                                     cls: 'text-[#1a1917] dark:text-[#f0eee8]',       border: 'border-[#1a1917] dark:border-[#f0eee8]' },
+              { label: 'This Week',        value: requests.filter(r => isThisWeek(r.created_at)).length,  cls: 'text-red-600 dark:text-red-400',            border: 'border-red-500' },
+              { label: 'This Month',       value: requests.filter(r => isThisMonth(r.created_at)).length, cls: 'text-orange-600 dark:text-orange-400',      border: 'border-orange-500' },
+              { label: 'Document Types',   value: uniqueTypes.length,                                   cls: 'text-[#5c5a54] dark:text-[#9e9b94]',       border: 'border-[#c8c6c0] dark:border-[#2a2a32]' },
+            ].map(s => (
+              <div key={s.label} className={`border-t-2 ${s.border} pt-3 pb-4`}>
+                <p className="mono text-[11px] tracking-[0.15em] uppercase text-[#5c5a54] dark:text-[#9e9b94] mb-2">{s.label}</p>
+                <p className={`mono text-4xl font-bold tabular-nums leading-none ${s.cls}`}>{s.value}</p>
+              </div>
+            ))}
+          </motion.div>
+
+          {/* FILTERS */}
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+            className="mb-8">
+            <SectionLabel label="Filters" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7a7870] dark:text-[#7e7b75]" />
+                <input
+                  value={search} onChange={e => setSearch(e.target.value)}
+                  placeholder="Search by name, ID, or document type…"
+                  className="w-full pl-9 pr-3 py-2.5 text-[12px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] placeholder-[#7a7870] dark:placeholder-[#7e7b75] focus:outline-none focus:border-[#1a1917] dark:focus:border-[#f0eee8] transition-colors mono"
                 />
               </div>
-            </CardContent>
-          </Card>
-        </motion.div>
 
-        {/* Table */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <Card>
-            <CardHeader><CardTitle>Rejected Requests ({filtered.length})</CardTitle></CardHeader>
-            <CardContent>
-              {requests.length === 0 ? (
-                <div className="text-center py-16">
-                  <FileText className="w-12 h-12 text-gray-500 dark:text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-900 dark:text-white font-medium mb-1">No rejected requests</p>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm">Rejected requests will appear here.</p>
+              <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
+                className="w-full px-3 py-2.5 text-[12px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] focus:outline-none focus:border-[#1a1917] dark:focus:border-[#f0eee8] transition-colors mono">
+                <option value="all">All Document Types</option>
+                {uniqueTypes.map(t => (
+                  <option key={t} value={t}>{fmtDocType(t)}</option>
+                ))}
+              </select>
+
+              <select value={dateFilter} onChange={e => setDateFilter(e.target.value as any)}
+                className="w-full px-3 py-2.5 text-[12px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] focus:outline-none focus:border-[#1a1917] dark:focus:border-[#f0eee8] transition-colors mono">
+                <option value="all">All Time</option>
+                <option value="today">Today</option>
+                <option value="week">This Week</option>
+                <option value="month">This Month</option>
+              </select>
+            </div>
+          </motion.div>
+
+          {/* TABLE */}
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }}>
+            <SectionLabel label={`Requests (${filtered.length})`} />
+
+            {filtered.length === 0 ? (
+              <div className="border border-[#c8c6c0] dark:border-[#2a2a32] bg-white dark:bg-[#1e1e24] py-16 text-center">
+                <FileText className="w-8 h-8 text-[#c8c6c0] dark:text-[#2a2a32] mx-auto mb-3" />
+                <p className="text-[13px] text-[#7a7870] dark:text-[#7e7b75]">
+                  {requests.length === 0 ? 'No rejected requests yet.' : 'No requests match your filters.'}
+                </p>
+              </div>
+            ) : (
+              <div className="border border-[#c8c6c0] dark:border-[#2a2a32] bg-white dark:bg-[#1e1e24] overflow-x-auto">
+
+                {/* Header */}
+                <div className="grid grid-cols-[0.6fr_1.4fr_1.2fr_1fr_1.6fr_0.5fr] gap-4 px-5 py-3 border-b border-[#e8e5e0] dark:border-[#222228] bg-[#f5f4f0] dark:bg-[#16161a]">
+                  {['ID', 'Resident', 'Document Type', 'Date', 'Reason', ''].map(h => (
+                    <p key={h} className="mono text-[10px] font-bold tracking-[0.12em] uppercase text-[#7a7870] dark:text-[#7e7b75]">{h}</p>
+                  ))}
                 </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Request ID</TableHead>
-                      <TableHead>Resident</TableHead>
-                      <TableHead>Document Type</TableHead>
-                      <TableHead>Date Rejected</TableHead>
-                      <TableHead>Reason</TableHead>
-                      <TableHead>Action</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filtered.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-gray-400 dark:text-gray-500">
-                          No requests match your search
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filtered.map((req) => {
-                        const name = req.profiles ? `${req.profiles.firstName} ${req.profiles.lastName}` : 'Unknown';
-                        return (
-                          <TableRow key={req.id}>
-                            <TableCell className="font-mono text-xs text-gray-500 dark:text-gray-400">{req.id.slice(0, 8).toUpperCase()}</TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <User className="w-4 h-4 text-blue-500 dark:text-blue-400" />
-                                <div>
-                                  <p className="text-gray-900 dark:text-white">{name}</p>
-                                  <p className="text-xs text-gray-500 dark:text-gray-400">{req.profiles?.email ?? ''}</p>
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <FileText className="w-4 h-4 text-red-500 dark:text-red-400" />
-                                {req.type ?? req.document_type ?? '—'}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                                <Calendar className="w-4 h-4" />
-                                {new Date(req.created_at).toLocaleDateString()}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 max-w-xs">{req.notes ?? '—'}</p>
-                            </TableCell>
-                            <TableCell>
-                              <Link href={`/rejected-requests/${req.id}`}>
-                                <Button size="sm" variant="orange" className="gap-2">
-                                  <Eye className="w-4 h-4" />
-                                  View
-                                </Button>
-                              </Link>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
 
+                {/* Rows */}
+                {filtered.map((req, i) => {
+                  const name = req.profiles ? `${req.profiles.firstName} ${req.profiles.lastName}` : 'Unknown';
+                  return (
+                    <div key={req.id}
+                      className={`grid grid-cols-[0.6fr_1.4fr_1.2fr_1fr_1.6fr_0.5fr] gap-4 px-5 py-4 border-b border-[#e8e5e0] dark:border-[#222228] last:border-0 transition-colors hover:bg-[#f5f4f0] dark:hover:bg-[#16161a] ${i % 2 !== 0 ? 'bg-[#faf9f7] dark:bg-[#1a1a20]' : ''}`}>
+
+                      {/* ID */}
+                      <div className="flex items-center">
+                        <p className="mono text-[11px] text-[#5c5a54] dark:text-[#9e9b94]">
+                          {req.id.slice(0, 8).toUpperCase()}
+                        </p>
+                      </div>
+
+                      {/* Resident */}
+                      <div className="flex items-start gap-2">
+                        <User className="w-3.5 h-3.5 text-[#7a7870] dark:text-[#7e7b75] mt-0.5 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-medium text-[#1a1917] dark:text-[#f0eee8] truncate">{name}</p>
+                          <p className="mono text-[11px] text-[#7a7870] dark:text-[#7e7b75] truncate">{req.profiles?.email ?? ''}</p>
+                        </div>
+                      </div>
+
+                      {/* Document type */}
+                      <div className="flex items-center">
+                        <p className="text-[12px] text-[#3d3b36] dark:text-[#c9c6be]">
+                          {fmtDocType(req.type ?? req.document_type)}
+                        </p>
+                      </div>
+
+                      {/* Date */}
+                      <div className="flex items-center">
+                        <div>
+                          <p className="mono text-[11px] text-[#1a1917] dark:text-[#f0eee8]">
+                            {new Date(req.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </p>
+                          <p className="mono text-[10px] text-[#7a7870] dark:text-[#7e7b75] mt-0.5">
+                            {new Date(req.created_at).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Reason */}
+                      <div className="flex items-center">
+                        {req.notes ? (
+                          <p className="text-[12px] text-[#5c5a54] dark:text-[#9e9b94] line-clamp-2 leading-snug border-l-2 border-red-300 dark:border-red-800 pl-2">
+                            {req.notes}
+                          </p>
+                        ) : (
+                          <p className="text-[12px] text-[#7a7870] dark:text-[#7e7b75] italic">No reason provided</p>
+                        )}
+                      </div>
+
+                      {/* Action */}
+                      <div className="flex items-center justify-end">
+                        <Link href={`/rejected-requests/${req.id}`}
+                          className="flex items-center justify-center w-7 h-7 border border-[#c8c6c0] dark:border-[#2a2a32] hover:border-[#1a1917] dark:hover:border-[#f0eee8] hover:bg-[#1a1917] dark:hover:bg-[#f0eee8] group transition-colors duration-150">
+                          <Eye className="w-3.5 h-3.5 text-[#5c5a54] dark:text-[#9e9b94] group-hover:text-white dark:group-hover:text-[#1a1917] transition-colors" />
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </motion.div>
+
+        </div>
       </div>
-    </div>
+    </>
   );
 }
