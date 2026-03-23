@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Loader2, CheckCircle, XCircle, Upload, Search, FileText } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, Upload, Search, FileText, Download } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
@@ -31,6 +31,38 @@ const ACTION_CFG = {
   document_uploaded: { label: 'Doc Uploaded', icon: Upload,      cls: 'text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/30'                 },
 } as const;
 
+/* ─── csv export ─────────────────────────────────────────────────────────── */
+function exportCSV(logs: AuditLog[]) {
+  const headers = ['Log ID', 'Timestamp', 'Action', 'Admin Name', 'Admin Email', 'Document Type', 'Resident', 'Notes', 'Request ID'];
+
+  const escape = (v: string | null | undefined) => {
+    const s = (v ?? '').replace(/"/g, '""');
+    return `"${s}"`;
+  };
+
+  const rows = logs.map(l => [
+    escape(l.id),
+    escape(new Date(l.created_at).toLocaleString('en-PH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })),
+    escape(ACTION_CFG[l.action]?.label ?? l.action),
+    escape(l.performer_name),
+    escape(l.performer_email),
+    escape(fmtDocType(l.document_type)),
+    escape(l.resident_name),
+    escape(l.notes),
+    escape(l.request_id),
+  ].join(','));
+
+  const csv  = [headers.map(h => `"${h}"`).join(','), ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const date = new Date().toISOString().slice(0, 10);
+  a.href     = url;
+  a.download = `audit-logs-${date}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 /* ─── sub-components ────────────────────────────────────────────────────── */
 const SectionLabel = ({ label }: { label: string }) => (
   <p className="mono text-[11px] tracking-[0.2em] uppercase text-[#5c5a54] dark:text-[#9e9b94] border-b border-[#c8c6c0] dark:border-[#2a2a32] pb-2 mb-4">{label}</p>
@@ -52,6 +84,7 @@ export default function AuditLogsPage() {
 
   const [logs,         setLogs]         = useState<AuditLog[]>([]);
   const [loading,      setLoading]      = useState(true);
+  const [exporting,    setExporting]    = useState(false);
   const [search,       setSearch]       = useState('');
   const [actionFilter, setActionFilter] = useState<'all' | AuditLog['action']>('all');
   const [dateFilter,   setDateFilter]   = useState<'all' | 'today' | 'week' | 'month'>('all');
@@ -69,7 +102,6 @@ export default function AuditLogsPage() {
 
       if (error) { console.error('[audit]', error.message); setLoading(false); return; }
 
-      // Resolve resident names via decrypting API
       const userIds = [...new Set((rawLogs ?? []).map((l: any) => l.requests?.user_id).filter(Boolean))];
       const profileMap: Record<string, string> = {};
       await Promise.all(userIds.map(async (uid: string) => {
@@ -98,7 +130,7 @@ export default function AuditLogsPage() {
     })();
   }, [router]);
 
-  /* ── filtering ─────────────────────────────────────────────────────────── */
+  /* ── filtering ──────────────────────────────────────────────────────────── */
   const isToday = (d: string) => new Date(d).toDateString() === new Date().toDateString();
   const isWeek  = (d: string) => { const now = new Date(); const s = new Date(now); s.setDate(now.getDate() - now.getDay()); s.setHours(0,0,0,0); return new Date(d) >= s; };
   const isMonth = (d: string) => { const n = new Date(); const d2 = new Date(d); return d2.getMonth() === n.getMonth() && d2.getFullYear() === n.getFullYear(); };
@@ -117,6 +149,16 @@ export default function AuditLogsPage() {
   });
 
   const countAction = (a: AuditLog['action']) => logs.filter(l => l.action === a).length;
+
+  /* ── export handler ─────────────────────────────────────────────────────── */
+  const handleExport = () => {
+    setExporting(true);
+    // small timeout so the button state updates before the sync blob work
+    setTimeout(() => {
+      exportCSV(filtered);
+      setExporting(false);
+    }, 80);
+  };
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-[#f5f4f0] dark:bg-[#16161a]">
@@ -145,9 +187,9 @@ export default function AuditLogsPage() {
           {/* STATS */}
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }} className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
             {[
-              { label: 'Total Events',  value: logs.length,                    color: 'text-[#1a1917] dark:text-[#f0eee8]'      },
-              { label: 'Approvals',     value: countAction('approved'),         color: 'text-emerald-600 dark:text-emerald-400'  },
-              { label: 'Rejections',    value: countAction('rejected'),         color: 'text-red-600 dark:text-red-400'          },
+              { label: 'Total Events',  value: logs.length,                     color: 'text-[#1a1917] dark:text-[#f0eee8]'     },
+              { label: 'Approvals',     value: countAction('approved'),          color: 'text-emerald-600 dark:text-emerald-400' },
+              { label: 'Rejections',    value: countAction('rejected'),          color: 'text-red-600 dark:text-red-400'         },
               { label: 'Docs Uploaded', value: countAction('document_uploaded'), color: 'text-blue-600 dark:text-blue-400'       },
             ].map(s => (
               <div key={s.label} className="border border-[#c8c6c0] dark:border-[#2a2a32] bg-white dark:bg-[#1e1e24] p-4">
@@ -157,9 +199,25 @@ export default function AuditLogsPage() {
             ))}
           </motion.div>
 
-          {/* FILTERS */}
+          {/* FILTERS + EXPORT */}
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mb-8">
-            <SectionLabel label="Filters" />
+            <div className="flex items-center justify-between mb-4">
+              <p className="mono text-[11px] tracking-[0.2em] uppercase text-[#5c5a54] dark:text-[#9e9b94] border-b border-[#c8c6c0] dark:border-[#2a2a32] pb-2 flex-1">Filters</p>
+              <button
+                onClick={handleExport}
+                disabled={exporting || filtered.length === 0}
+                className="ml-6 flex items-center gap-2 mono text-[11px] font-bold tracking-[0.1em] uppercase px-4 py-2 border border-[#1a1917] dark:border-[#f0eee8] text-[#1a1917] dark:text-[#f0eee8] hover:bg-[#1a1917] dark:hover:bg-[#f0eee8] hover:text-white dark:hover:text-[#1a1917] transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+              >
+                {exporting
+                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  : <Download className="w-3.5 h-3.5" />
+                }
+                Export CSV
+                {filtered.length > 0 && !exporting && (
+                  <span className="ml-1 text-[#7a7870] dark:text-[#9e9b94] font-normal">({filtered.length})</span>
+                )}
+              </button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7a7870] dark:text-[#7e7b75]" />
@@ -220,7 +278,7 @@ export default function AuditLogsPage() {
                       </p>
                     </div>
 
-                    {/* Admin — show name primarily, email as subtitle */}
+                    {/* Admin */}
                     <div>
                       <p className="text-[12px] font-medium text-[#1a1917] dark:text-[#f0eee8] truncate" title={log.performer_name ?? log.performer_email ?? ''}>
                         {log.performer_name ?? <span className="italic text-[#7a7870] dark:text-[#7e7b75]">Unknown</span>}
