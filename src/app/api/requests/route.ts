@@ -7,30 +7,12 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// ALL sensitive fields that get encrypted on write and decrypted on read.
-// Must stay in sync with what encryptFields() writes.
 const SENSITIVE_FIELDS = [
-  // Common
-  'additional_info',
-  'purpose',
-  'custom_purpose',
-  // Barangay Clearance
-  'purok',
-  'ctc_no',
-  'ctc_date_issued',
-  'ctc_place_issued',
-  // Business Clearance
+  'additional_info', 'purpose', 'custom_purpose',
+  'purok', 'ctc_no', 'ctc_date_issued', 'ctc_place_issued',
   'business_name',
-  // Certification of Death
-  'deceased_name',
-  'deceased_age',
-  'date_of_death',
-  'place_of_death',
-  'relationship_to_deceased',
-  // Job Seeker / Oath of Undertaking
-  'bcn_no',
-  'years_of_residency',
-  // Notes (set by admin on approve/reject)
+  'deceased_name', 'deceased_age', 'date_of_death', 'place_of_death', 'relationship_to_deceased',
+  'bcn_no', 'years_of_residency',
   'notes',
 ] as const;
 
@@ -48,7 +30,6 @@ export async function POST(req: NextRequest) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-    // Return decrypted so the client gets clean data immediately
     const decrypted = decryptFields(data, [...SENSITIVE_FIELDS]);
     return NextResponse.json({ data: decrypted }, { status: 201 });
   } catch (err: any) {
@@ -73,19 +54,16 @@ export async function GET(req: NextRequest) {
     const { data, error } = await query;
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-    const decrypted = (data ?? []).map(row =>
-      decryptFields(row, [...SENSITIVE_FIELDS])
-    );
-
+    const decrypted = (data ?? []).map(row => decryptFields(row, [...SENSITIVE_FIELDS]));
     return NextResponse.json({ data: decrypted });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
 
-// ── PATCH /api/requests — admin updates status/notes/file ────────────────────
-// Used by approve, reject, and file upload actions.
-// Encrypts any sensitive fields in the update payload before writing.
+// ── PATCH /api/requests ───────────────────────────────────────────────────────
+// Handles: approve, reject, file upload.
+// Writes an audit_log row for every status change and file upload.
 export async function PATCH(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -94,12 +72,30 @@ export async function PATCH(req: NextRequest) {
 
     const body = await req.json();
 
-    // Only encrypt fields that are in SENSITIVE_FIELDS and present in the payload
-    const fieldsToEncrypt = SENSITIVE_FIELDS.filter(f => f in body);
-    const payload = fieldsToEncrypt.length > 0
-      ? encryptFields(body, fieldsToEncrypt)
-      : body;
+    // ── Resolve the acting admin ──────────────────────────────────────────────
+    // The client passes `admin_id` in the body (set from supabase.auth.getUser()
+    // on the client). We use it only for audit logging — never for access control.
+    const adminId    = body.admin_id    ?? null;
+    const adminEmail = body.admin_email ?? null;
 
+    // Strip audit meta fields before writing to requests table
+    const { admin_id: _aid, admin_email: _aem, ...updatePayload } = body;
+
+    // ── Encrypt sensitive fields ──────────────────────────────────────────────
+    const fieldsToEncrypt = SENSITIVE_FIELDS.filter(f => f in updatePayload);
+    const payload = fieldsToEncrypt.length > 0
+      ? encryptFields(updatePayload, fieldsToEncrypt)
+      : updatePayload;
+
+    // ── Track approved_by / rejected_by ───────────────────────────────────────
+    if (updatePayload.status === 'approved' && adminId) {
+      (payload as any).approved_by = adminId;
+    }
+    if (updatePayload.status === 'rejected' && adminId) {
+      (payload as any).rejected_by = adminId;
+    }
+
+    // ── Update the request row ────────────────────────────────────────────────
     const { data, error } = await supabase
       .from('requests')
       .update(payload)
@@ -108,6 +104,35 @@ export async function PATCH(req: NextRequest) {
       .single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+    // ── Write audit log ───────────────────────────────────────────────────────
+    // Determine what action was taken
+    let action: string | null = null;
+    let notes: string | null  = null;
+
+    if (updatePayload.status === 'approved') {
+      action = 'approved';
+      notes  = updatePayload.notes ?? null;
+    } else if (updatePayload.status === 'rejected') {
+      action = 'rejected';
+      notes  = updatePayload.notes ?? null;
+    } else if (updatePayload.file_url) {
+      action = 'document_uploaded';
+      notes  = `File: ${updatePayload.file_url.split('/').pop() ?? 'unknown'}`;
+    }
+
+    if (action) {
+      // Fire-and-forget — don't block the response on audit write
+      supabase.from('audit_logs').insert({
+        request_id:      id,
+        action,
+        performed_by:    adminId,
+        performer_email: adminEmail,
+        notes,
+      }).then(({ error: auditErr }) => {
+        if (auditErr) console.error('[audit] Failed to write log:', auditErr.message);
+      });
+    }
 
     const decrypted = decryptFields(data, [...SENSITIVE_FIELDS]);
     return NextResponse.json({ data: decrypted });
