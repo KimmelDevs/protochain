@@ -1,17 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/Card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/app/components/ui/Table';
-import Input from '@/app/components/ui/Input';
-import Select from '@/app/components/ui/Select';
-import Button from '@/app/components/ui/Button';
-import { Search, Eye, User, Mail, Phone, MapPin, Calendar, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Search, Eye, User, Mail, Phone, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 
+/* ─────────────────────────── types ─────────────────────────────────────── */
 interface Resident {
   id: string;
   firstName: string;
@@ -25,233 +21,271 @@ interface Resident {
   totalRequests?: number;
 }
 
+/* ─────────────────────────── helpers ───────────────────────────────────── */
+const getInitials = (first: string, last: string) =>
+  `${first?.[0] ?? ''}${last?.[0] ?? ''}`.toUpperCase() || '?';
+
+const isThisMonth = (d: string) => {
+  const dt = new Date(d), now = new Date();
+  return dt.getMonth() === now.getMonth() && dt.getFullYear() === now.getFullYear();
+};
+
+const fmt = (d: string) =>
+  new Date(d).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+
+/* ─────────────────────────── page ──────────────────────────────────────── */
 export default function ResidentsPage() {
   const router = useRouter();
   const [residents, setResidents] = useState<Resident[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [loading,   setLoading]   = useState(true);
+  const [search,    setSearch]    = useState('');
 
   useEffect(() => {
-    const load = async () => {
+    (async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { router.push('/login'); return; }
 
-        const { data: profilesData, error } = await supabase
+        const { data: pd, error } = await supabase
           .from('profiles')
           .select('id, firstName, lastName, email, role, avatar_base64, created_at')
           .eq('role', 'resident')
           .order('created_at', { ascending: false });
 
         if (error) throw error;
-        if (!profilesData || profilesData.length === 0) { setResidents([]); return; }
+        if (!pd?.length) { setResidents([]); return; }
 
-        const userIds = profilesData.map((p: any) => p.id);
-        const { data: requestsData } = await supabase
-          .from('requests')
-          .select('user_id')
-          .in('user_id', userIds);
+        const ids = pd.map((p: any) => p.id);
+        const { data: rd } = await supabase
+          .from('requests').select('user_id').in('user_id', ids);
 
         const countMap: Record<string, number> = {};
-        (requestsData ?? []).forEach((r: any) => {
-          countMap[r.user_id] = (countMap[r.user_id] ?? 0) + 1;
-        });
+        (rd ?? []).forEach((r: any) => { countMap[r.user_id] = (countMap[r.user_id] ?? 0) + 1; });
 
-        const residentsWithDecrypted = await Promise.all(
-          profilesData.map(async (p: any) => {
-            try {
-              const res = await fetch(`/api/profile?id=${p.id}`);
-              if (res.ok) {
-                const json = await res.json();
-                return {
-                  ...p,
-                  phone: json.data?.phone ?? '',
-                  address: json.data?.address ?? '',
-                  totalRequests: countMap[p.id] ?? 0,
-                };
-              }
-            } catch {}
-            return { ...p, phone: '', address: '', totalRequests: countMap[p.id] ?? 0 };
-          })
-        );
+        const hydrated = await Promise.all(pd.map(async (p: any) => {
+          try {
+            const res = await fetch(`/api/profile?id=${p.id}`);
+            if (res.ok) {
+              const j = await res.json();
+              return { ...p, phone: j.data?.phone ?? '', address: j.data?.address ?? '', totalRequests: countMap[p.id] ?? 0 };
+            }
+          } catch {}
+          return { ...p, phone: '', address: '', totalRequests: countMap[p.id] ?? 0 };
+        }));
 
-        setResidents(residentsWithDecrypted);
-      } catch (err) {
-        console.error('Error loading residents:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+        setResidents(hydrated);
+      } catch (e) { console.error(e); }
+      finally     { setLoading(false); }
+    })();
   }, [router]);
 
-  const isThisMonth = (dateStr: string) => {
-    const d = new Date(dateStr);
-    const now = new Date();
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-  };
-
-  const filtered = residents.filter((r) => {
-    const name = `${r.firstName} ${r.lastName}`;
-    const q = searchQuery.toLowerCase();
-    const matchesSearch =
-      name.toLowerCase().includes(q) ||
+  const filtered = residents.filter(r => {
+    const q = search.toLowerCase();
+    return (
+      `${r.firstName} ${r.lastName}`.toLowerCase().includes(q) ||
       (r.email ?? '').toLowerCase().includes(q) ||
-      r.id.toLowerCase().includes(q);
-    const matchesStatus = statusFilter === 'all' || r.role === statusFilter;
-    return matchesSearch && matchesStatus;
+      r.id.toLowerCase().includes(q)
+    );
   });
 
-  const getInitials = (first: string, last: string) =>
-    `${first?.[0] ?? ''}${last?.[0] ?? ''}`.toUpperCase() || '?';
+  const totalReqs = residents.reduce((s, r) => s + (r.totalRequests ?? 0), 0);
+  const newThisMonth = residents.filter(r => isThisMonth(r.created_at)).length;
+  const avgReqs = residents.length ? Math.round(totalReqs / residents.length) : 0;
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f0f23]">
-        <Loader2 className="w-8 h-8 text-orange-400 dark:text-orange-500 animate-spin" />
-      </div>
-    );
-  }
+  const stats = [
+    { label: 'Total Residents', value: residents.length },
+    { label: 'New This Month',  value: newThisMonth     },
+    { label: 'Total Requests',  value: totalReqs        },
+    { label: 'Avg. Requests',   value: avgReqs          },
+  ];
+
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-[#f5f4f0] dark:bg-[#16161a]">
+      <span className="mono text-[12px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] uppercase animate-pulse">
+        Loading…
+      </span>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0f0f23] p-4 lg:p-8 transition-colors">
-      <div className="max-w-7xl mx-auto">
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+        .pg   { font-family: 'IBM Plex Sans', sans-serif; }
+        .mono { font-family: 'IBM Plex Mono', monospace; }
+      `}</style>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">Residents</h1>
-          <p className="text-gray-600 dark:text-gray-400">Manage registered residents and their information</p>
-        </motion.div>
+      <div className="pg min-h-screen bg-[#f5f4f0] dark:bg-[#16161a] transition-colors duration-200">
+        <div className="max-w-6xl mx-auto px-6 lg:px-10 pt-6 pb-14">
 
-        {/* Stats */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"
-        >
-          {[
-            { label: 'Total Residents', value: residents.length, color: 'text-gray-900 dark:text-white' },
-            { label: 'New This Month', value: residents.filter(r => isThisMonth(r.created_at)).length, color: 'text-blue-600 dark:text-blue-500' },
-            { label: 'Total Requests', value: residents.reduce((sum, r) => sum + (r.totalRequests ?? 0), 0), color: 'text-green-600 dark:text-green-500' },
-            { label: 'Avg. Requests', value: residents.length ? Math.round(residents.reduce((sum, r) => sum + (r.totalRequests ?? 0), 0) / residents.length) : 0, color: 'text-purple-600 dark:text-purple-500' },
-          ].map(s => (
-            <Card key={s.label}><CardContent className="p-4">
-              <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
-              <div className="text-sm text-gray-700 dark:text-gray-400">{s.label}</div>
-            </CardContent></Card>
-          ))}
-        </motion.div>
-
-        {/* Filters */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <Card className="mb-6 bg-white/10 dark:bg-[#0f0f23]">
-            <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-400 w-5 h-5" />
-                  <Input
-                    placeholder="Search by name, email, or ID..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 text-gray-900 dark:text-gray-100"
-                  />
-                </div>
-                <Select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  options={[
-                    { value: 'all', label: 'All Residents' },
-                    { value: 'resident', label: 'Residents' },
-                  ]}
-                />
+          {/* ── MASTHEAD ───────────────────────────────────────────────── */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="border-b-2 border-[#1a1917] dark:border-[#f0eee8] pb-5 mb-10"
+          >
+            <div className="flex items-end justify-between">
+              <div>
+                <p className="mono text-[11px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] mb-2 uppercase">
+                  Directory
+                </p>
+                <h1 className="mono text-2xl md:text-3xl font-bold text-[#1a1917] dark:text-[#f0eee8] tracking-tight leading-none">
+                  RESIDENTS
+                </h1>
               </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+              <Link
+                href="/admindashboard"
+                className="mono text-[11px] tracking-[0.1em] uppercase text-orange-600 dark:text-orange-400 hover:text-orange-700 transition-colors"
+              >
+                ← Dashboard
+              </Link>
+            </div>
+          </motion.div>
 
-        {/* Table */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <Card className="bg-white/10 dark:bg-[#0f0f23]">
-            <CardHeader><CardTitle>All Residents ({filtered.length})</CardTitle></CardHeader>
-            <CardContent>
-              {residents.length === 0 ? (
-                <div className="text-center py-16">
-                  <User className="w-12 h-12 text-gray-500 dark:text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-900 dark:text-white font-medium mb-1">No residents yet</p>
-                  <p className="text-gray-700 dark:text-gray-400 text-sm">Registered residents will appear here.</p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-gray-900 dark:text-gray-100">Resident</TableHead>
-                      <TableHead className="text-gray-900 dark:text-gray-100">Contact</TableHead>
-                      <TableHead className="text-gray-900 dark:text-gray-100">Address</TableHead>
-                      <TableHead className="text-gray-900 dark:text-gray-100">Registered</TableHead>
-                      <TableHead className="text-gray-900 dark:text-gray-100">Requests</TableHead>
-                      <TableHead className="text-gray-900 dark:text-gray-100">Action</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filtered.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-gray-500 dark:text-gray-400">
-                          No residents match your search
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filtered.map((resident) => (
-                        <TableRow key={resident.id} className="hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              {resident.avatar_base64 ? (
-                                <img src={resident.avatar_base64} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
-                              ) : (
-                                <div className="w-9 h-9 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold shrink-0">
-                                  {getInitials(resident.firstName, resident.lastName)}
-                                </div>
-                              )}
-                              <div>
-                                <p className="text-gray-900 dark:text-white font-medium">{resident.firstName} {resident.lastName}</p>
-                                <p className="text-xs text-gray-600 dark:text-gray-400 font-mono">{resident.id.slice(0, 8).toUpperCase()}</p>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                                <Mail className="w-3 h-3 text-gray-400 dark:text-gray-400 shrink-0" />
-                                {resident.email}
-                              </div>
-                              <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                                <Phone className="w-3 h-3 text-gray-400 dark:text-gray-400 shrink-0" />
-                                {resident.phone || '—'}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-gray-700 dark:text-gray-300">{resident.address || '—'}</TableCell>
-                          <TableCell className="text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                            <Calendar className="w-4 h-4" />
-                            {new Date(resident.created_at).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell className="text-gray-900 dark:text-gray-100 font-medium">{resident.totalRequests}</TableCell>
-                          <TableCell>
-                            <Link href={`/residents/${resident.id}`}>
-                              <Button variant="orange" size="sm" className="gap-2">
-                                <Eye className="w-4 h-4" />
-                                View
-                              </Button>
-                            </Link>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
+          {/* ── STAT STRIP ─────────────────────────────────────────────── */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.07 }}
+            className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-6 mb-12"
+          >
+            {stats.map(({ label, value }) => (
+              <div key={label} className="border-t-2 border-[#1a1917] dark:border-[#f0eee8] pt-3 pb-4">
+                <p className="mono text-[11px] tracking-[0.15em] uppercase text-[#5c5a54] dark:text-[#9e9b94] mb-2">
+                  {label}
+                </p>
+                <p className="mono text-4xl font-bold tabular-nums text-[#1a1917] dark:text-[#f0eee8] leading-none">
+                  {value}
+                </p>
+              </div>
+            ))}
+          </motion.div>
+
+          {/* ── SEARCH ─────────────────────────────────────────────────── */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="mb-6"
+          >
+            <div className="relative max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7a7870] dark:text-[#7e7b75]" />
+              <input
+                type="text"
+                placeholder="Search by name, email, or ID…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="w-full pl-9 pr-4 py-2.5 text-[13px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] placeholder-[#7a7870] dark:placeholder-[#7e7b75] focus:outline-none focus:border-[#1a1917] dark:focus:border-[#f0eee8] transition-colors"
+              />
+            </div>
+          </motion.div>
+
+          {/* ── TABLE ──────────────────────────────────────────────────── */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.13 }}
+          >
+            {/* col headers */}
+            <div className="grid grid-cols-[1fr_180px_140px_80px_44px] py-2 border-b border-[#e0deda] dark:border-[#222228]">
+              {['Resident', 'Contact', 'Registered', 'Requests', ''].map(h => (
+                <span key={h} className="mono text-[11px] tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75]">
+                  {h}
+                </span>
+              ))}
+            </div>
+
+            {residents.length === 0 ? (
+              <div className="py-20 flex flex-col items-center gap-3">
+                <User className="w-6 h-6 text-[#c8c6c0] dark:text-[#3a3845]" />
+                <p className="mono text-[12px] tracking-widest uppercase text-[#7a7870] dark:text-[#7e7b75]">
+                  No residents yet
+                </p>
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="py-20 flex flex-col items-center gap-3">
+                <Search className="w-6 h-6 text-[#c8c6c0] dark:text-[#3a3845]" />
+                <p className="mono text-[12px] tracking-widest uppercase text-[#7a7870] dark:text-[#7e7b75]">
+                  No results match
+                </p>
+              </div>
+            ) : (
+              <AnimatePresence>
+                {filtered.map((res, i) => (
+                  <motion.div
+                    key={res.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.025 * i }}
+                    className="group grid grid-cols-[1fr_180px_140px_80px_44px] items-center py-3.5 border-b border-[#e8e5e0] dark:border-[#222228] last:border-0 hover:bg-black/[0.025] dark:hover:bg-[#1e1e24] -mx-2 px-2 transition-colors duration-100"
+                  >
+                    {/* resident */}
+                    <div className="flex items-center gap-3 min-w-0 pr-4">
+                      {res.avatar_base64 ? (
+                        <img
+                          src={res.avatar_base64}
+                          alt=""
+                          className="w-8 h-8 rounded-full object-cover flex-shrink-0 border border-[#e0deda] dark:border-[#2a2a32]"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 flex-shrink-0 bg-orange-500 flex items-center justify-center">
+                          <span className="mono text-[10px] font-bold text-white leading-none">
+                            {getInitials(res.firstName, res.lastName)}
+                          </span>
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-[14px] font-medium text-[#1a1917] dark:text-[#f0eee8] truncate leading-none">
+                          {res.firstName} {res.lastName}
+                        </p>
+                        <p className="mono text-[11px] text-[#7a7870] dark:text-[#7e7b75] mt-1.5 truncate">
+                          {res.id.slice(0, 8).toUpperCase()}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* contact */}
+                    <div className="pr-3 min-w-0">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Mail className="w-3 h-3 text-[#7a7870] dark:text-[#7e7b75] flex-shrink-0" />
+                        <p className="text-[12px] text-[#3d3b36] dark:text-[#c9c6be] truncate">{res.email}</p>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Phone className="w-3 h-3 text-[#7a7870] dark:text-[#7e7b75] flex-shrink-0" />
+                        <p className="text-[12px] text-[#5c5a54] dark:text-[#9e9b94] truncate">{res.phone || '—'}</p>
+                      </div>
+                    </div>
+
+                    {/* registered */}
+                    <span className="mono text-[11px] text-[#5c5a54] dark:text-[#9e9b94]">
+                      {fmt(res.created_at)}
+                    </span>
+
+                    {/* request count */}
+                    <span className="mono text-[13px] font-bold tabular-nums text-[#1a1917] dark:text-[#f0eee8]">
+                      {res.totalRequests ?? 0}
+                    </span>
+
+                    {/* view */}
+                    <Link href={`/residents/${res.id}`} className="flex justify-end">
+                      <span className="flex items-center justify-center w-7 h-7 border border-[#c8c6c0] dark:border-[#2a2a32] hover:bg-[#1a1917] dark:hover:bg-[#f0eee8] hover:border-[#1a1917] dark:hover:border-[#f0eee8] group/btn transition-colors duration-150">
+                        <Eye className="w-3.5 h-3.5 text-[#5c5a54] dark:text-[#9e9b94] group-hover/btn:text-white dark:group-hover/btn:text-[#1a1917] transition-colors" />
+                      </span>
+                    </Link>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            )}
+
+            {filtered.length > 0 && (
+              <p className="mono text-[11px] text-[#7a7870] dark:text-[#7e7b75] mt-3">
+                Showing {filtered.length} of {residents.length} resident{residents.length !== 1 ? 's' : ''}
+              </p>
+            )}
+          </motion.div>
+
+        </div>
       </div>
-    </div>
+    </>
   );
 }

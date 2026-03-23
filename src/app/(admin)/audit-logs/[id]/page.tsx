@@ -1,14 +1,14 @@
 'use client';
 
-import { use, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle, XCircle, Upload, User, Mail, FileText, Clock, ShieldCheck, ExternalLink, Loader2 } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, Upload, Search, FileText, Download } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 
 /* ─── types ─────────────────────────────────────────────────────────────── */
-interface AuditDetail {
+interface AuditLog {
   id:              string;
   request_id:      string;
   action:          'approved' | 'rejected' | 'document_uploaded';
@@ -18,12 +18,7 @@ interface AuditDetail {
   notes:           string | null;
   created_at:      string;
   document_type:   string | null;
-  request_status:  string | null;
-  file_url:        string | null;
-  file_hash:       string | null;
   resident_name:   string | null;
-  resident_email:  string | null;
-  resident_phone:  string | null;
 }
 
 /* ─── helpers ───────────────────────────────────────────────────────────── */
@@ -36,27 +31,44 @@ const ACTION_CFG = {
   document_uploaded: { label: 'Doc Uploaded', icon: Upload,      cls: 'text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/30'                 },
 } as const;
 
+/* ─── csv export ─────────────────────────────────────────────────────────── */
+function exportCSV(logs: AuditLog[]) {
+  const headers = ['Log ID', 'Timestamp', 'Action', 'Admin Name', 'Admin Email', 'Document Type', 'Resident', 'Notes', 'Request ID'];
+
+  const escape = (v: string | null | undefined) => {
+    const s = (v ?? '').replace(/"/g, '""');
+    return `"${s}"`;
+  };
+
+  const rows = logs.map(l => [
+    escape(l.id),
+    escape(new Date(l.created_at).toLocaleString('en-PH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })),
+    escape(ACTION_CFG[l.action]?.label ?? l.action),
+    escape(l.performer_name),
+    escape(l.performer_email),
+    escape(fmtDocType(l.document_type)),
+    escape(l.resident_name),
+    escape(l.notes),
+    escape(l.request_id),
+  ].join(','));
+
+  const csv  = [headers.map(h => `"${h}"`).join(','), ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const date = new Date().toISOString().slice(0, 10);
+  a.href     = url;
+  a.download = `audit-logs-${date}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 /* ─── sub-components ────────────────────────────────────────────────────── */
 const SectionLabel = ({ label }: { label: string }) => (
   <p className="mono text-[11px] tracking-[0.2em] uppercase text-[#5c5a54] dark:text-[#9e9b94] border-b border-[#c8c6c0] dark:border-[#2a2a32] pb-2 mb-4">{label}</p>
 );
-const DetailRow = ({ label, value }: { label: string; value?: string | null }) => (
-  <div>
-    <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">{label}</p>
-    <p className="text-[13px] font-medium text-[#1a1917] dark:text-[#f0eee8]">{value ?? '—'}</p>
-  </div>
-);
-const IconDetail = ({ icon: Icon, label, value, sub }: { icon: React.ElementType; label: string; value?: string | null; sub?: string | null }) => (
-  <div className="flex items-start gap-3 py-3 border-b border-[#e8e5e0] dark:border-[#222228] last:border-0">
-    <Icon className="w-4 h-4 text-[#7a7870] dark:text-[#7e7b75] mt-0.5 flex-shrink-0" />
-    <div>
-      <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-0.5">{label}</p>
-      <p className="text-[13px] text-[#1a1917] dark:text-[#f0eee8]">{value ?? '—'}</p>
-      {sub && <p className="mono text-[10px] text-[#7a7870] dark:text-[#7e7b75] mt-0.5">{sub}</p>}
-    </div>
-  </div>
-);
-const ActionBadge = ({ action }: { action: AuditDetail['action'] }) => {
+
+const ActionBadge = ({ action }: { action: AuditLog['action'] }) => {
   const cfg  = ACTION_CFG[action] ?? ACTION_CFG.approved;
   const Icon = cfg.icon;
   return (
@@ -67,80 +79,90 @@ const ActionBadge = ({ action }: { action: AuditDetail['action'] }) => {
 };
 
 /* ─── page ──────────────────────────────────────────────────────────────── */
-export default function AuditLogDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function AuditLogsPage() {
   const router = useRouter();
 
-  const [log,      setLog]      = useState<AuditDetail | null>(null);
-  const [loading,  setLoading]  = useState(true);
-  const [notFound, setNotFound] = useState(false);
-  const [copied,   setCopied]   = useState(false);
+  const [logs,         setLogs]         = useState<AuditLog[]>([]);
+  const [loading,      setLoading]      = useState(true);
+  const [exporting,    setExporting]    = useState(false);
+  const [search,       setSearch]       = useState('');
+  const [actionFilter, setActionFilter] = useState<'all' | AuditLog['action']>('all');
+  const [dateFilter,   setDateFilter]   = useState<'all' | 'today' | 'week' | 'month'>('all');
 
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/login'); return; }
 
-      const { data: logRow, error } = await supabase
+      const { data: rawLogs, error } = await supabase
         .from('audit_logs')
-        .select(`id, request_id, action, performed_by, performer_email, performer_name, notes, created_at, requests ( document_type, type, status, file_url, file_hash, user_id )`)
-        .eq('id', id)
-        .single();
+        .select(`id, request_id, action, performed_by, performer_email, performer_name, notes, created_at, requests ( document_type, type, user_id )`)
+        .order('created_at', { ascending: false })
+        .limit(500);
 
-      if (error || !logRow) { setNotFound(true); setLoading(false); return; }
+      if (error) { console.error('[audit]', error.message); setLoading(false); return; }
 
-      // Resolve resident profile via decrypting API
-      const userId = (logRow as any).requests?.user_id ?? null;
-      let residentName = null, residentEmail = null, residentPhone = null;
-      if (userId) {
+      const userIds = [...new Set((rawLogs ?? []).map((l: any) => l.requests?.user_id).filter(Boolean))];
+      const profileMap: Record<string, string> = {};
+      await Promise.all(userIds.map(async (uid: string) => {
         try {
-          const res = await fetch(`/api/profile?id=${userId}`);
-          if (res.ok) {
-            const j = await res.json();
-            const p = j.data;
-            if (p) {
-              residentName  = `${p.firstName ?? p.first_name ?? ''} ${p.lastName ?? p.last_name ?? ''}`.trim() || null;
-              residentEmail = p.email ?? null;
-              residentPhone = p.phone ?? null;
-            }
-          }
+          const res = await fetch(`/api/profile?id=${uid}`);
+          if (!res.ok) return;
+          const j = await res.json();
+          const p = j.data;
+          if (p) profileMap[uid] = `${p.firstName ?? p.first_name ?? ''} ${p.lastName ?? p.last_name ?? ''}`.trim();
         } catch { /* skip */ }
-      }
+      }));
 
-      const r = (logRow as any).requests;
-      setLog({
-        id:              logRow.id,
-        request_id:      logRow.request_id,
-        action:          logRow.action as AuditDetail['action'],
-        performed_by:    logRow.performed_by,
-        performer_email: logRow.performer_email,
-        performer_name:  (logRow as any).performer_name ?? null,
-        notes:           logRow.notes,
-        created_at:      logRow.created_at,
-        document_type:   r?.type ?? r?.document_type ?? null,
-        request_status:  r?.status ?? null,
-        file_url:        r?.file_url ?? null,
-        file_hash:       r?.file_hash ?? null,
-        resident_name:   residentName,
-        resident_email:  residentEmail,
-        resident_phone:  residentPhone,
-      });
+      setLogs((rawLogs ?? []).map((l: any) => ({
+        id:              l.id,
+        request_id:      l.request_id,
+        action:          l.action,
+        performed_by:    l.performed_by,
+        performer_email: l.performer_email,
+        performer_name:  l.performer_name ?? null,
+        notes:           l.notes,
+        created_at:      l.created_at,
+        document_type:   l.requests?.type ?? l.requests?.document_type ?? null,
+        resident_name:   l.requests?.user_id ? (profileMap[l.requests.user_id] ?? null) : null,
+      })));
       setLoading(false);
     })();
-  }, [id, router]);
+  }, [router]);
+
+  /* ── filtering ──────────────────────────────────────────────────────────── */
+  const isToday = (d: string) => new Date(d).toDateString() === new Date().toDateString();
+  const isWeek  = (d: string) => { const now = new Date(); const s = new Date(now); s.setDate(now.getDate() - now.getDay()); s.setHours(0,0,0,0); return new Date(d) >= s; };
+  const isMonth = (d: string) => { const n = new Date(); const d2 = new Date(d); return d2.getMonth() === n.getMonth() && d2.getFullYear() === n.getFullYear(); };
+
+  const filtered = logs.filter(l => {
+    const q = search.toLowerCase();
+    const matchSearch =
+      (l.performer_name  ?? '').toLowerCase().includes(q) ||
+      (l.performer_email ?? '').toLowerCase().includes(q) ||
+      (l.resident_name   ?? '').toLowerCase().includes(q) ||
+      (l.document_type   ?? '').toLowerCase().includes(q) ||
+      l.request_id.toLowerCase().includes(q);
+    const matchAction = actionFilter === 'all' || l.action === actionFilter;
+    const matchDate   = dateFilter === 'all' ? true : dateFilter === 'today' ? isToday(l.created_at) : dateFilter === 'week' ? isWeek(l.created_at) : isMonth(l.created_at);
+    return matchSearch && matchAction && matchDate;
+  });
+
+  const countAction = (a: AuditLog['action']) => logs.filter(l => l.action === a).length;
+
+  /* ── export handler ─────────────────────────────────────────────────────── */
+  const handleExport = () => {
+    setExporting(true);
+    // small timeout so the button state updates before the sync blob work
+    setTimeout(() => {
+      exportCSV(filtered);
+      setExporting(false);
+    }, 80);
+  };
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-[#f5f4f0] dark:bg-[#16161a]">
       <span className="mono text-[12px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] uppercase animate-pulse">Loading…</span>
-    </div>
-  );
-
-  if (notFound || !log) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f5f4f0] dark:bg-[#16161a]">
-      <div className="text-center">
-        <p className="text-[14px] text-[#3d3b36] dark:text-[#c9c6be] mb-4">Audit log not found.</p>
-        <Link href="/audit-logs" className="mono text-[11px] tracking-[0.1em] uppercase text-orange-600 dark:text-orange-400 hover:underline">← Back to Audit Logs</Link>
-      </div>
     </div>
   );
 
@@ -149,125 +171,159 @@ export default function AuditLogDetailPage({ params }: { params: Promise<{ id: s
       <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap'); .pg{font-family:'IBM Plex Sans',sans-serif} .mono{font-family:'IBM Plex Mono',monospace}`}</style>
 
       <div className="pg min-h-screen bg-[#f5f4f0] dark:bg-[#16161a] transition-colors duration-200">
-        <div className="max-w-4xl mx-auto px-6 lg:px-10 pt-6 pb-14">
+        <div className="max-w-6xl mx-auto px-6 lg:px-10 pt-6 pb-14">
 
           {/* MASTHEAD */}
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="border-b-2 border-[#1a1917] dark:border-[#f0eee8] pb-5 mb-10">
             <div className="flex items-end justify-between flex-wrap gap-4">
               <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <p className="mono text-[11px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] uppercase">{log.id.slice(0, 8).toUpperCase()}</p>
-                  <ActionBadge action={log.action} />
-                </div>
-                <h1 className="mono text-2xl md:text-3xl font-bold text-[#1a1917] dark:text-[#f0eee8] tracking-tight leading-none">AUDIT LOG</h1>
+                <p className="mono text-[11px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] uppercase mb-2">Admin Panel</p>
+                <h1 className="mono text-2xl md:text-3xl font-bold text-[#1a1917] dark:text-[#f0eee8] tracking-tight leading-none">AUDIT LOGS</h1>
               </div>
-              <Link href="/audit-logs" className="mono text-[11px] tracking-[0.1em] uppercase text-orange-600 dark:text-orange-400 hover:text-orange-700 transition-colors flex items-center gap-1">← Audit Logs</Link>
+              <p className="mono text-[11px] text-[#7a7870] dark:text-[#7e7b75]">{logs.length} total events</p>
             </div>
           </motion.div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+          {/* STATS */}
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }} className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+            {[
+              { label: 'Total Events',  value: logs.length,                     color: 'text-[#1a1917] dark:text-[#f0eee8]'     },
+              { label: 'Approvals',     value: countAction('approved'),          color: 'text-emerald-600 dark:text-emerald-400' },
+              { label: 'Rejections',    value: countAction('rejected'),          color: 'text-red-600 dark:text-red-400'         },
+              { label: 'Docs Uploaded', value: countAction('document_uploaded'), color: 'text-blue-600 dark:text-blue-400'       },
+            ].map(s => (
+              <div key={s.label} className="border border-[#c8c6c0] dark:border-[#2a2a32] bg-white dark:bg-[#1e1e24] p-4">
+                <p className={`mono text-2xl font-bold ${s.color}`}>{s.value}</p>
+                <p className="mono text-[11px] text-[#7a7870] dark:text-[#7e7b75] uppercase tracking-wider mt-1">{s.label}</p>
+              </div>
+            ))}
+          </motion.div>
 
-            {/* LEFT */}
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="lg:col-span-2 space-y-10">
+          {/* FILTERS + EXPORT */}
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <p className="mono text-[11px] tracking-[0.2em] uppercase text-[#5c5a54] dark:text-[#9e9b94] border-b border-[#c8c6c0] dark:border-[#2a2a32] pb-2 flex-1">Filters</p>
+              <button
+                onClick={handleExport}
+                disabled={exporting || filtered.length === 0}
+                className="ml-6 flex items-center gap-2 mono text-[11px] font-bold tracking-[0.1em] uppercase px-4 py-2 border border-[#1a1917] dark:border-[#f0eee8] text-[#1a1917] dark:text-[#f0eee8] hover:bg-[#1a1917] dark:hover:bg-[#f0eee8] hover:text-white dark:hover:text-[#1a1917] transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+              >
+                {exporting
+                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  : <Download className="w-3.5 h-3.5" />
+                }
+                Export CSV
+                {filtered.length > 0 && !exporting && (
+                  <span className="ml-1 text-[#7a7870] dark:text-[#9e9b94] font-normal">({filtered.length})</span>
+                )}
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7a7870] dark:text-[#7e7b75]" />
+                <input value={search} onChange={e => setSearch(e.target.value)}
+                  placeholder="Search by admin, resident, doc type…"
+                  className="w-full pl-9 pr-3 py-2.5 text-[12px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] placeholder-[#7a7870] dark:placeholder-[#7e7b75] focus:outline-none focus:border-[#1a1917] dark:focus:border-[#f0eee8] transition-colors mono" />
+              </div>
+              <select value={actionFilter} onChange={e => setActionFilter(e.target.value as any)}
+                className="w-full px-3 py-2.5 text-[12px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] focus:outline-none focus:border-[#1a1917] dark:focus:border-[#f0eee8] transition-colors mono">
+                <option value="all">All Actions</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+                <option value="document_uploaded">Document Uploaded</option>
+              </select>
+              <select value={dateFilter} onChange={e => setDateFilter(e.target.value as any)}
+                className="w-full px-3 py-2.5 text-[12px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] focus:outline-none focus:border-[#1a1917] dark:focus:border-[#f0eee8] transition-colors mono">
+                <option value="all">All Time</option>
+                <option value="today">Today</option>
+                <option value="week">This Week</option>
+                <option value="month">This Month</option>
+              </select>
+            </div>
+          </motion.div>
 
-              {/* Event details */}
-              <div>
-                <SectionLabel label="Event Details" />
-                <div className="grid grid-cols-2 gap-x-8 gap-y-5">
-                  <DetailRow label="Action"         value={ACTION_CFG[log.action]?.label ?? log.action} />
-                  <DetailRow label="Timestamp"      value={new Date(log.created_at).toLocaleString('en-PH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })} />
-                  <DetailRow label="Document Type"  value={fmtDocType(log.document_type)} />
-                  <DetailRow label="Request Status" value={log.request_status ? log.request_status.charAt(0).toUpperCase() + log.request_status.slice(1) : '—'} />
-                  {log.notes && (
-                    <div className="col-span-2">
-                      <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-2">
-                        {log.action === 'rejected' ? 'Rejection Reason' : log.action === 'document_uploaded' ? 'File Info' : 'Notes'}
-                      </p>
-                      <p className="text-[13px] text-[#3d3b36] dark:text-[#c9c6be] leading-relaxed border-l-2 border-[#c8c6c0] dark:border-[#2a2a32] pl-3">{log.notes}</p>
-                    </div>
-                  )}
+          {/* TABLE */}
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }}>
+            <SectionLabel label={`Events (${filtered.length})`} />
+
+            {filtered.length === 0 ? (
+              <div className="border border-[#c8c6c0] dark:border-[#2a2a32] bg-white dark:bg-[#1e1e24] py-16 text-center">
+                <FileText className="w-8 h-8 text-[#c8c6c0] dark:text-[#2a2a32] mx-auto mb-3" />
+                <p className="text-[13px] text-[#7a7870] dark:text-[#7e7b75]">
+                  {logs.length === 0 ? 'No audit events yet.' : 'No events match your filters.'}
+                </p>
+              </div>
+            ) : (
+              <div className="border border-[#c8c6c0] dark:border-[#2a2a32] bg-white dark:bg-[#1e1e24] overflow-x-auto">
+
+                {/* Header */}
+                <div className="grid grid-cols-[1fr_1.6fr_1.2fr_1fr_1.2fr_0.7fr] gap-4 px-5 py-3 border-b border-[#e8e5e0] dark:border-[#222228] bg-[#f5f4f0] dark:bg-[#16161a]">
+                  {['Timestamp', 'Admin', 'Action', 'Document Type', 'Resident', 'View'].map(h => (
+                    <p key={h} className="mono text-[10px] font-bold tracking-[0.12em] uppercase text-[#7a7870] dark:text-[#7e7b75]">{h}</p>
+                  ))}
                 </div>
-              </div>
 
-              {/* Performed by — name primary, email as subtitle */}
-              <div>
-                <SectionLabel label="Performed By" />
-                <IconDetail
-                  icon={User}
-                  label="Admin"
-                  value={log.performer_name ?? log.performer_email ?? 'Unknown'}
-                  sub={log.performer_name ? (log.performer_email ?? undefined) : undefined}
-                />
-                <IconDetail icon={Mail} label="Admin ID" value={log.performed_by ?? '—'} />
-              </div>
+                {/* Rows */}
+                {filtered.map((log, i) => (
+                  <div key={log.id}
+                    className={`grid grid-cols-[1fr_1.6fr_1.2fr_1fr_1.2fr_0.7fr] gap-4 px-5 py-4 border-b border-[#e8e5e0] dark:border-[#222228] last:border-0 hover:bg-[#f5f4f0] dark:hover:bg-[#16161a] transition-colors ${i % 2 !== 0 ? 'bg-[#faf9f7] dark:bg-[#1a1a20]' : ''}`}>
 
-              {/* Resident */}
-              <div>
-                <SectionLabel label="Resident" />
-                <IconDetail icon={User} label="Full Name" value={log.resident_name} />
-                <IconDetail icon={Mail} label="Email"     value={log.resident_email} />
-                <IconDetail icon={User} label="Phone"     value={log.resident_phone} />
-              </div>
-
-              {/* Document hash */}
-              {log.file_hash && (
-                <div>
-                  <SectionLabel label="Document Integrity" />
-                  <div className="border-l-2 border-emerald-500 pl-3 py-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                      <span className="mono text-[10px] font-bold tracking-[0.1em] uppercase text-emerald-600 dark:text-emerald-400">SHA-256 Hash</span>
-                    </div>
-                    <p className="mono text-[10px] text-[#5c5a54] dark:text-[#9e9b94] break-all leading-relaxed mb-1">{log.file_hash}</p>
-                    <button onClick={() => { navigator.clipboard.writeText(log.file_hash!); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-                      className="mono text-[10px] text-orange-600 dark:text-orange-400 hover:underline">
-                      {copied ? '✓ Copied' : 'Copy hash'}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </motion.div>
-
-            {/* RIGHT */}
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }} className="space-y-8">
-
-              <div>
-                <SectionLabel label="References" />
-                <div className="space-y-4">
-                  <div>
-                    <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-2">Request</p>
-                    <Link href={`/approved-documents/${log.request_id}`} className="flex items-center gap-2 mono text-[11px] text-orange-600 dark:text-orange-400 hover:underline">
-                      <ExternalLink className="w-3.5 h-3.5" />{log.request_id.slice(0, 8).toUpperCase()} →
-                    </Link>
-                  </div>
-                  <div>
-                    <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-2">All Events for This Request</p>
-                    <Link href={`/audit-logs?request_id=${log.request_id}`} className="flex items-center gap-2 mono text-[11px] text-orange-600 dark:text-orange-400 hover:underline">
-                      <ExternalLink className="w-3.5 h-3.5" />View all events →
-                    </Link>
-                  </div>
-                  {log.file_url && (
+                    {/* Timestamp */}
                     <div>
-                      <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-2">Document File</p>
-                      <a href={log.file_url} target="_blank" rel="noopener noreferrer" download className="flex items-center gap-2 mono text-[11px] text-orange-600 dark:text-orange-400 hover:underline">
-                        <FileText className="w-3.5 h-3.5" />Download →
-                      </a>
+                      <p className="mono text-[11px] text-[#1a1917] dark:text-[#f0eee8]">
+                        {new Date(log.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </p>
+                      <p className="mono text-[10px] text-[#7a7870] dark:text-[#7e7b75] mt-0.5">
+                        {new Date(log.created_at).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' })}
+                      </p>
                     </div>
-                  )}
-                </div>
-              </div>
 
-              <div>
-                <SectionLabel label="Timing" />
-                <div className="space-y-4">
-                  <DetailRow label="Date"   value={new Date(log.created_at).toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} />
-                  <DetailRow label="Time"   value={new Date(log.created_at).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} />
-                  <DetailRow label="Log ID" value={log.id} />
-                </div>
-              </div>
+                    {/* Admin */}
+                    <div>
+                      <p className="text-[12px] font-medium text-[#1a1917] dark:text-[#f0eee8] truncate" title={log.performer_name ?? log.performer_email ?? ''}>
+                        {log.performer_name ?? <span className="italic text-[#7a7870] dark:text-[#7e7b75]">Unknown</span>}
+                      </p>
+                      {log.performer_name && log.performer_email && (
+                        <p className="mono text-[10px] text-[#7a7870] dark:text-[#7e7b75] mt-0.5 truncate" title={log.performer_email}>
+                          {log.performer_email}
+                        </p>
+                      )}
+                    </div>
 
-            </motion.div>
-          </div>
+                    {/* Action */}
+                    <div>
+                      <ActionBadge action={log.action} />
+                      {log.notes && (
+                        <p className="text-[11px] text-[#5c5a54] dark:text-[#9e9b94] mt-1.5 leading-snug line-clamp-2" title={log.notes}>
+                          {log.notes}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Document type */}
+                    <div>
+                      <p className="text-[12px] text-[#3d3b36] dark:text-[#c9c6be]">{fmtDocType(log.document_type)}</p>
+                    </div>
+
+                    {/* Resident */}
+                    <div>
+                      <p className="text-[12px] text-[#3d3b36] dark:text-[#c9c6be]">
+                        {log.resident_name || <span className="text-[#7a7870] dark:text-[#7e7b75] italic">—</span>}
+                      </p>
+                    </div>
+
+                    {/* View detail */}
+                    <div>
+                      <Link href={`/audit-logs/${log.id}`} className="mono text-[10px] tracking-[0.08em] uppercase text-orange-600 dark:text-orange-400 hover:underline">
+                        {log.id.slice(0, 8).toUpperCase()} →
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </motion.div>
+
         </div>
       </div>
     </>
