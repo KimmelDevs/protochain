@@ -6,25 +6,9 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
 import {
   LayoutDashboard, Clock, CheckCircle, XCircle,
-  Users, Settings, LogOut, BarChart3, Moon, Sun,
+  Users, Settings, LogOut, BarChart3, Moon, Sun, ScrollText,
 } from 'lucide-react';
 import Image from 'next/image';
-
-/*
- * Same contrast tokens as DashboardPage — applied consistently:
- *
- * Light (#fafaf9 bg):
- *   primary  #1a1917  — nav label active, name
- *   body     #3d3b36  — nav label inactive
- *   muted    #5c5a54  — section headers, role, theme toggle
- *   subtle   #7a7870  — lowest tier, still AA
- *
- * Dark (#16161a bg):
- *   primary  #f0eee8  — nav label active, name
- *   body     #c9c6be  — nav label inactive
- *   muted    #9e9b94  — section headers, role, theme toggle
- *   subtle   #7e7b75  — lowest tier, still AA
- */
 
 const NAV = [
   { label: 'Dashboard',          href: '/admindashboard',     icon: LayoutDashboard },
@@ -33,6 +17,7 @@ const NAV = [
   { label: 'Rejected Requests',  href: '/rejected-requests',  icon: XCircle         },
   { label: 'Residents',          href: '/residents',          icon: Users           },
   { label: 'Reports',            href: '/reports',            icon: BarChart3       },
+  { label: 'Audit Logs',         href: '/audit-logs',         icon: ScrollText      },
 ];
 
 const SECONDARY = [
@@ -101,11 +86,9 @@ export default function AdminSidebar() {
               <Image src="/protochain_logo2.jpg" alt="ProtoChain" width={28} height={28} priority />
             </div>
             <div>
-              {/* brand name — primary */}
               <p className="sb-mono text-[13px] font-medium text-[#1a1917] dark:text-[#f0eee8] leading-none tracking-tight">
                 ProtoChain
               </p>
-              {/* tagline — orange, always readable */}
               <p className="sb-mono text-[10px] tracking-[0.15em] uppercase text-orange-600 dark:text-orange-400 leading-none mt-0.5">
                 Admin Portal
               </p>
@@ -116,14 +99,14 @@ export default function AdminSidebar() {
         {/* ── PRIMARY NAV ──────────────────────────────────── */}
         <nav className="flex-1 overflow-y-auto px-3 pt-4">
 
-          {/* section header — muted tier */}
           <p className="sb-mono text-[10px] tracking-[0.18em] uppercase text-[#7a7870] dark:text-[#7e7b75] px-2 mb-2">
             Main
           </p>
 
           <ul className="space-y-0.5">
             {NAV.map(({ label, href, icon: Icon }) => {
-              const active = pathname === href;
+              // treat /audit-logs/[id] as active for /audit-logs
+              const active = pathname === href || (href !== '/admindashboard' && pathname.startsWith(href + '/'));
               return (
                 <li key={href}>
                   <Link
@@ -141,7 +124,6 @@ export default function AdminSidebar() {
                       <span className="absolute left-0 top-1.5 bottom-1.5 w-[2px] bg-orange-500" />
                     )}
                     <Icon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-orange-500' : ''}`} />
-                    {/* nav label — 13px minimum, body tier inactive / primary active */}
                     <span className={`text-[13px] leading-none ${active ? 'font-medium' : 'font-normal'}`}>
                       {label}
                     </span>
@@ -151,7 +133,6 @@ export default function AdminSidebar() {
             })}
           </ul>
 
-          {/* secondary group */}
           <p className="sb-mono text-[10px] tracking-[0.18em] uppercase text-[#7a7870] dark:text-[#7e7b75] px-2 mt-5 mb-2">
             System
           </p>
@@ -205,23 +186,13 @@ export default function AdminSidebar() {
 
         {/* ── PROFILE + LOGOUT ─────────────────────────────── */}
         <div className="px-3 pb-4 pt-3 border-t border-[#dedad4] dark:border-[#2a2a32] space-y-0.5">
-
           <div className="flex items-center gap-2.5 px-2 py-2">
-            {/* avatar */}
             <div className="w-7 h-7 rounded bg-orange-500 flex items-center justify-center flex-shrink-0">
-              <span className="sb-mono text-[10px] font-semibold text-white leading-none">
-                {initials}
-              </span>
+              <span className="sb-mono text-[10px] font-semibold text-white leading-none">{initials}</span>
             </div>
             <div className="min-w-0 flex-1">
-              {/* name — primary tier */}
-              <p className="text-[13px] font-medium text-[#1a1917] dark:text-[#f0eee8] truncate leading-none">
-                {fullName}
-              </p>
-              {/* role — muted tier */}
-              <p className="sb-mono text-[10px] text-[#5c5a54] dark:text-[#9e9b94] leading-none mt-1 capitalize">
-                {roleLabel}
-              </p>
+              <p className="text-[13px] font-medium text-[#1a1917] dark:text-[#f0eee8] truncate leading-none">{fullName}</p>
+              <p className="sb-mono text-[10px] text-[#5c5a54] dark:text-[#9e9b94] leading-none mt-1 capitalize">{roleLabel}</p>
             </div>
           </div>
 
@@ -236,7 +207,6 @@ export default function AdminSidebar() {
             <LogOut className="w-4 h-4 flex-shrink-0" />
             <span>Sign out</span>
           </button>
-
         </div>
       </aside>
     </>
