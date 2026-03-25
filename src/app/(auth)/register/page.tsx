@@ -120,7 +120,14 @@ export default function SignUpPage() {
     if (!formData.lastName.trim()) errors.lastName = 'Last name is required';
     if (!formData.email.trim()) errors.email = 'Email is required';
     if (!formData.username.trim()) errors.username = 'Username is required';
-    if (!formData.birthday) errors.birthday = 'Birthday is required';
+
+    // Birthday validation
+    if (!formData.birthday) {
+      errors.birthday = 'Birthday is required';
+    } else if (new Date(formData.birthday) > new Date()) {
+      errors.birthday = 'Birthday cannot be in the future';
+    }
+
     if (!formData.civilStatus) errors.civilStatus = 'Civil status is required';
     if (!formData.address.trim()) errors.address = 'Address is required';
 
@@ -249,6 +256,7 @@ export default function SignUpPage() {
                 value={formData.birthday}
                 onChange={handleChange}
                 onClick={() => dateRef.current?.showPicker()}
+                max={new Date().toISOString().split('T')[0]}
                 className={`w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border text-white focus:outline-none focus:ring-2 focus:ring-orange-500 [&::-webkit-calendar-picker-indicator]:invert
                   ${fieldErrors.birthday ? 'border-red-500' : 'border-white/20'}`}
               />

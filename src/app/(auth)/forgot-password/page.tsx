@@ -4,31 +4,48 @@ import Button from "@/app/components/ui/Button";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { createClient } from "@/app/lib/supabase/client";
 
 export default function ForgotPasswordPage() {
+  const supabase = createClient();
+
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
 
-    console.log('Reset password for:', email);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
 
-    setTimeout(() => {
+    if (error) {
+      setError(error.message);
       setLoading(false);
-      setSent(true);
-    }, 1500);
+      return;
+    }
+
+    setLoading(false);
+    setSent(true);
   };
 
-  const handleResend = () => {
+  const handleResend = async () => {
     setLoading(true);
-    console.log('Resending to:', email);
+    setError('');
 
-    setTimeout(() => {
-      setLoading(false);
-    }, 1500);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    if (error) {
+      setError(error.message);
+    }
+
+    setLoading(false);
   };
 
   return (
@@ -59,6 +76,13 @@ export default function ForgotPasswordPage() {
               </p>
             </div>
 
+            {/* Error */}
+            {error && (
+              <div className="p-3 bg-red-500/10 border border-red-500 rounded text-red-400 text-sm">
+                {error}
+              </div>
+            )}
+
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-6">
 
@@ -73,7 +97,6 @@ export default function ForgotPasswordPage() {
                   required
                   className="peer w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
-
                 <label
                   htmlFor="email"
                   className={`absolute left-4 top-2 text-gray-400 text-sm transition-all
@@ -169,8 +192,14 @@ export default function ForgotPasswordPage() {
 
               <p className="text-white font-medium break-all">{email}</p>
 
-              <div className="space-y-3 pt-4">
+              {/* Resend error */}
+              {error && (
+                <div className="p-3 bg-red-500/10 border border-red-500 rounded text-red-400 text-sm">
+                  {error}
+                </div>
+              )}
 
+              <div className="space-y-3 pt-4">
                 <button
                   onClick={handleResend}
                   disabled={loading}
@@ -185,7 +214,6 @@ export default function ForgotPasswordPage() {
                 >
                   Back to Login
                 </Link>
-
               </div>
             </div>
           </>
