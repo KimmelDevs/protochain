@@ -26,33 +26,28 @@ interface Request {
 
 export default function MyRequestsPage() {
   const router = useRouter();
-  const [requests, setRequests] = useState<Request[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [requests,     setRequests]     = useState<Request[]>([]);
+  const [loading,      setLoading]      = useState(true);
+  const [searchQuery,  setSearchQuery]  = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  // Load user requests
   useEffect(() => {
-    const load = async () => {
+    (async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { router.push('/login'); return; }
 
-        const { data, error } = await supabase
-          .from('requests')
-          .select('id, type, document_type, status, created_at, processed_at, purpose, custom_purpose')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-        setRequests(data ?? []);
+        // ── Use /api/requests so purpose / custom_purpose are decrypted ──────
+        const res = await fetch(`/api/requests?user_id=${user.id}`);
+        if (!res.ok) throw new Error('Failed to load requests');
+        const json = await res.json();
+        setRequests(json.data ?? []);
       } catch (err) {
         console.error('Failed to load requests:', err);
       } finally {
         setLoading(false);
       }
-    };
-    load();
+    })();
   }, [router]);
 
   const filtered = requests.filter((r) => {
@@ -63,16 +58,15 @@ export default function MyRequestsPage() {
   });
 
   const count = (status: string) => requests.filter(r => r.status === status).length;
+
   const displayPurpose = (r: Request) =>
     r.purpose === 'others' && r.custom_purpose ? r.custom_purpose : r.purpose ?? '—';
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f0f23] transition-colors duration-300">
-        <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f0f23] transition-colors duration-300">
+      <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+    </div>
+  );
 
   return (
     <div className="min-h-screen p-4 lg:p-8 bg-gray-50 dark:bg-[#0f0f23] transition-colors duration-300 text-gray-900 dark:text-white">
@@ -88,10 +82,10 @@ export default function MyRequestsPage() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
           className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           {[
-            { label: 'Total', value: requests.length, color: 'text-gray-900 dark:text-white' },
-            { label: 'Pending', value: count('pending'), color: 'text-yellow-400' },
-            { label: 'Approved', value: count('approved'), color: 'text-green-400' },
-            { label: 'Rejected', value: count('rejected'), color: 'text-red-400' },
+            { label: 'Total',    value: requests.length,    color: 'text-gray-900 dark:text-white' },
+            { label: 'Pending',  value: count('pending'),   color: 'text-yellow-400' },
+            { label: 'Approved', value: count('approved'),  color: 'text-green-400'  },
+            { label: 'Rejected', value: count('rejected'),  color: 'text-red-400'    },
           ].map(s => (
             <Card key={s.label}><CardContent className="p-4">
               <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
@@ -114,16 +108,14 @@ export default function MyRequestsPage() {
                     className="pl-10 text-gray-900 dark:text-white"
                   />
                 </div>
-
-                {/* Fixed Select usage: no darkMode prop */}
                 <Select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                   options={[
-                    { value: 'all', label: 'All Status' },
-                    { value: 'pending', label: 'Pending' },
-                    { value: 'approved', label: 'Approved' },
-                    { value: 'rejected', label: 'Rejected' },
+                    { value: 'all',      label: 'All Status' },
+                    { value: 'pending',  label: 'Pending'    },
+                    { value: 'approved', label: 'Approved'   },
+                    { value: 'rejected', label: 'Rejected'   },
                   ]}
                 />
               </div>
@@ -142,7 +134,7 @@ export default function MyRequestsPage() {
                   <p className="text-gray-900 dark:text-white font-medium mb-1">No requests yet</p>
                   <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">You haven't submitted any document requests.</p>
                   <Link href="/request-document">
-                    <button className="bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity">
+                    <button className="bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 rounded-lg font-semibold transition-opacity hover:opacity-90">
                       Request a Document
                     </button>
                   </Link>
