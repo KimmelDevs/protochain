@@ -27,33 +27,27 @@ interface RequestDoc {
 export default function MyDocumentsPage() {
   const router = useRouter();
   const [documents, setDocuments] = useState<RequestDoc[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading]     = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState('all');
+  const [typeFilter, setTypeFilter]   = useState('all');
 
-  // Load approved documents
   useEffect(() => {
-    const load = async () => {
+    (async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { router.push('/login'); return; }
 
-        const { data, error } = await supabase
-          .from('requests')
-          .select('id, type, document_type, status, created_at, file_url, purpose, custom_purpose')
-          .eq('user_id', user.id)
-          .eq('status', 'approved')
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-        setDocuments(data ?? []);
+        // ── Use /api/requests so all sensitive fields are decrypted ──────────
+        const res = await fetch(`/api/requests?user_id=${user.id}&status=approved`);
+        if (!res.ok) throw new Error('Failed to load documents');
+        const json = await res.json();
+        setDocuments(json.data ?? []);
       } catch (err) {
         console.error(err);
       } finally {
         setLoading(false);
       }
-    };
-    load();
+    })();
   }, [router]);
 
   const filtered = documents.filter((doc) => {
@@ -70,13 +64,11 @@ export default function MyDocumentsPage() {
   const displayPurpose = (doc: RequestDoc) =>
     doc.purpose === 'others' && doc.custom_purpose ? doc.custom_purpose : doc.purpose;
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f0f23] transition-colors duration-300">
-        <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f0f23] transition-colors duration-300">
+      <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+    </div>
+  );
 
   return (
     <div className="min-h-screen p-4 lg:p-8 bg-gray-50 dark:bg-[#0f0f23] transition-colors duration-300">
@@ -94,9 +86,9 @@ export default function MyDocumentsPage() {
           className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"
         >
           {[
-            { label: 'Total Documents', value: documents.length, icon: <CheckCircle className="w-8 h-8 text-green-400" /> },
-            { label: 'With File', value: documents.filter(d => d.file_url).length, icon: <FileText className="w-8 h-8 text-blue-400" /> },
-            { label: 'Document Types', value: new Set(documents.map(d => d.type)).size, icon: <FileText className="w-8 h-8 text-purple-400" /> },
+            { label: 'Total Documents', value: documents.length,                           icon: <CheckCircle className="w-8 h-8 text-green-400" /> },
+            { label: 'With File',       value: documents.filter(d => d.file_url).length,   icon: <FileText    className="w-8 h-8 text-blue-400"  /> },
+            { label: 'Document Types',  value: new Set(documents.map(d => d.type)).size,   icon: <FileText    className="w-8 h-8 text-purple-400" /> },
           ].map(s => (
             <div key={s.label} className="bg-white/5 dark:bg-white/10 border border-gray-300 dark:border-white/10 rounded-xl p-4 transition-colors duration-300">
               <div className="flex items-center justify-between">
@@ -176,7 +168,7 @@ export default function MyDocumentsPage() {
           {filtered.map((doc) => (
             <div
               key={doc.id}
-              className="bg-white/5 dark:bg-white/10 border border-gray-300 dark:border-white/10 rounded-xl p-6 hover:border-blue-500/30 transition-all transition-colors duration-300 group"
+              className="bg-white/5 dark:bg-white/10 border border-gray-300 dark:border-white/10 rounded-xl p-6 hover:border-blue-500/30 transition-all duration-300 group"
             >
               <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
                 <FileText className="w-6 h-6 text-white" />
@@ -186,11 +178,11 @@ export default function MyDocumentsPage() {
 
               <div className="space-y-2 mb-4">
                 <p className="text-xs font-mono text-gray-500 dark:text-gray-400">{doc.id.slice(0, 8).toUpperCase()}</p>
-                <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-400">
+                <div className="flex items-center gap-2 text-sm text-gray-400">
                   <Calendar className="w-4 h-4 shrink-0" />
                   <span>Approved: {new Date(doc.created_at).toLocaleDateString()}</span>
                 </div>
-                <p className="text-sm text-gray-400 dark:text-gray-400 capitalize">Purpose: {displayPurpose(doc)}</p>
+                <p className="text-sm text-gray-400 capitalize">Purpose: {displayPurpose(doc)}</p>
               </div>
 
               <div className="mb-4">

@@ -49,73 +49,82 @@ interface Profile {
 }
 
 export default function DocumentDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
-  const router = useRouter();
-  const [doc, setDoc] = useState<RequestDoc | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { id }   = use(params);
+  const router   = useRouter();
+
+  const [doc,      setDoc]      = useState<RequestDoc | null>(null);
+  const [profile,  setProfile]  = useState<Profile | null>(null);
+  const [loading,  setLoading]  = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
-    const load = async () => {
+    // Sync dark mode from localStorage
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+
+    (async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { router.push('/login'); return; }
 
-        const { data, error } = await supabase
-          .from('requests')
-          .select('*')
-          .eq('id', id)
-          .eq('user_id', user.id)
-          .eq('status', 'approved')
-          .single();
+        // ── Use /api/requests — decrypts ALL sensitive fields server-side ────
+        // Direct Supabase queries return raw ciphertext for purok, ctc_no,
+        // purpose, notes, additional_info, and every other sensitive field.
+        const res = await fetch(`/api/requests?id=${id}`);
+        if (!res.ok) { setNotFound(true); return; }
+        const json = await res.json();
+        const data: RequestDoc | undefined = json.data?.[0];
 
-        if (error || !data) { setNotFound(true); return; }
+        // Safety: make sure this request belongs to the current user
+        if (!data || data.user_id !== user.id || data.status !== 'approved') {
+          setNotFound(true);
+          return;
+        }
         setDoc(data);
 
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('firstName, lastName, email, phone, address, birthday, civilStatus')
-          .eq('id', user.id)
-          .single();
-
-        if (profileData) setProfile(profileData);
+        // ── Use /api/profile — decrypts firstName, lastName, address, etc. ───
+        const profileRes = await fetch(`/api/profile?id=${user.id}`);
+        if (profileRes.ok) {
+          const profileJson = await profileRes.json();
+          const p = profileJson.data;
+          if (p) {
+            setProfile({
+              firstName:   p.firstName   ?? p.first_name   ?? '',
+              lastName:    p.lastName    ?? p.last_name    ?? '',
+              email:       p.email       ?? '',
+              phone:       p.phone       ?? '',
+              address:     p.address     ?? '',
+              birthday:    p.birthday    ?? null,
+              civilStatus: p.civilStatus ?? p.civil_status ?? null,
+            });
+          }
+        }
       } catch {
         setNotFound(true);
       } finally {
         setLoading(false);
       }
-    };
-    load();
-    const savedTheme = localStorage.getItem("theme");
-      if (savedTheme === "dark") {
-        setDarkMode(true);
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
-      }, [id, router]);
+    })();
+  }, [id, router]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+    </div>
+  );
 
-  if (notFound || !doc) {
-    return (
-      <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center">
-        <div className="text-center">
-          <FileText className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-400 mb-4">Document not found</p>
-          <Link href="/my-documents"><Button>Back to Documents</Button></Link>
-        </div>
+  if (notFound || !doc) return (
+    <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center">
+      <div className="text-center">
+        <FileText className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+        <p className="text-gray-400 mb-4">Document not found</p>
+        <Link href="/my-documents"><Button>Back to Documents</Button></Link>
       </div>
-    );
-  }
+    </div>
+  );
 
   const displayPurpose = doc.purpose === 'others' && doc.custom_purpose
     ? doc.custom_purpose : doc.purpose;
@@ -124,37 +133,37 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
   const extraDetails: { label: string; value: string | null }[] = [];
   if (doc.document_type === 'barangay-clearance') {
     extraDetails.push(
-      { label: 'Purok / Zone', value: doc.purok },
-      { label: 'CTC Number', value: doc.ctc_no },
-      { label: 'CTC Date Issued', value: doc.ctc_date_issued },
+      { label: 'Purok / Zone',     value: doc.purok },
+      { label: 'CTC Number',       value: doc.ctc_no },
+      { label: 'CTC Date Issued',  value: doc.ctc_date_issued },
       { label: 'CTC Place Issued', value: doc.ctc_place_issued },
     );
   }
   if (doc.document_type === 'business-clearance') {
     extraDetails.push(
-      { label: 'Business Name', value: doc.business_name },
+      { label: 'Business Name',    value: doc.business_name },
       { label: 'Location / Purok', value: doc.purok },
     );
   }
   if (doc.document_type === 'certification-of-death') {
     extraDetails.push(
-      { label: 'Deceased Name', value: doc.deceased_name },
-      { label: 'Age at Death', value: doc.deceased_age },
-      { label: 'Date of Death', value: doc.date_of_death },
-      { label: 'Place of Death', value: doc.place_of_death },
-      { label: 'Relationship', value: doc.relationship_to_deceased },
+      { label: 'Deceased Name',    value: doc.deceased_name },
+      { label: 'Age at Death',     value: doc.deceased_age },
+      { label: 'Date of Death',    value: doc.date_of_death },
+      { label: 'Place of Death',   value: doc.place_of_death },
+      { label: 'Relationship',     value: doc.relationship_to_deceased },
     );
   }
   if (doc.document_type === 'job-seeker') {
     extraDetails.push(
-      { label: 'BCN Number', value: doc.bcn_no },
-      { label: 'Purok / Zone', value: doc.purok },
+      { label: 'BCN Number',         value: doc.bcn_no },
+      { label: 'Purok / Zone',       value: doc.purok },
       { label: 'Years of Residency', value: doc.years_of_residency },
     );
   }
   if (doc.document_type === 'oath-of-undertaking') {
     extraDetails.push(
-      { label: 'Purok / Zone', value: doc.purok },
+      { label: 'Purok / Zone',       value: doc.purok },
       { label: 'Years of Residency', value: doc.years_of_residency },
     );
   }
@@ -185,10 +194,10 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
               <CardHeader><CardTitle>Document Details</CardTitle></CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4">
-                  <DetailRow label="Document Type" value={doc.type ?? doc.document_type} />
-                  <DetailRow label="Purpose" value={displayPurpose ?? '—'} />
-                  <DetailRow label="Date Requested" value={new Date(doc.created_at).toLocaleDateString()} />
-                  <DetailRow label="Status" value="Approved" />
+                  <DetailRow label="Document Type"  value={doc.type ?? doc.document_type} />
+                  <DetailRow label="Purpose"         value={displayPurpose ?? '—'} />
+                  <DetailRow label="Date Requested"  value={new Date(doc.created_at).toLocaleDateString()} />
+                  <DetailRow label="Status"          value="Approved" />
                   {doc.additional_info && (
                     <div className="col-span-2">
                       <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Additional Information</p>
@@ -224,13 +233,22 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
               <Card>
                 <CardHeader><CardTitle>Your Information</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
-                  <IconRow icon={<User className="w-4 h-4 text-gray-500 dark:text-gray-400" />} label="Full Name"
-                    value={`${profile.firstName} ${profile.lastName}`} />
-                  <IconRow icon={<MapPin className="w-4 h-4 text-gray-500 dark:text-gray-400" />} label="Address"
-                    value={profile.address || '—'} />
+                  <IconRow
+                    icon={<User   className="w-4 h-4 text-gray-500 dark:text-gray-400" />}
+                    label="Full Name"
+                    value={`${profile.firstName} ${profile.lastName}`}
+                  />
+                  <IconRow
+                    icon={<MapPin className="w-4 h-4 text-gray-500 dark:text-gray-400" />}
+                    label="Address"
+                    value={profile.address || '—'}
+                  />
                   {profile.birthday && (
-                    <IconRow icon={<Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400" />} label="Birthday"
-                      value={new Date(profile.birthday).toLocaleDateString()} />
+                    <IconRow
+                      icon={<Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400" />}
+                      label="Birthday"
+                      value={new Date(profile.birthday).toLocaleDateString()}
+                    />
                   )}
                   {profile.civilStatus && (
                     <DetailRow label="Civil Status" value={profile.civilStatus} />
@@ -271,7 +289,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
               </CardContent>
             </Card>
 
-            {/* Status timeline */}
+            {/* Status */}
             <Card>
               <CardHeader><CardTitle>Status</CardTitle></CardHeader>
               <CardContent className="space-y-3">
@@ -288,25 +306,25 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
       </div>
     </div>
   );
+}
 
-  function DetailRow({ label, value }: { label: string; value: string }) {
-    return (
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{label}</p>
+      <p className="text-gray-900 dark:text-white font-medium">{value}</p>
+    </div>
+  );
+}
+
+function IconRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="mt-0.5 shrink-0">{icon}</div>
       <div>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{label}</p>
-        <p className="text-gray-900 dark:text-white font-medium">{value}</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
+        <p className="text-gray-900 dark:text-white text-sm">{value}</p>
       </div>
-    );
-  }
-
-  function IconRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-    return (
-      <div className="flex items-start gap-3">
-        <div className="mt-0.5 shrink-0">{icon}</div>
-        <div>
-          <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
-          <p className="text-gray-900 dark:text-white text-sm">{value}</p>
-        </div>
-      </div>
-    );
-  }
+    </div>
+  );
 }
