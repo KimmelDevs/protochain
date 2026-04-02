@@ -1,16 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/app/lib/supabase'; // ← shared client, not auth-helpers
+import { supabase } from '@/app/lib/supabase';
 import Link from 'next/link';
 import {
-  UsersIcon,
-  ClipboardDocumentListIcon,
-  ShieldCheckIcon,
-  ClockIcon,
-  ArrowTrendingUpIcon,
-  ChevronRightIcon,
-} from '@heroicons/react/24/outline';
+  Users,
+  ClipboardList,
+  ShieldCheck,
+  Clock,
+  TrendingUp,
+  ChevronRight,
+} from 'lucide-react';
 
 interface AuditLog {
   id: string;
@@ -26,31 +26,31 @@ interface AuditLog {
 }
 
 interface Stats {
-  totalUsers: number;
-  superAdmins: number;
-  admins: number;
-  residents: number;
-  totalRequests: number;
+  totalUsers:      number;
+  superAdmins:     number;
+  admins:          number;
+  residents:       number;
+  totalRequests:   number;
   pendingRequests: number;
-  recentLogs: AuditLog[];
+  recentLogs:      AuditLog[];
 }
 
-const ACTION_COLOR: Record<string, string> = {
-  role_changed:      'bg-violet-900/40 text-violet-300 border-violet-700/40',
-  position_changed:  'bg-sky-900/40 text-sky-300 border-sky-700/40',
-  user_deleted:      'bg-red-900/40 text-red-300 border-red-700/40',
-  approved:          'bg-emerald-900/40 text-emerald-300 border-emerald-700/40',
-  rejected:          'bg-red-900/40 text-red-300 border-red-700/40',
-  document_uploaded: 'bg-amber-900/40 text-amber-300 border-amber-700/40',
+const ACTION_PILL: Record<string, string> = {
+  role_changed:      'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+  position_changed:  'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  user_deleted:      'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  approved:          'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  rejected:          'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  document_uploaded: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
 };
 
 const ACTION_DOT: Record<string, string> = {
-  role_changed:      'bg-violet-400',
-  position_changed:  'bg-sky-400',
-  user_deleted:      'bg-red-400',
-  approved:          'bg-emerald-400',
-  rejected:          'bg-red-400',
-  document_uploaded: 'bg-amber-400',
+  role_changed:      'bg-orange-500',
+  position_changed:  'bg-blue-500',
+  user_deleted:      'bg-red-500',
+  approved:          'bg-green-500',
+  rejected:          'bg-red-500',
+  document_uploaded: 'bg-yellow-500',
 };
 
 export default function SuperAdminDashboard() {
@@ -88,157 +88,181 @@ export default function SuperAdminDashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full min-h-[400px]">
-        <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-7 h-7 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   const statCards = [
     {
-      label: 'Total users',
+      label: 'Total Users',
       value: stats?.totalUsers,
-      icon: UsersIcon,
-      color: 'text-violet-400',
-      bg: 'bg-violet-900/20 border-violet-800/30',
-      sub: `${stats?.superAdmins} super · ${stats?.admins} admin · ${stats?.residents} residents`,
+      icon:  Users,
+      sub:   `${stats?.superAdmins} super · ${stats?.admins} admin · ${stats?.residents} residents`,
+      accent: 'text-orange-600 dark:text-orange-400',
+      border: 'border-orange-200 dark:border-orange-900/50',
+      bg:    'bg-orange-50 dark:bg-orange-900/10',
     },
     {
-      label: 'Total requests',
+      label: 'Total Requests',
       value: stats?.totalRequests,
-      icon: ClipboardDocumentListIcon,
-      color: 'text-sky-400',
-      bg: 'bg-sky-900/20 border-sky-800/30',
-      sub: `${stats?.pendingRequests} pending`,
+      icon:  ClipboardList,
+      sub:   `${stats?.pendingRequests} pending`,
+      accent: 'text-blue-600 dark:text-blue-400',
+      border: 'border-blue-200 dark:border-blue-900/50',
+      bg:    'bg-blue-50 dark:bg-blue-900/10',
     },
     {
       label: 'Admins',
       value: stats?.admins,
-      icon: ShieldCheckIcon,
-      color: 'text-emerald-400',
-      bg: 'bg-emerald-900/20 border-emerald-800/30',
-      sub: `+ ${stats?.superAdmins} super admin`,
+      icon:  ShieldCheck,
+      sub:   `+ ${stats?.superAdmins} super admin`,
+      accent: 'text-green-600 dark:text-green-400',
+      border: 'border-green-200 dark:border-green-900/50',
+      bg:    'bg-green-50 dark:bg-green-900/10',
     },
     {
-      label: 'Audit entries',
+      label: 'Audit Entries',
       value: stats?.recentLogs.length,
-      icon: ClockIcon,
-      color: 'text-amber-400',
-      bg: 'bg-amber-900/20 border-amber-800/30',
-      sub: 'Recent activity',
+      icon:  Clock,
+      sub:   'Recent activity',
+      accent: 'text-yellow-600 dark:text-yellow-400',
+      border: 'border-yellow-200 dark:border-yellow-900/50',
+      bg:    'bg-yellow-50 dark:bg-yellow-900/10',
     },
   ];
 
   return (
-    <div className="p-8 space-y-8 font-mono">
+    <div className="p-8 space-y-7" style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}>
 
-      {/* Page header */}
+      {/* ── Page header ──────────────────────────────── */}
       <div>
-        <div className="flex items-center gap-2 text-[10px] text-[#374151] tracking-widest uppercase mb-3">
-          <ArrowTrendingUpIcon className="w-3 h-3" />
-          <span>Overview</span>
+        <div className="flex items-center gap-1.5 mb-2">
+          <TrendingUp className="w-3.5 h-3.5 text-[#7a7870] dark:text-[#7e7b75]" />
+          <p style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+             className="text-[10px] tracking-[0.18em] uppercase text-[#7a7870] dark:text-[#7e7b75]">
+            Overview
+          </p>
         </div>
-        <h1 className="text-2xl font-bold text-white tracking-tight">
+        <h1 className="text-2xl font-semibold text-[#1a1917] dark:text-[#f0eee8] tracking-tight">
           Welcome back, {profile?.firstName || 'Super Admin'}
         </h1>
         {profile?.position && (
-          <p className="text-[#4B5563] text-sm mt-1">{profile.position}</p>
+          <p className="text-sm text-[#7a7870] dark:text-[#7e7b75] mt-1">{profile.position}</p>
         )}
       </div>
 
-      {/* Stat cards */}
+      {/* ── Stat cards ───────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {statCards.map(({ label, value, icon: Icon, color, bg, sub }) => (
-          <div key={label} className={`rounded-xl border p-5 ${bg}`}>
-            <div className="flex items-start justify-between mb-4">
-              <p className="text-[10px] tracking-widest uppercase text-[#4B5563]">{label}</p>
-              <Icon className={`w-4 h-4 ${color}`} />
+        {statCards.map(({ label, value, icon: Icon, sub, accent, border, bg }) => (
+          <div key={label} className={`rounded-lg border ${border} ${bg} p-5`}>
+            <div className="flex items-start justify-between mb-3">
+              <p style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                 className="text-[10px] tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75]">
+                {label}
+              </p>
+              <Icon className={`w-4 h-4 ${accent}`} />
             </div>
-            <p className={`text-3xl font-bold ${color}`}>{value ?? '—'}</p>
-            <p className="text-[#374151] text-[11px] mt-2">{sub}</p>
+            <p className={`text-3xl font-semibold ${accent}`}>{value ?? '—'}</p>
+            <p className="text-[11px] text-[#7a7870] dark:text-[#7e7b75] mt-1.5">{sub}</p>
           </div>
         ))}
       </div>
 
-      {/* Role distribution bar */}
-      <div className="rounded-xl border border-[#13111F] bg-[#0D0D16] p-6">
-        <p className="text-[10px] tracking-widest uppercase text-[#4B5563] mb-4">Role distribution</p>
-        <div className="flex h-3 rounded-full overflow-hidden gap-0.5">
+      {/* ── Role distribution bar ────────────────────── */}
+      <div className="rounded-lg border border-[#dedad4] dark:border-[#2a2a32] bg-white dark:bg-[#1a1a20] p-5">
+        <p style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+           className="text-[10px] tracking-[0.18em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-3">
+          Role distribution
+        </p>
+        <div className="flex h-2 rounded-full overflow-hidden gap-0.5">
           {stats && stats.totalUsers > 0 && (
             <>
               <div
-                className="bg-violet-500 transition-all"
+                className="bg-orange-500"
                 style={{ width: `${(stats.superAdmins / stats.totalUsers) * 100}%` }}
                 title={`Super Admin: ${stats.superAdmins}`}
               />
               <div
-                className="bg-sky-500 transition-all"
+                className="bg-blue-500"
                 style={{ width: `${(stats.admins / stats.totalUsers) * 100}%` }}
                 title={`Admin: ${stats.admins}`}
               />
               <div
-                className="bg-[#1E1B2E] flex-1 transition-all"
+                className="bg-[#dedad4] dark:bg-[#2a2a32] flex-1"
                 title={`Residents: ${stats.residents}`}
               />
             </>
           )}
         </div>
-        <div className="flex gap-6 mt-3">
+        <div className="flex gap-5 mt-2.5">
           {[
-            { label: 'Super admin', color: 'bg-violet-500',                          count: stats?.superAdmins },
-            { label: 'Admin',       color: 'bg-sky-500',                             count: stats?.admins },
-            { label: 'Resident',    color: 'bg-[#1E1B2E] border border-[#2D2A40]', count: stats?.residents },
+            { label: 'Super admin', color: 'bg-orange-500', count: stats?.superAdmins },
+            { label: 'Admin',       color: 'bg-blue-500',   count: stats?.admins },
+            { label: 'Resident',    color: 'bg-[#dedad4] dark:bg-[#2a2a32]', count: stats?.residents },
           ].map(({ label, color, count }) => (
-            <div key={label} className="flex items-center gap-2">
-              <div className={`w-2.5 h-2.5 rounded-full ${color}`} />
-              <span className="text-[11px] text-[#4B5563]">
-                {label}: <span className="text-[#9CA3AF]">{count}</span>
+            <div key={label} className="flex items-center gap-1.5">
+              <div className={`w-2 h-2 rounded-full ${color}`} />
+              <span className="text-[11px] text-[#7a7870] dark:text-[#7e7b75]">
+                {label}:{' '}
+                <span className="text-[#3d3b36] dark:text-[#c9c6be] font-medium">{count}</span>
               </span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Recent audit log + quick actions */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      {/* ── Audit log + Quick actions ─────────────────── */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
 
-        {/* Audit log */}
-        <div className="xl:col-span-2 rounded-xl border border-[#13111F] bg-[#0D0D16] p-6">
-          <div className="flex items-center justify-between mb-5">
-            <p className="text-[10px] tracking-widest uppercase text-[#4B5563]">Recent audit activity</p>
-            <Link href="/audit" className="text-[11px] text-violet-400 hover:text-violet-300 flex items-center gap-1">
-              View all <ChevronRightIcon className="w-3 h-3" />
+        {/* Recent audit */}
+        <div className="xl:col-span-2 rounded-lg border border-[#dedad4] dark:border-[#2a2a32] bg-white dark:bg-[#1a1a20] p-5">
+          <div className="flex items-center justify-between mb-4">
+            <p style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+               className="text-[10px] tracking-[0.18em] uppercase text-[#7a7870] dark:text-[#7e7b75]">
+              Recent audit activity
+            </p>
+            <Link href="/audit"
+              className="flex items-center gap-0.5 text-[11px] text-orange-600 dark:text-orange-400 hover:underline">
+              View all <ChevronRight className="w-3 h-3" />
             </Link>
           </div>
 
           {stats?.recentLogs.length === 0 ? (
-            <p className="text-[#374151] text-sm text-center py-8">No activity yet.</p>
+            <p className="text-sm text-[#7a7870] dark:text-[#7e7b75] text-center py-8">
+              No activity yet.
+            </p>
           ) : (
             <div className="space-y-3">
               {stats?.recentLogs.map(log => (
                 <div key={log.id} className="flex items-start gap-3">
-                  <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${ACTION_DOT[log.action] || 'bg-gray-500'}`} />
+                  <div className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${ACTION_DOT[log.action] || 'bg-gray-400'}`} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`inline-block px-2 py-0.5 rounded-full border text-[9px] tracking-widest uppercase font-semibold ${ACTION_COLOR[log.action] || 'bg-gray-900/40 text-gray-400 border-gray-700/40'}`}>
+                      <span className={`inline-block px-2 py-0.5 rounded text-[9px] tracking-[0.1em] uppercase font-medium ${ACTION_PILL[log.action] || 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}>
                         {log.action.replace(/_/g, ' ')}
                       </span>
                       {log.old_role && log.new_role && (
-                        <span className="text-[11px] text-[#4B5563]">
-                          {log.old_role} → <span className="text-violet-400">{log.new_role}</span>
+                        <span className="text-[11px] text-[#7a7870] dark:text-[#7e7b75]">
+                          {log.old_role.replace('_', ' ')}
+                          {' → '}
+                          <span className="text-orange-600 dark:text-orange-400">{log.new_role.replace('_', ' ')}</span>
                         </span>
                       )}
                       {!log.old_role && log.old_position !== undefined && log.new_position !== undefined && (
-                        <span className="text-[11px] text-[#4B5563]">
-                          "{log.old_position || 'none'}" → "<span className="text-sky-400">{log.new_position || 'none'}</span>"
+                        <span className="text-[11px] text-[#7a7870] dark:text-[#7e7b75]">
+                          "{log.old_position || 'none'}"
+                          {' → '}
+                          <span className="text-blue-600 dark:text-blue-400">"{log.new_position || 'none'}"</span>
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] text-[#374151] mt-0.5">
+                    <p className="text-[11px] text-[#7a7870] dark:text-[#7e7b75] mt-0.5">
                       {log.performer_email || 'System'}
                       {log.notes && ` · ${log.notes}`}
                     </p>
                   </div>
-                  <span className="text-[10px] text-[#374151] shrink-0">
+                  <span className="text-[10px] text-[#a09e98] dark:text-[#5c5a54] flex-shrink-0">
                     {new Date(log.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}
                   </span>
                 </div>
@@ -248,24 +272,31 @@ export default function SuperAdminDashboard() {
         </div>
 
         {/* Quick actions */}
-        <div className="rounded-xl border border-[#13111F] bg-[#0D0D16] p-6">
-          <p className="text-[10px] tracking-widest uppercase text-[#4B5563] mb-5">Quick actions</p>
-          <div className="space-y-2">
+        <div className="rounded-lg border border-[#dedad4] dark:border-[#2a2a32] bg-white dark:bg-[#1a1a20] p-5">
+          <p style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+             className="text-[10px] tracking-[0.18em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-4">
+            Quick actions
+          </p>
+          <div className="space-y-1.5">
             {[
-              { href: '/users',          label: 'Manage users',      sub: 'Edit roles & positions', color: 'hover:border-violet-700/50 hover:bg-violet-900/10' },
-              { href: '/audit',          label: 'View audit log',    sub: 'Full activity history',  color: 'hover:border-sky-700/50 hover:bg-sky-900/10' },
-              { href: '/super-settings', label: 'Barangay settings', sub: 'Update info & logo',     color: 'hover:border-emerald-700/50 hover:bg-emerald-900/10' },
-            ].map(({ href, label, sub, color }) => (
+              { href: '/users',          label: 'Manage users',      sub: 'Edit roles & positions' },
+              { href: '/audit',          label: 'View audit log',    sub: 'Full activity history'  },
+              { href: '/super-settings', label: 'Barangay settings', sub: 'Update info & logo'     },
+            ].map(({ href, label, sub }) => (
               <Link
                 key={href}
                 href={href}
-                className={`flex items-center justify-between p-3 rounded-lg border border-[#13111F] transition-all group ${color}`}
+                className="flex items-center justify-between p-3 rounded
+                  border border-[#dedad4] dark:border-[#2a2a32]
+                  hover:bg-[#eeecea] dark:hover:bg-[#1e1e24]
+                  hover:border-[#c9c6be] dark:hover:border-[#3a3a42]
+                  transition-colors group"
               >
                 <div>
-                  <p className="text-white text-sm font-medium">{label}</p>
-                  <p className="text-[#4B5563] text-[11px] mt-0.5">{sub}</p>
+                  <p className="text-[13px] font-medium text-[#1a1917] dark:text-[#f0eee8]">{label}</p>
+                  <p className="text-[11px] text-[#7a7870] dark:text-[#7e7b75] mt-0.5">{sub}</p>
                 </div>
-                <ChevronRightIcon className="w-4 h-4 text-[#374151] group-hover:text-[#6B7280] transition-colors" />
+                <ChevronRight className="w-4 h-4 text-[#a09e98] dark:text-[#5c5a54] group-hover:text-[#3d3b36] dark:group-hover:text-[#c9c6be] transition-colors" />
               </Link>
             ))}
           </div>

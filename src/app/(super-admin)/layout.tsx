@@ -3,33 +3,230 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { supabase } from '@/app/lib/supabase'; // ← same client the whole app uses
+import Image from 'next/image';
+import { supabase } from '@/app/lib/supabase';
 import {
-  UsersIcon,
-  ClipboardDocumentListIcon,
-  Cog6ToothIcon,
-  ArrowRightOnRectangleIcon,
-  ShieldCheckIcon,
-  ChartBarIcon,
-  BellIcon,
-} from '@heroicons/react/24/outline';
+  LayoutDashboard,
+  Users,
+  ScrollText,
+  Settings,
+  LogOut,
+  Moon,
+  Sun,
+  ShieldCheck,
+} from 'lucide-react';
 
-const NAV = [
-  { href: '/superadmindashboard', label: 'Dashboard',        icon: ChartBarIcon },
-  { href: '/users',               label: 'Users',            icon: UsersIcon },
-  { href: '/audit',               label: 'Audit Log',        icon: ClipboardDocumentListIcon },
-  { href: '/super-settings',      label: 'Settings',         icon: Cog6ToothIcon },
+/* ─────────────────────────────────────────────────────────────
+   Navigation items
+───────────────────────────────────────────────────────────── */
+const NAV_MAIN = [
+  { label: 'Dashboard', href: '/superadmindashboard', icon: LayoutDashboard },
+  { label: 'Users',     href: '/users',               icon: Users           },
+  { label: 'Audit Log', href: '/audit',               icon: ScrollText      },
+];
+
+const NAV_SYSTEM = [
+  { label: 'Settings', href: '/super-settings', icon: Settings },
 ];
 
 interface Profile {
-  email: string;
   firstName: string;
-  position: string;
+  lastName:  string;
+  role:      string;
+  position:  string;
+  email:     string;
 }
 
-export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {
-  const router   = useRouter();
+/* ─────────────────────────────────────────────────────────────
+   Sidebar — identical structure + tokens to AdminSidebar
+   Dark/light toggle + Sign-out are ALWAYS rendered here,
+   not in individual pages.
+───────────────────────────────────────────────────────────── */
+function SuperAdminSidebar({ profile }: { profile: Profile | null }) {
   const pathname = usePathname();
+  const router   = useRouter();
+  const [darkMode, setDarkMode] = useState(false);
+
+  /* Read stored preference on mount */
+  useEffect(() => {
+    if (localStorage.getItem('theme') === 'dark') {
+      setDarkMode(true);
+      document.documentElement.classList.add('dark');
+    }
+  }, []);
+
+  /* Apply whenever darkMode flips */
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode);
+    localStorage.setItem('theme', darkMode ? 'dark' : 'light');
+  }, [darkMode]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
+
+  const initials = profile
+    ? `${profile.firstName?.[0] ?? ''}${profile.lastName?.[0] ?? ''}`.toUpperCase()
+    : '?';
+  const fullName = profile ? `${profile.firstName} ${profile.lastName}` : 'Loading…';
+
+  /* Shared link style logic */
+  const isActive = (href: string) =>
+    pathname === href ||
+    (href !== '/superadmindashboard' && pathname.startsWith(href));
+
+  const linkCls = (href: string) =>
+    `relative flex items-center gap-2.5 px-2 py-2.5 rounded transition-colors duration-150
+    ${isActive(href)
+      ? 'bg-[#eeecea] dark:bg-[#1e1e24] text-[#1a1917] dark:text-[#f0eee8]'
+      : 'text-[#3d3b36] dark:text-[#c9c6be] hover:bg-[#eeecea] dark:hover:bg-[#1e1e24] hover:text-[#1a1917] dark:hover:text-[#f0eee8]'
+    }`;
+
+  return (
+    <>
+      {/* IBM Plex fonts — same as AdminSidebar */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap');
+        .sb      { font-family: 'IBM Plex Sans', sans-serif; }
+        .sb-mono { font-family: 'IBM Plex Mono', monospace; }
+      `}</style>
+
+      <aside className="sb w-56 h-screen flex flex-col sticky top-0
+        bg-[#fafaf9]  dark:bg-[#16161a]
+        border-r border-[#dedad4] dark:border-[#2a2a32]
+        transition-colors duration-200">
+
+        {/* ── LOGO ─────────────────────────────────────── */}
+        <div className="px-5 pt-6 pb-5 border-b border-[#dedad4] dark:border-[#2a2a32]">
+          <Link href="/" className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded overflow-hidden flex-shrink-0">
+              <Image
+                src="/protochain_logo2.jpg"
+                alt="ProtoChain"
+                width={28}
+                height={28}
+                priority
+              />
+            </div>
+            <div>
+              <p className="sb-mono text-[13px] font-medium text-[#1a1917] dark:text-[#f0eee8] leading-none tracking-tight">
+                ProtoChain
+              </p>
+              <p className="sb-mono text-[10px] tracking-[0.15em] uppercase text-orange-600 dark:text-orange-400 leading-none mt-0.5">
+                Super Admin
+              </p>
+            </div>
+          </Link>
+        </div>
+
+        {/* ── PRIMARY NAV ──────────────────────────────── */}
+        <nav className="flex-1 overflow-y-auto px-3 pt-4">
+
+          <p className="sb-mono text-[10px] tracking-[0.18em] uppercase text-[#7a7870] dark:text-[#7e7b75] px-2 mb-2">
+            Main
+          </p>
+
+          <ul className="space-y-0.5">
+            {NAV_MAIN.map(({ label, href, icon: Icon }) => (
+              <li key={href}>
+                <Link href={href} className={linkCls(href)}>
+                  {isActive(href) && (
+                    <span className="absolute left-0 top-1.5 bottom-1.5 w-[2px] bg-orange-500" />
+                  )}
+                  <Icon className={`w-4 h-4 flex-shrink-0 ${isActive(href) ? 'text-orange-500' : ''}`} />
+                  <span className={`text-[13px] leading-none ${isActive(href) ? 'font-medium' : 'font-normal'}`}>
+                    {label}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+
+          <p className="sb-mono text-[10px] tracking-[0.18em] uppercase text-[#7a7870] dark:text-[#7e7b75] px-2 mt-5 mb-2">
+            System
+          </p>
+
+          <ul className="space-y-0.5">
+            {NAV_SYSTEM.map(({ label, href, icon: Icon }) => (
+              <li key={href}>
+                <Link href={href} className={linkCls(href)}>
+                  {isActive(href) && (
+                    <span className="absolute left-0 top-1.5 bottom-1.5 w-[2px] bg-orange-500" />
+                  )}
+                  <Icon className={`w-4 h-4 flex-shrink-0 ${isActive(href) ? 'text-orange-500' : ''}`} />
+                  <span className={`text-[13px] leading-none ${isActive(href) ? 'font-medium' : 'font-normal'}`}>
+                    {label}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        {/* ── THEME TOGGLE — always visible ────────────── */}
+        <div className="px-3 pb-1">
+          <button
+            onClick={() => setDarkMode(d => !d)}
+            className="flex items-center gap-2.5 px-2 py-2.5 w-full rounded text-[13px]
+              text-[#5c5a54] dark:text-[#9e9b94]
+              hover:text-[#1a1917] dark:hover:text-[#f0eee8]
+              hover:bg-[#eeecea] dark:hover:bg-[#1e1e24]
+              transition-colors duration-150"
+          >
+            {darkMode
+              ? <><Sun  className="w-4 h-4 flex-shrink-0" /><span>Light mode</span></>
+              : <><Moon className="w-4 h-4 flex-shrink-0" /><span>Dark mode</span></>
+            }
+          </button>
+        </div>
+
+        {/* ── PROFILE + SIGN OUT — always visible ──────── */}
+        <div className="px-3 pb-4 pt-3 border-t border-[#dedad4] dark:border-[#2a2a32] space-y-0.5">
+
+          {/* Profile row */}
+          <div className="flex items-center gap-2.5 px-2 py-2">
+            <div className="w-7 h-7 rounded bg-orange-500 flex items-center justify-center flex-shrink-0">
+              <span className="sb-mono text-[10px] font-semibold text-white leading-none">
+                {initials}
+              </span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-medium text-[#1a1917] dark:text-[#f0eee8] truncate leading-none">
+                {fullName}
+              </p>
+              <div className="flex items-center gap-1 mt-0.5">
+                <ShieldCheck className="w-2.5 h-2.5 text-orange-500 flex-shrink-0" />
+                <p className="sb-mono text-[10px] text-orange-600 dark:text-orange-400 leading-none truncate">
+                  {profile?.position || 'Super Admin'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Sign out — always rendered in the sidebar */}
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2.5 px-2 py-2.5 w-full rounded text-[13px]
+              text-[#5c5a54] dark:text-[#9e9b94]
+              hover:text-red-600 dark:hover:text-red-400
+              hover:bg-red-50 dark:hover:bg-red-500/10
+              transition-colors duration-150"
+          >
+            <LogOut className="w-4 h-4 flex-shrink-0" />
+            <span>Sign out</span>
+          </button>
+        </div>
+      </aside>
+    </>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Layout wrapper — guards route, fetches profile, renders shell
+───────────────────────────────────────────────────────────── */
+export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
 
   const [profile,  setProfile]  = useState<Profile | null>(null);
   const [checking, setChecking] = useState(true);
@@ -39,8 +236,6 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
 
     const verify = async () => {
       try {
-        // getSession() reads from the cookie/localStorage that the shared
-        // supabase client already populated — no cross-client mismatch.
         const { data: { session } } = await supabase.auth.getSession();
 
         if (!session?.user) {
@@ -50,7 +245,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
 
         const { data: prof, error } = await supabase
           .from('profiles')
-          .select('email, firstName, role, position')
+          .select('email, firstName, lastName, role, position')
           .eq('id', session.user.id)
           .single();
 
@@ -63,6 +258,8 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
           setProfile({
             email:     prof.email     ?? '',
             firstName: prof.firstName ?? '',
+            lastName:  prof.lastName  ?? '',
+            role:      prof.role      ?? '',
             position:  prof.position  ?? '',
           });
           setChecking(false);
@@ -73,12 +270,9 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
       }
     };
 
-    // Also re-verify whenever the Supabase auth state changes
-    // (e.g. token refresh, sign-out from another tab)
+    /* Re-guard on auth state change (e.g. sign-out from another tab) */
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
-        if (mounted) router.replace('/login');
-      }
+      if (!session && mounted) router.replace('/login');
     });
 
     verify();
@@ -89,13 +283,14 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
     };
   }, [router]);
 
-  /* ── Loading / access-check screen ────────────────────────── */
+  /* Loading screen — matches admin portal style */
   if (checking) {
     return (
-      <div className="min-h-screen bg-[#07070E] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-[#4B5563] text-sm font-mono tracking-widest uppercase">
+      <div className="min-h-screen bg-[#fafaf9] dark:bg-[#16161a] flex items-center justify-center transition-colors duration-200">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+          <p style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+             className="text-[11px] tracking-[0.18em] uppercase text-[#7a7870] dark:text-[#7e7b75]">
             Verifying access…
           </p>
         </div>
@@ -103,103 +298,11 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
     );
   }
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.replace('/login');
-  };
-
-  /* ── Shell ─────────────────────────────────────────────────── */
   return (
-    <div className="min-h-screen bg-[#07070E] flex font-mono">
-
-      {/* ── Sidebar ─────────────────────────────────────────── */}
-      <aside className="w-64 shrink-0 border-r border-[#13111F] flex flex-col">
-
-        {/* Logo */}
-        <div className="px-6 py-7 border-b border-[#13111F]">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center">
-              <ShieldCheckIcon className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <p className="text-white text-sm font-bold tracking-wide">Super Admin</p>
-              <p className="text-[#4B5563] text-[10px] tracking-widest uppercase">Barangay System</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Nav links */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
-          {NAV.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href || pathname.startsWith(href);
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-150 group
-                  ${active
-                    ? 'bg-violet-600/15 text-violet-300 border border-violet-600/30'
-                    : 'text-[#4B5563] hover:text-[#9CA3AF] hover:bg-white/5 border border-transparent'
-                  }`}
-              >
-                <Icon
-                  className={`w-4 h-4 shrink-0 ${
-                    active ? 'text-violet-400' : 'text-[#374151] group-hover:text-[#6B7280]'
-                  }`}
-                />
-                <span className="tracking-wide">{label}</span>
-                {active && (
-                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-violet-400" />
-                )}
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* Profile footer */}
-        <div className="px-3 pb-4 border-t border-[#13111F] pt-4">
-          <div className="px-3 py-3 rounded-lg bg-[#0F0F18] border border-[#13111F] mb-2">
-            <p className="text-white text-xs font-semibold truncate">
-              {profile?.firstName || 'Super Admin'}
-            </p>
-            <p className="text-[#4B5563] text-[10px] truncate mt-0.5">{profile?.email}</p>
-            {profile?.position && (
-              <span className="inline-block mt-1.5 px-2 py-0.5 bg-violet-900/40 border border-violet-700/40 rounded-full text-violet-300 text-[9px] tracking-widest uppercase">
-                {profile.position}
-              </span>
-            )}
-          </div>
-
-          <button
-            onClick={handleSignOut}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[#4B5563] hover:text-red-400 hover:bg-red-950/20 text-sm transition-all border border-transparent hover:border-red-900/40"
-          >
-            <ArrowRightOnRectangleIcon className="w-4 h-4" />
-            <span>Sign out</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* ── Main area ───────────────────────────────────────── */}
-      <main className="flex-1 flex flex-col min-w-0">
-
-        {/* Top bar */}
-        <header className="h-14 border-b border-[#13111F] flex items-center justify-between px-8 shrink-0">
-          <div className="flex items-center gap-2 text-[#4B5563] text-xs tracking-widest uppercase">
-            <span>Barangay Salawag</span>
-            <span>/</span>
-            <span className="text-[#6B7280]">
-              {NAV.find(n => pathname === n.href || pathname.startsWith(n.href))?.label || 'Dashboard'}
-            </span>
-          </div>
-          <button className="relative p-2 rounded-lg text-[#4B5563] hover:text-white hover:bg-white/5 transition-all">
-            <BellIcon className="w-4 h-4" />
-          </button>
-        </header>
-
-        <div className="flex-1 overflow-auto">
-          {children}
-        </div>
+    <div className="flex min-h-screen bg-[#fafaf9] dark:bg-[#16161a] transition-colors duration-200">
+      <SuperAdminSidebar profile={profile} />
+      <main className="flex-1 overflow-y-auto">
+        {children}
       </main>
     </div>
   );
