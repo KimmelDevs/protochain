@@ -232,7 +232,7 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
 
   /* ── early returns ─────────────────────────────────────────────────────── */
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f5f4f0] dark:bg-[#16161a]">
+    <div className="min-h-screen flex items-center justify-center bg-[#fafaf9] dark:bg-[#16161a]">
       <span className="mono text-[12px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] uppercase animate-pulse">
         Loading…
       </span>
@@ -240,7 +240,7 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
   );
 
   if (notFound || !request) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f5f4f0] dark:bg-[#16161a]">
+    <div className="min-h-screen flex items-center justify-center bg-[#fafaf9] dark:bg-[#16161a]">
       <div className="text-center">
         <p className="text-[14px] text-[#3d3b36] dark:text-[#c9c6be] mb-4">Document not found.</p>
         <Link href="/approved-documents" className="mono text-[11px] tracking-[0.1em] uppercase text-orange-600 dark:text-orange-400 hover:underline">
@@ -271,7 +271,7 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
         onChange={e => { const f = e.target.files?.[0]; if (f) uploadFile(f, f.name); }}
       />
 
-      <div className="pg min-h-screen bg-[#f5f4f0] dark:bg-[#16161a] transition-colors duration-200">
+      <div className="pg min-h-screen bg-[#fafaf9] dark:bg-[#16161a] transition-colors duration-200">
         <div className="max-w-6xl mx-auto px-6 lg:px-10 pt-6 pb-14">
 
           {/* ── MASTHEAD ─────────────────────────────────────────────── */}

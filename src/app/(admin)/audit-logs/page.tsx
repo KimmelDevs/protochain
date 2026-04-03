@@ -160,7 +160,7 @@ export default function AuditLogsPage() {
   };
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f5f4f0] dark:bg-[#16161a]">
+    <div className="min-h-screen flex items-center justify-center bg-[#fafaf9] dark:bg-[#16161a]">
       <span className="mono text-[12px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] uppercase animate-pulse">Loading…</span>
     </div>
   );
@@ -169,7 +169,7 @@ export default function AuditLogsPage() {
     <>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap'); .pg{font-family:'IBM Plex Sans',sans-serif} .mono{font-family:'IBM Plex Mono',monospace}`}</style>
 
-      <div className="pg min-h-screen bg-[#f5f4f0] dark:bg-[#16161a] transition-colors duration-200">
+      <div className="pg min-h-screen bg-[#fafaf9] dark:bg-[#16161a] transition-colors duration-200">
         <div className="max-w-6xl mx-auto px-6 lg:px-10 pt-6 pb-14">
 
           {/* ── MASTHEAD ───────────────────────────────────────────────── */}
@@ -210,7 +210,7 @@ export default function AuditLogsPage() {
               <button
                 onClick={handleExport}
                 disabled={exporting || filtered.length === 0}
-                className="ml-6 mb-4 flex items-center gap-2 mono text-[11px] font-bold tracking-[0.1em] uppercase px-4 py-2 border border-[#1a1917] dark:border-[#f0eee8] text-[#1a1917] dark:text-[#f0eee8] hover:bg-[#1a1917] dark:hover:bg-[#f0eee8] hover:text-white dark:hover:text-[#1a1917] transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+                className="ml-6 mb-4 flex items-center gap-2 mono text-[11px] font-bold tracking-[0.1em] uppercase px-4 py-2 border border-orange-600 dark:border-orange-500 text-orange-600 dark:text-orange-400 hover:bg-orange-600 dark:hover:bg-orange-500 hover:text-white dark:hover:text-white transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
               >
                 {exporting
                   ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -229,13 +229,13 @@ export default function AuditLogsPage() {
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   placeholder="Search by admin, resident, doc type…"
-                  className="w-full pl-9 pr-3 py-2.5 text-[12px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] placeholder-[#7a7870] dark:placeholder-[#7e7b75] focus:outline-none focus:border-[#1a1917] dark:focus:border-[#f0eee8] transition-colors mono"
+                  className="w-full pl-9 pr-3 py-2.5 text-[12px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] placeholder-[#7a7870] dark:placeholder-[#7e7b75] focus:outline-none focus:border-orange-500 dark:focus:border-orange-400 transition-colors mono"
                 />
               </div>
               <select
                 value={actionFilter}
                 onChange={e => setActionFilter(e.target.value as any)}
-                className="w-full px-3 py-2.5 text-[12px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] focus:outline-none focus:border-[#1a1917] dark:focus:border-[#f0eee8] transition-colors mono"
+                className="w-full px-3 py-2.5 text-[12px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] focus:outline-none focus:border-orange-500 dark:focus:border-orange-400 transition-colors mono"
               >
                 <option value="all">All Actions</option>
                 <option value="approved">Approved</option>
@@ -245,7 +245,7 @@ export default function AuditLogsPage() {
               <select
                 value={dateFilter}
                 onChange={e => setDateFilter(e.target.value as any)}
-                className="w-full px-3 py-2.5 text-[12px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] focus:outline-none focus:border-[#1a1917] dark:focus:border-[#f0eee8] transition-colors mono"
+                className="w-full px-3 py-2.5 text-[12px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] focus:outline-none focus:border-orange-500 dark:focus:border-orange-400 transition-colors mono"
               >
                 <option value="all">All Time</option>
                 <option value="today">Today</option>
@@ -270,7 +270,7 @@ export default function AuditLogsPage() {
               <div className="border border-[#c8c6c0] dark:border-[#2a2a32] bg-white dark:bg-[#1e1e24] overflow-x-auto">
 
                 {/* col headers */}
-                <div className="grid grid-cols-[1fr_1.6fr_1.2fr_1fr_1.2fr_0.7fr] gap-4 px-5 py-3 border-b border-[#e8e5e0] dark:border-[#222228] bg-[#f5f4f0] dark:bg-[#16161a]">
+                <div className="grid grid-cols-[1fr_1.6fr_1.2fr_1fr_1.2fr_0.7fr] gap-4 px-5 py-3 border-b border-[#e8e5e0] dark:border-[#222228] bg-[#fafaf9] dark:bg-[#16161a]">
                   {['Timestamp', 'Admin', 'Action', 'Document Type', 'Resident', 'View'].map(h => (
                     <p key={h} className="mono text-[10px] font-bold tracking-[0.12em] uppercase text-[#7a7870] dark:text-[#7e7b75]">{h}</p>
                   ))}

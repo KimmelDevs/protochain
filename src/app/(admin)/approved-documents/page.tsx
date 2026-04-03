@@ -127,7 +127,7 @@ export default function ApprovedDocumentsPage() {
   ];
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f5f4f0] dark:bg-[#16161a]">
+    <div className="min-h-screen flex items-center justify-center bg-[#fafaf9] dark:bg-[#16161a]">
       <span className="mono text-[12px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] uppercase animate-pulse">
         Loading…
       </span>
@@ -142,7 +142,7 @@ export default function ApprovedDocumentsPage() {
         .mono { font-family: 'IBM Plex Mono', monospace; }
       `}</style>
 
-      <div className="pg min-h-screen bg-[#f5f4f0] dark:bg-[#16161a] transition-colors duration-200">
+      <div className="pg min-h-screen bg-[#fafaf9] dark:bg-[#16161a] transition-colors duration-200">
         <div className="max-w-6xl mx-auto px-6 lg:px-10 pt-6 pb-14">
 
           {/* ── MASTHEAD ───────────────────────────────────────────────── */}
@@ -202,13 +202,13 @@ export default function ApprovedDocumentsPage() {
                 placeholder="Search by name, ID, or document type…"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 text-[13px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] placeholder-[#7a7870] dark:placeholder-[#7e7b75] focus:outline-none focus:border-[#1a1917] dark:focus:border-[#f0eee8] transition-colors"
+                className="w-full pl-9 pr-4 py-2.5 text-[13px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] placeholder-[#7a7870] dark:placeholder-[#7e7b75] focus:outline-none focus:border-orange-500 dark:focus:border-orange-400 transition-colors"
               />
             </div>
             <select
               value={typeFilter}
               onChange={e => setTypeFilter(e.target.value)}
-              className="mono text-[12px] px-3 py-2.5 bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] focus:outline-none focus:border-[#1a1917] dark:focus:border-[#f0eee8] transition-colors sm:w-48"
+              className="mono text-[12px] px-3 py-2.5 bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] focus:outline-none focus:border-orange-500 dark:focus:border-orange-400 transition-colors sm:w-48"
             >
               {uniqueTypes.map(t => (
                 <option key={t} value={t}>{t === 'all' ? 'All Types' : fmtDocType(t)}</option>
@@ -217,7 +217,7 @@ export default function ApprovedDocumentsPage() {
             <select
               value={dateFilter}
               onChange={e => setDateFilter(e.target.value)}
-              className="mono text-[12px] px-3 py-2.5 bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] focus:outline-none focus:border-[#1a1917] dark:focus:border-[#f0eee8] transition-colors sm:w-36"
+              className="mono text-[12px] px-3 py-2.5 bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] focus:outline-none focus:border-orange-500 dark:focus:border-orange-400 transition-colors sm:w-36"
             >
               {[['all','All Time'],['week','This Week'],['month','This Month'],['year','This Year']].map(([v,l]) => (
                 <option key={v} value={v}>{l}</option>
@@ -312,8 +312,8 @@ export default function ApprovedDocumentsPage() {
 
                       {/* view */}
                       <Link href={`/approved-documents/${req.id}`} className="flex justify-end">
-                        <span className="flex items-center justify-center w-7 h-7 border border-[#c8c6c0] dark:border-[#2a2a32] hover:bg-[#1a1917] dark:hover:bg-[#f0eee8] hover:border-[#1a1917] dark:hover:border-[#f0eee8] group/btn transition-colors duration-150">
-                          <Eye className="w-3.5 h-3.5 text-[#5c5a54] dark:text-[#9e9b94] group-hover/btn:text-white dark:group-hover/btn:text-[#1a1917] transition-colors" />
+                        <span className="flex items-center justify-center w-7 h-7 border border-[#c8c6c0] dark:border-[#2a2a32] hover:bg-orange-600 hover:border-orange-600 group/btn transition-colors duration-150">
+                          <Eye className="w-3.5 h-3.5 text-[#5c5a54] dark:text-[#9e9b94] group-hover/btn:text-white transition-colors" />
                         </span>
                       </Link>
                     </motion.div>

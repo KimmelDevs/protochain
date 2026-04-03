@@ -134,13 +134,13 @@ export default function ResidentDetailPage({ params }: { params: Promise<{ id: s
 
   /* ── loading ────────────────────────────────────────────────────────────── */
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f5f4f0] dark:bg-[#16161a]">
+    <div className="min-h-screen flex items-center justify-center bg-[#fafaf9] dark:bg-[#16161a]">
       <span className="mono text-[12px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] uppercase animate-pulse">Loading…</span>
     </div>
   );
 
   if (notFound || !profile) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f5f4f0] dark:bg-[#16161a]">
+    <div className="min-h-screen flex items-center justify-center bg-[#fafaf9] dark:bg-[#16161a]">
       <div className="text-center">
         <p className="text-[14px] text-[#3d3b36] dark:text-[#c9c6be] mb-4">Resident not found.</p>
         <Link href="/residents" className="mono text-[11px] tracking-[0.1em] uppercase text-orange-600 dark:text-orange-400 hover:underline">
@@ -169,7 +169,7 @@ export default function ResidentDetailPage({ params }: { params: Promise<{ id: s
         .mono { font-family: 'IBM Plex Mono', monospace; }
       `}</style>
 
-      <div className="pg min-h-screen bg-[#f5f4f0] dark:bg-[#16161a] transition-colors duration-200">
+      <div className="pg min-h-screen bg-[#fafaf9] dark:bg-[#16161a] transition-colors duration-200">
         <div className="max-w-5xl mx-auto px-6 lg:px-10 pt-6 pb-14">
 
           {/* MASTHEAD */}
@@ -225,7 +225,7 @@ export default function ResidentDetailPage({ params }: { params: Promise<{ id: s
                   <div className="border border-[#c8c6c0] dark:border-[#2a2a32] bg-white dark:bg-[#1e1e24] overflow-x-auto">
 
                     {/* Header */}
-                    <div className="grid grid-cols-[1.6fr_1fr_0.8fr_0.4fr] gap-4 px-5 py-3 border-b border-[#e8e5e0] dark:border-[#222228] bg-[#f5f4f0] dark:bg-[#16161a]">
+                    <div className="grid grid-cols-[1.6fr_1fr_0.8fr_0.4fr] gap-4 px-5 py-3 border-b border-[#e8e5e0] dark:border-[#222228] bg-[#fafaf9] dark:bg-[#16161a]">
                       {['Document', 'Date', 'Status', ''].map(h => (
                         <p key={h} className="mono text-[10px] font-bold tracking-[0.12em] uppercase text-[#7a7870] dark:text-[#7e7b75]">{h}</p>
                       ))}

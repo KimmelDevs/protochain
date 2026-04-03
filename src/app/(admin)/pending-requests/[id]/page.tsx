@@ -80,7 +80,7 @@ const Modal = ({ open, onClose, title, children }: { open: boolean; onClose: () 
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
-      <motion.div initial={{ opacity: 0, scale: 0.97, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ duration: 0.15 }} onClick={e => e.stopPropagation()} className="w-full max-w-md mx-4 bg-[#f5f4f0] dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] p-6">
+      <motion.div initial={{ opacity: 0, scale: 0.97, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ duration: 0.15 }} onClick={e => e.stopPropagation()} className="w-full max-w-md mx-4 bg-[#fafaf9] dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] p-6">
         <div className="flex items-center justify-between border-b border-[#c8c6c0] dark:border-[#2a2a32] pb-3 mb-5">
           <h2 className="mono text-[14px] font-bold text-[#1a1917] dark:text-[#f0eee8] tracking-tight uppercase">{title}</h2>
           <button onClick={onClose} className="text-[#7a7870] hover:text-[#1a1917] dark:hover:text-[#f0eee8] transition-colors mono text-[13px]">✕</button>
@@ -241,9 +241,9 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
   };
 
   /* ── early returns ─────────────────────────────────────────────────────── */
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#f5f4f0] dark:bg-[#16161a]"><span className="mono text-[12px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] uppercase animate-pulse">Loading…</span></div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#fafaf9] dark:bg-[#16161a]"><span className="mono text-[12px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] uppercase animate-pulse">Loading…</span></div>;
   if (notFound || !request) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f5f4f0] dark:bg-[#16161a]">
+    <div className="min-h-screen flex items-center justify-center bg-[#fafaf9] dark:bg-[#16161a]">
       <div className="text-center"><p className="text-[14px] text-[#3d3b36] dark:text-[#c9c6be] mb-4">Request not found.</p>
         <Link href="/pending-requests" className="mono text-[11px] tracking-[0.1em] uppercase text-orange-600 dark:text-orange-400 hover:underline">← Back to Pending Requests</Link></div>
     </div>
@@ -258,7 +258,7 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
       <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap'); .pg{font-family:'IBM Plex Sans',sans-serif} .mono{font-family:'IBM Plex Mono',monospace}`}</style>
       <input ref={uploadRef} type="file" accept=".docx,.pdf" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) uploadFile(f, f.name); }} />
 
-      <div className="pg min-h-screen bg-[#f5f4f0] dark:bg-[#16161a] transition-colors duration-200">
+      <div className="pg min-h-screen bg-[#fafaf9] dark:bg-[#16161a] transition-colors duration-200">
         <div className="max-w-6xl mx-auto px-6 lg:px-10 pt-6 pb-14">
 
           {/* MASTHEAD */}
@@ -388,7 +388,7 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
           <AlertBanner variant="success">You are about to approve this request.</AlertBanner>
           <div>
             <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-2">Approval Notes (Optional)</p>
-            <textarea value={approvalNotes} onChange={e => setApprovalNotes(e.target.value)} rows={4} placeholder="Add any notes for this approval…" className="w-full px-3 py-2.5 text-[13px] bg-white dark:bg-[#16161a] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] placeholder-[#7a7870] dark:placeholder-[#7e7b75] focus:outline-none focus:border-[#1a1917] dark:focus:border-[#f0eee8] resize-none transition-colors" />
+            <textarea value={approvalNotes} onChange={e => setApprovalNotes(e.target.value)} rows={4} placeholder="Add any notes for this approval…" className="w-full px-3 py-2.5 text-[13px] bg-white dark:bg-[#16161a] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] placeholder-[#7a7870] dark:placeholder-[#7e7b75] focus:outline-none focus:border-orange-500 dark:focus:border-orange-400 resize-none transition-colors" />
           </div>
           <div className="flex gap-3 pt-1">
             <button onClick={() => setShowApproveModal(false)} disabled={processing} className="flex-1 py-2.5 text-[12px] font-semibold border border-[#c8c6c0] dark:border-[#2a2a32] text-[#5c5a54] dark:text-[#9e9b94] hover:border-[#1a1917] dark:hover:border-[#f0eee8] hover:text-[#1a1917] dark:hover:text-[#f0eee8] transition-colors disabled:opacity-40">Cancel</button>
@@ -405,7 +405,7 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
           <AlertBanner variant="warning">Please provide a clear reason for rejection.</AlertBanner>
           <div>
             <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-2">Reason for Rejection <span className="text-red-500">*</span></p>
-            <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} rows={4} placeholder="Explain why this request is being rejected…" className="w-full px-3 py-2.5 text-[13px] bg-white dark:bg-[#16161a] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] placeholder-[#7a7870] dark:placeholder-[#7e7b75] focus:outline-none focus:border-[#1a1917] dark:focus:border-[#f0eee8] resize-none transition-colors" />
+            <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} rows={4} placeholder="Explain why this request is being rejected…" className="w-full px-3 py-2.5 text-[13px] bg-white dark:bg-[#16161a] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] placeholder-[#7a7870] dark:placeholder-[#7e7b75] focus:outline-none focus:border-orange-500 dark:focus:border-orange-400 resize-none transition-colors" />
           </div>
           <div className="flex gap-3 pt-1">
             <button onClick={() => setShowRejectModal(false)} disabled={processing} className="flex-1 py-2.5 text-[12px] font-semibold border border-[#c8c6c0] dark:border-[#2a2a32] text-[#5c5a54] dark:text-[#9e9b94] hover:border-[#1a1917] dark:hover:border-[#f0eee8] hover:text-[#1a1917] dark:hover:text-[#f0eee8] transition-colors disabled:opacity-40">Cancel</button>

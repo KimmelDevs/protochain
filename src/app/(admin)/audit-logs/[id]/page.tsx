@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Loader2, CheckCircle, XCircle, Upload, Search, FileText, Download } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, Upload, Search, FileText, Download, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
@@ -25,6 +25,16 @@ interface AuditLog {
 const fmtDocType = (s: string | null) =>
   (s ?? '—').split(/[\s-]/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
 
+// Route to the correct request detail page based on action
+const requestDetailHref = (log: AuditLog): string => {
+  if (!log.request_id) return '/audit-logs';
+  if (log.action === 'approved' || log.action === 'document_uploaded')
+    return `/approved-documents/${log.request_id}`;
+  if (log.action === 'rejected')
+    return `/rejected-requests/${log.request_id}`;
+  return `/pending-requests/${log.request_id}`;
+};
+
 const ACTION_CFG = {
   approved:          { label: 'Approved',     icon: CheckCircle, cls: 'text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30' },
   rejected:          { label: 'Rejected',     icon: XCircle,     cls: 'text-red-600 dark:text-red-400 border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/30'                       },
@@ -34,12 +44,7 @@ const ACTION_CFG = {
 /* ─── csv export ─────────────────────────────────────────────────────────── */
 function exportCSV(logs: AuditLog[]) {
   const headers = ['Log ID', 'Timestamp', 'Action', 'Admin Name', 'Admin Email', 'Document Type', 'Resident', 'Notes', 'Request ID'];
-
-  const escape = (v: string | null | undefined) => {
-    const s = (v ?? '').replace(/"/g, '""');
-    return `"${s}"`;
-  };
-
+  const escape = (v: string | null | undefined) => `"${(v ?? '').replace(/"/g, '""')}"`;
   const rows = logs.map(l => [
     escape(l.id),
     escape(new Date(l.created_at).toLocaleString('en-PH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })),
@@ -51,21 +56,21 @@ function exportCSV(logs: AuditLog[]) {
     escape(l.notes),
     escape(l.request_id),
   ].join(','));
-
   const csv  = [headers.map(h => `"${h}"`).join(','), ...rows].join('\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
-  const date = new Date().toISOString().slice(0, 10);
   a.href     = url;
-  a.download = `audit-logs-${date}.csv`;
+  a.download = `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
 
 /* ─── sub-components ────────────────────────────────────────────────────── */
 const SectionLabel = ({ label }: { label: string }) => (
-  <p className="mono text-[11px] tracking-[0.2em] uppercase text-[#5c5a54] dark:text-[#9e9b94] border-b border-[#c8c6c0] dark:border-[#2a2a32] pb-2 mb-4">{label}</p>
+  <p className="mono text-[11px] tracking-[0.2em] uppercase text-[#5c5a54] dark:text-[#9e9b94] border-b border-[#c8c6c0] dark:border-[#2a2a32] pb-2 mb-4">
+    {label}
+  </p>
 );
 
 const ActionBadge = ({ action }: { action: AuditLog['action'] }) => {
@@ -144,24 +149,22 @@ export default function AuditLogsPage() {
       (l.document_type   ?? '').toLowerCase().includes(q) ||
       l.request_id.toLowerCase().includes(q);
     const matchAction = actionFilter === 'all' || l.action === actionFilter;
-    const matchDate   = dateFilter === 'all' ? true : dateFilter === 'today' ? isToday(l.created_at) : dateFilter === 'week' ? isWeek(l.created_at) : isMonth(l.created_at);
+    const matchDate   = dateFilter === 'all' ? true
+      : dateFilter === 'today' ? isToday(l.created_at)
+      : dateFilter === 'week'  ? isWeek(l.created_at)
+      : isMonth(l.created_at);
     return matchSearch && matchAction && matchDate;
   });
 
   const countAction = (a: AuditLog['action']) => logs.filter(l => l.action === a).length;
 
-  /* ── export handler ─────────────────────────────────────────────────────── */
   const handleExport = () => {
     setExporting(true);
-    // small timeout so the button state updates before the sync blob work
-    setTimeout(() => {
-      exportCSV(filtered);
-      setExporting(false);
-    }, 80);
+    setTimeout(() => { exportCSV(filtered); setExporting(false); }, 80);
   };
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f5f4f0] dark:bg-[#16161a]">
+    <div className="min-h-screen flex items-center justify-center bg-[#fafaf9] dark:bg-[#16161a]">
       <span className="mono text-[12px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] uppercase animate-pulse">Loading…</span>
     </div>
   );
@@ -170,7 +173,7 @@ export default function AuditLogsPage() {
     <>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap'); .pg{font-family:'IBM Plex Sans',sans-serif} .mono{font-family:'IBM Plex Mono',monospace}`}</style>
 
-      <div className="pg min-h-screen bg-[#f5f4f0] dark:bg-[#16161a] transition-colors duration-200">
+      <div className="pg min-h-screen bg-[#fafaf9] dark:bg-[#16161a] transition-colors duration-200">
         <div className="max-w-6xl mx-auto px-6 lg:px-10 pt-6 pb-14">
 
           {/* MASTHEAD */}
@@ -206,12 +209,9 @@ export default function AuditLogsPage() {
               <button
                 onClick={handleExport}
                 disabled={exporting || filtered.length === 0}
-                className="ml-6 flex items-center gap-2 mono text-[11px] font-bold tracking-[0.1em] uppercase px-4 py-2 border border-[#1a1917] dark:border-[#f0eee8] text-[#1a1917] dark:text-[#f0eee8] hover:bg-[#1a1917] dark:hover:bg-[#f0eee8] hover:text-white dark:hover:text-[#1a1917] transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+                className="ml-6 flex items-center gap-2 mono text-[11px] font-bold tracking-[0.1em] uppercase px-4 py-2 border border-orange-600 dark:border-orange-500 text-orange-600 dark:text-orange-400 hover:bg-orange-600 dark:hover:bg-orange-500 hover:text-white dark:hover:text-white transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
               >
-                {exporting
-                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  : <Download className="w-3.5 h-3.5" />
-                }
+                {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
                 Export CSV
                 {filtered.length > 0 && !exporting && (
                   <span className="ml-1 text-[#7a7870] dark:text-[#9e9b94] font-normal">({filtered.length})</span>
@@ -221,19 +221,28 @@ export default function AuditLogsPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7a7870] dark:text-[#7e7b75]" />
-                <input value={search} onChange={e => setSearch(e.target.value)}
+                <input
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
                   placeholder="Search by admin, resident, doc type…"
-                  className="w-full pl-9 pr-3 py-2.5 text-[12px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] placeholder-[#7a7870] dark:placeholder-[#7e7b75] focus:outline-none focus:border-[#1a1917] dark:focus:border-[#f0eee8] transition-colors mono" />
+                  className="w-full pl-9 pr-3 py-2.5 text-[12px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] placeholder-[#7a7870] dark:placeholder-[#7e7b75] focus:outline-none focus:border-orange-500 dark:focus:border-orange-400 transition-colors mono"
+                />
               </div>
-              <select value={actionFilter} onChange={e => setActionFilter(e.target.value as any)}
-                className="w-full px-3 py-2.5 text-[12px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] focus:outline-none focus:border-[#1a1917] dark:focus:border-[#f0eee8] transition-colors mono">
+              <select
+                value={actionFilter}
+                onChange={e => setActionFilter(e.target.value as any)}
+                className="w-full px-3 py-2.5 text-[12px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] focus:outline-none focus:border-orange-500 dark:focus:border-orange-400 transition-colors mono"
+              >
                 <option value="all">All Actions</option>
                 <option value="approved">Approved</option>
                 <option value="rejected">Rejected</option>
                 <option value="document_uploaded">Document Uploaded</option>
               </select>
-              <select value={dateFilter} onChange={e => setDateFilter(e.target.value as any)}
-                className="w-full px-3 py-2.5 text-[12px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] focus:outline-none focus:border-[#1a1917] dark:focus:border-[#f0eee8] transition-colors mono">
+              <select
+                value={dateFilter}
+                onChange={e => setDateFilter(e.target.value as any)}
+                className="w-full px-3 py-2.5 text-[12px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] focus:outline-none focus:border-orange-500 dark:focus:border-orange-400 transition-colors mono"
+              >
                 <option value="all">All Time</option>
                 <option value="today">Today</option>
                 <option value="week">This Week</option>
@@ -257,7 +266,7 @@ export default function AuditLogsPage() {
               <div className="border border-[#c8c6c0] dark:border-[#2a2a32] bg-white dark:bg-[#1e1e24] overflow-x-auto">
 
                 {/* Header */}
-                <div className="grid grid-cols-[1fr_1.6fr_1.2fr_1fr_1.2fr_0.7fr] gap-4 px-5 py-3 border-b border-[#e8e5e0] dark:border-[#222228] bg-[#f5f4f0] dark:bg-[#16161a]">
+                <div className="grid grid-cols-[1fr_1.6fr_1.2fr_1fr_1.2fr_0.7fr] gap-4 px-5 py-3 border-b border-[#e8e5e0] dark:border-[#222228] bg-[#fafaf9] dark:bg-[#16161a]">
                   {['Timestamp', 'Admin', 'Action', 'Document Type', 'Resident', 'View'].map(h => (
                     <p key={h} className="mono text-[10px] font-bold tracking-[0.12em] uppercase text-[#7a7870] dark:text-[#7e7b75]">{h}</p>
                   ))}
@@ -265,9 +274,10 @@ export default function AuditLogsPage() {
 
                 {/* Rows */}
                 {filtered.map((log, i) => (
-                  <div key={log.id}
-                    className={`grid grid-cols-[1fr_1.6fr_1.2fr_1fr_1.2fr_0.7fr] gap-4 px-5 py-4 border-b border-[#e8e5e0] dark:border-[#222228] last:border-0 hover:bg-[#f5f4f0] dark:hover:bg-[#16161a] transition-colors ${i % 2 !== 0 ? 'bg-[#faf9f7] dark:bg-[#1a1a20]' : ''}`}>
-
+                  <div
+                    key={log.id}
+                    className={`grid grid-cols-[1fr_1.6fr_1.2fr_1fr_1.2fr_0.7fr] gap-4 px-5 py-4 border-b border-[#e8e5e0] dark:border-[#222228] last:border-0 hover:bg-[#faf9f7] dark:hover:bg-[#1e1e24] transition-colors ${i % 2 !== 0 ? 'bg-[#faf9f7] dark:bg-[#1a1a20]' : ''}`}
+                  >
                     {/* Timestamp */}
                     <div>
                       <p className="mono text-[11px] text-[#1a1917] dark:text-[#f0eee8]">
@@ -312,15 +322,29 @@ export default function AuditLogsPage() {
                       </p>
                     </div>
 
-                    {/* View detail */}
-                    <div>
-                      <Link href={`/audit-logs/${log.id}`} className="mono text-[10px] tracking-[0.08em] uppercase text-orange-600 dark:text-orange-400 hover:underline">
-                        {log.id.slice(0, 8).toUpperCase()} →
-                      </Link>
+                    {/* ── View — links to the actual request detail page ── */}
+                    <div className="flex items-start">
+                      {log.request_id ? (
+                        <Link
+                          href={requestDetailHref(log)}
+                          className="group/btn flex items-center justify-center w-7 h-7 border border-[#c8c6c0] dark:border-[#2a2a32] hover:bg-orange-600 hover:border-orange-600 transition-colors duration-150"
+                          title={`View ${ACTION_CFG[log.action]?.label ?? 'request'}`}
+                        >
+                          <ExternalLink className="w-3.5 h-3.5 text-[#5c5a54] dark:text-[#9e9b94] group-hover/btn:text-white transition-colors" />
+                        </Link>
+                      ) : (
+                        <span className="mono text-[10px] text-[#c8c6c0] dark:text-[#2a2a32]">—</span>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
+            )}
+
+            {filtered.length > 0 && (
+              <p className="mono text-[11px] text-[#7a7870] dark:text-[#7e7b75] mt-3">
+                Showing {filtered.length} of {logs.length} events
+              </p>
             )}
           </motion.div>
 
