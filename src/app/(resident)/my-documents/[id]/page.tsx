@@ -265,9 +265,11 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-green-400" />Document File
+                  <FileText className="w-5 h-5 text-green-400" />
+                  Document File
                 </CardTitle>
               </CardHeader>
+
               <CardContent className="space-y-3">
                 {doc.file_url ? (
                   <>
@@ -275,9 +277,11 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                       <CheckCircle className="w-4 h-4" />
                       <span>File is ready to download</span>
                     </div>
+
                     <a href={doc.file_url} target="_blank" rel="noopener noreferrer" download>
-                      <Button className="w-full gap-2">
-                        <Download className="w-4 h-4" />Download Document
+                      <Button variant="orange" className="w-full gap-2 mt-2">
+                        <Download className="w-4 h-4" />
+                        Download Document
                       </Button>
                     </a>
                   </>

@@ -104,7 +104,7 @@ export default function RejectedRequestsPage() {
 
   /* ── loading ────────────────────────────────────────────────────────────── */
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f5f4f0] dark:bg-[#16161a]">
+    <div className="min-h-screen flex items-center justify-center bg-[#fafaf9] dark:bg-[#16161a]">
       <span className="mono text-[12px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] uppercase animate-pulse">Loading…</span>
     </div>
   );
@@ -117,7 +117,7 @@ export default function RejectedRequestsPage() {
         .mono { font-family: 'IBM Plex Mono', monospace; }
       `}</style>
 
-      <div className="pg min-h-screen bg-[#f5f4f0] dark:bg-[#16161a] transition-colors duration-200">
+      <div className="pg min-h-screen bg-[#fafaf9] dark:bg-[#16161a] transition-colors duration-200">
         <div className="max-w-6xl mx-auto px-6 lg:px-10 pt-6 pb-14">
 
           {/* MASTHEAD */}
@@ -163,12 +163,12 @@ export default function RejectedRequestsPage() {
                 <input
                   value={search} onChange={e => setSearch(e.target.value)}
                   placeholder="Search by name, ID, or document type…"
-                  className="w-full pl-9 pr-3 py-2.5 text-[12px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] placeholder-[#7a7870] dark:placeholder-[#7e7b75] focus:outline-none focus:border-[#1a1917] dark:focus:border-[#f0eee8] transition-colors mono"
+                  className="w-full pl-9 pr-3 py-2.5 text-[12px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] placeholder-[#7a7870] dark:placeholder-[#7e7b75] focus:outline-none focus:border-orange-500 dark:focus:border-orange-400 transition-colors mono"
                 />
               </div>
 
               <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
-                className="w-full px-3 py-2.5 text-[12px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] focus:outline-none focus:border-[#1a1917] dark:focus:border-[#f0eee8] transition-colors mono">
+                className="w-full px-3 py-2.5 text-[12px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] focus:outline-none focus:border-orange-500 dark:focus:border-orange-400 transition-colors mono">
                 <option value="all">All Document Types</option>
                 {uniqueTypes.map(t => (
                   <option key={t} value={t}>{fmtDocType(t)}</option>
@@ -176,7 +176,7 @@ export default function RejectedRequestsPage() {
               </select>
 
               <select value={dateFilter} onChange={e => setDateFilter(e.target.value as any)}
-                className="w-full px-3 py-2.5 text-[12px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] focus:outline-none focus:border-[#1a1917] dark:focus:border-[#f0eee8] transition-colors mono">
+                className="w-full px-3 py-2.5 text-[12px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] focus:outline-none focus:border-orange-500 dark:focus:border-orange-400 transition-colors mono">
                 <option value="all">All Time</option>
                 <option value="today">Today</option>
                 <option value="week">This Week</option>
@@ -200,7 +200,7 @@ export default function RejectedRequestsPage() {
               <div className="border border-[#c8c6c0] dark:border-[#2a2a32] bg-white dark:bg-[#1e1e24] overflow-x-auto">
 
                 {/* Header */}
-                <div className="grid grid-cols-[0.6fr_1.4fr_1.2fr_1fr_1.6fr_0.5fr] gap-4 px-5 py-3 border-b border-[#e8e5e0] dark:border-[#222228] bg-[#f5f4f0] dark:bg-[#16161a]">
+                <div className="grid grid-cols-[0.6fr_1.4fr_1.2fr_1fr_1.6fr_0.5fr] gap-4 px-5 py-3 border-b border-[#e8e5e0] dark:border-[#222228] bg-[#fafaf9] dark:bg-[#16161a]">
                   {['ID', 'Resident', 'Document Type', 'Date', 'Reason', ''].map(h => (
                     <p key={h} className="mono text-[10px] font-bold tracking-[0.12em] uppercase text-[#7a7870] dark:text-[#7e7b75]">{h}</p>
                   ))}
@@ -262,8 +262,8 @@ export default function RejectedRequestsPage() {
                       {/* Action */}
                       <div className="flex items-center justify-end">
                         <Link href={`/rejected-requests/${req.id}`}
-                          className="flex items-center justify-center w-7 h-7 border border-[#c8c6c0] dark:border-[#2a2a32] hover:border-[#1a1917] dark:hover:border-[#f0eee8] hover:bg-[#1a1917] dark:hover:bg-[#f0eee8] group transition-colors duration-150">
-                          <Eye className="w-3.5 h-3.5 text-[#5c5a54] dark:text-[#9e9b94] group-hover:text-white dark:group-hover:text-[#1a1917] transition-colors" />
+                          className="group/btn flex items-center justify-center w-7 h-7 border border-[#c8c6c0] dark:border-[#2a2a32] hover:bg-orange-600 hover:border-orange-600 transition-colors duration-150">
+                          <Eye className="w-3.5 h-3.5 text-[#5c5a54] dark:text-[#9e9b94] group-hover/btn:text-white transition-colors" />
                         </Link>
                       </div>
                     </div>

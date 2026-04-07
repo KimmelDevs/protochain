@@ -197,9 +197,10 @@ export default function MyDocumentsPage() {
                     <Eye className="w-4 h-4" />View
                   </Button>
                 </Link>
+
                 {doc.file_url && (
                   <a href={doc.file_url} target="_blank" rel="noopener noreferrer" download>
-                    <Button size="sm" className="px-3">
+                    <Button variant="orange" size="sm" className="px-3">
                       <Download className="w-4 h-4" />
                     </Button>
                   </a>

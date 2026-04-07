@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState, useEffect } from 'react';
+import { use, useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/Card';
 import TextArea from '@/app/components/ui/TextArea';
@@ -67,12 +67,59 @@ function FloatInput({ label, value, onChange, type = 'text', required = false }:
       <input type={type} value={value} onChange={(e) => onChange(e.target.value)}
         placeholder=" " required={required}
         className={`peer w-full px-4 pt-6 pb-2 rounded-lg bg-white dark:bg-[#1c1c34] border border-gray-300 dark:border-white/20 text-black dark:text-white
-          focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500
-          ${type === 'date' ? '[&::-webkit-calendar-picker-indicator]:invert' : ''}`}
+          focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500`}
       />
       <label className={`absolute left-4 text-gray-500 dark:text-gray-400 text-sm transition-all pointer-events-none
         ${value ? 'top-2 text-xs' : 'top-1/2 -translate-y-1/2'}
         peer-focus:top-2 peer-focus:text-xs peer-focus:translate-y-0`}>
+        {label}{required ? ' *' : ''}
+      </label>
+    </div>
+  );
+}
+
+// Dedicated date picker input that:
+// 1. Hides the browser's dd/mm/yyyy mask when unfocused and empty
+// 2. Opens the calendar picker on click/focus
+// 3. Keeps the floating label behaviour
+function FloatDateInput({ label, value, onChange, required = false }: {
+  label: string; value: string; onChange: (v: string) => void; required?: boolean;
+}) {
+  const [focused, setFocused] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const hasValue = value !== '';
+  const isFloated = hasValue || focused;
+
+  const handleFocus = () => {
+    setFocused(true);
+    // Delay showPicker slightly so the type switch from 'text' → 'date' is committed first
+    setTimeout(() => {
+      try { inputRef.current?.showPicker(); } catch { /* some browsers block programmatic picker */ }
+    }, 50);
+  };
+
+  return (
+    <div className="relative">
+      <input
+        ref={inputRef}
+        // Use 'text' type when empty + unfocused so the browser hides the dd/mm/yyyy mask
+        type={focused || hasValue ? 'date' : 'text'}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={handleFocus}
+        onBlur={() => setFocused(false)}
+        placeholder=" "
+        required={required}
+        className="peer w-full px-4 pt-6 pb-2 rounded-lg bg-white dark:bg-[#1c1c34] border border-gray-300 dark:border-white/20 text-black dark:text-white
+          focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500
+          [&::-webkit-calendar-picker-indicator]:opacity-60 dark:[&::-webkit-calendar-picker-indicator]:invert
+          [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+      />
+      <label
+        className={`absolute left-4 text-gray-500 dark:text-gray-400 transition-all duration-150 pointer-events-none
+          ${isFloated ? 'top-2 text-xs' : 'top-1/2 -translate-y-1/2 text-sm'}`}
+      >
         {label}{required ? ' *' : ''}
       </label>
     </div>
@@ -195,7 +242,7 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
               You'll be notified once it's ready.
             </p>
             <div className="flex flex-col gap-3">
-              <Link href="/my-requests"><Button variant= 'orange' className="w-full">View My Requests</Button></Link>
+              <Link href="/my-requests"><Button variant='orange' className="w-full">View My Requests</Button></Link>
               <Link href="/request-document"><Button variant="outline" className="w-full">Request Another</Button></Link>
             </div>
           </CardContent>
@@ -229,8 +276,7 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Cards and inputs below updated for light/dark mode */}
-                    <Card className="bg-white dark:bg-[#1c1c34] border border-gray-300 dark:border-white/20">
+          <Card className="bg-white dark:bg-[#1c1c34] border border-gray-300 dark:border-white/20">
             <CardHeader><CardTitle className="text-black dark:text-white">Your Information</CardTitle></CardHeader>
             <CardContent>
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
@@ -253,7 +299,8 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
               <CardContent className="space-y-4">
                 <FloatInput label="Purok / Zone" value={purok} onChange={setPurok} required />
                 <FloatInput label="CTC Number" value={ctcNo} onChange={setCtcNo} required />
-                <FloatInput label="CTC Date Issued" value={ctcDateIssued} onChange={setCtcDateIssued} type="date" required />
+                {/* FloatDateInput: calendar picker, hides dd/mm/yyyy mask when empty + unfocused */}
+                <FloatDateInput label="CTC Date Issued" value={ctcDateIssued} onChange={setCtcDateIssued} required />
                 <FloatInput label="CTC Place Issued" value={ctcPlaceIssued} onChange={setCtcPlaceIssued} required />
               </CardContent>
             </Card>
@@ -275,7 +322,8 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
               <CardContent className="space-y-4">
                 <FloatInput label="Full Name of Deceased" value={deceasedName} onChange={setDeceasedName} required />
                 <FloatInput label="Age at Time of Death" value={deceasedAge} onChange={setDeceasedAge} required />
-                <FloatInput label="Date of Death" value={dateOfDeath} onChange={setDateOfDeath} type="date" required />
+                {/* FloatDateInput: calendar picker, hides dd/mm/yyyy mask when empty + unfocused */}
+                <FloatDateInput label="Date of Death" value={dateOfDeath} onChange={setDateOfDeath} required />
                 <FloatInput label="Place of Death" value={placeOfDeath} onChange={setPlaceOfDeath} required />
                 <FloatInput label="Your Relationship to Deceased" value={relationship} onChange={setRelationship} required />
               </CardContent>

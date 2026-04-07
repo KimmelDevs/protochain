@@ -236,17 +236,20 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
             </Card>
 
             {request.status === 'approved' && request.file_url && (
-              <Card>
-                <CardHeader><CardTitle>Your Document</CardTitle></CardHeader>
-                <CardContent>
-                  <a href={request.file_url} target="_blank" rel="noopener noreferrer" download>
-                    <Button className="w-full gap-2">
-                      <Download className="w-4 h-4" />Download Document
-                    </Button>
-                  </a>
-                </CardContent>
-              </Card>
-            )}
+            <Card>
+              <CardHeader>
+                <CardTitle>Your Document</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <a href={request.file_url} target="_blank" rel="noopener noreferrer" download>
+                  <Button variant="orange" className="w-full gap-2">
+                    <Download className="w-4 h-4" />
+                    Download Document
+                  </Button>
+                </a>
+              </CardContent>
+            </Card>
+          )}
 
             {request.status === 'approved' && !request.file_url && (
               <Card><CardContent className="p-4">

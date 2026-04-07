@@ -41,19 +41,21 @@ export function useAuthActions() {
     }
   };
 
-  // Login: no PII involved, safe to use Supabase directly
   const login = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return { success: false, error: error.message };
 
-    // Fetch role — role is not encrypted
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', data.user.id)
       .single();
 
-    if (profile?.role === 'admin') {
+    // Route to the correct dashboard based on role.
+    // The (super-admin) route group uses /superadmindashboard as its entry page.
+    if (profile?.role === 'super_admin') {
+      router.push('/superadmindashboard');
+    } else if (profile?.role === 'admin') {
       router.push('/admindashboard');
     } else {
       router.push('/dashboard');
