@@ -7,22 +7,26 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// ALL profile fields that are encrypted at rest.
-// first_name / last_name cover snake_case columns; firstName / lastName cover
-// camelCase aliases — include both so decryption works regardless of which
-// column name Supabase returns.
+// Snake_case DB columns that are encrypted at rest.
 const SENSITIVE_FIELDS = [
   'first_name',
   'last_name',
-  'firstName',
-  'lastName',
   'email',
   'phone',
   'address',
   'birthday',
   'civil_status',
-  'civilStatus',
 ] as const;
+
+// Remap DB snake_case row → camelCase for the client.
+function toClientShape(row: Record<string, any>) {
+  return {
+    ...row,
+    firstName:   row.first_name,
+    lastName:    row.last_name,
+    civilStatus: row.civil_status,
+  };
+}
 
 // ── GET /api/profile?id=xxx ───────────────────────────────────────────────────
 // Fetches and decrypts ALL sensitive profile fields.
@@ -40,7 +44,7 @@ export async function GET(req: NextRequest) {
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
     const decrypted = decryptFields(data, [...SENSITIVE_FIELDS]);
-    return NextResponse.json({ data: decrypted });
+    return NextResponse.json({ data: toClientShape(decrypted) });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
@@ -55,9 +59,20 @@ export async function PATCH(req: NextRequest) {
 
     const body = await req.json();
 
-    // Only encrypt fields that are actually present in the update payload
-    const fieldsToEncrypt = SENSITIVE_FIELDS.filter(f => f in body);
-    const encrypted = encryptFields(body, fieldsToEncrypt);
+    // Map camelCase keys from the client → snake_case DB columns.
+    const mapped: Record<string, any> = {
+      ...(body.firstName   !== undefined && { first_name:   body.firstName }),
+      ...(body.lastName    !== undefined && { last_name:    body.lastName }),
+      ...(body.civilStatus !== undefined && { civil_status: body.civilStatus }),
+      ...(body.phone       !== undefined && { phone:        body.phone }),
+      ...(body.address     !== undefined && { address:      body.address }),
+      ...(body.birthday    !== undefined && { birthday:     body.birthday }),
+      ...(body.username    !== undefined && { username:     body.username }),
+    };
+
+    // Encrypt only the sensitive fields that are present in the payload.
+    const fieldsToEncrypt = SENSITIVE_FIELDS.filter(f => f in mapped);
+    const encrypted = encryptFields(mapped, fieldsToEncrypt);
 
     const { data, error } = await supabase
       .from('profiles')
@@ -68,9 +83,9 @@ export async function PATCH(req: NextRequest) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-    // Return decrypted so the UI can display it immediately
+    // Decrypt and return camelCase so the UI can display it immediately.
     const decrypted = decryptFields(data, [...SENSITIVE_FIELDS]);
-    return NextResponse.json({ data: decrypted });
+    return NextResponse.json({ data: toClientShape(decrypted) });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
