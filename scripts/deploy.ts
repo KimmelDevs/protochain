@@ -1,15 +1,20 @@
-import { ethers } from 'hardhat';
+import { ethers } from 'ethers';
+import hre from 'hardhat';
 
 async function main() {
-  const [deployer] = await ethers.getSigners();
-  console.log('Deploying DocumentRegistry…');
-  console.log('Deployer wallet:', deployer.address);
+  const provider  = new ethers.JsonRpcProvider(process.env.SEPOLIA_RPC_URL);
+  const wallet    = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY!, provider);
 
-  const balance = await ethers.provider.getBalance(deployer.address);
+  console.log('Deploying DocumentRegistry…');
+  console.log('Deployer wallet:', wallet.address);
+
+  const balance = await provider.getBalance(wallet.address);
   console.log('Deployer balance:', ethers.formatEther(balance), 'ETH\n');
 
-  const Registry = await ethers.getContractFactory('DocumentRegistry');
-  const registry  = await Registry.deploy();
+  // Get compiled artifact from Hardhat
+  const artifact = await hre.artifacts.readArtifact('DocumentRegistry');
+  const factory  = new ethers.ContractFactory(artifact.abi, artifact.bytecode, wallet);
+  const registry = await factory.deploy();
   await registry.waitForDeployment();
 
   const address = await registry.getAddress();

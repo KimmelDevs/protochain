@@ -1,5 +1,5 @@
 import { HardhatUserConfig } from 'hardhat/config';
-import '@nomicfoundation/hardhat-toolbox';
+import '@nomicfoundation/hardhat-ethers';
 import * as dotenv from 'dotenv';
 
 dotenv.config({ path: '.env.local' });
@@ -10,6 +10,7 @@ const config: HardhatUserConfig = {
   networks: {
     // Sepolia testnet — free ETH from https://sepoliafaucet.com
     sepolia: {
+      type:     'http',
       url:      process.env.SEPOLIA_RPC_URL ?? '',
       accounts: process.env.DEPLOYER_PRIVATE_KEY
         ? [process.env.DEPLOYER_PRIVATE_KEY]
