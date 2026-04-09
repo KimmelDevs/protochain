@@ -8,6 +8,7 @@ export interface RequestDetail {
   created_at: string; processed_at?: string | null; purpose: string;
   custom_purpose: string | null; additional_info: string | null;
   file_url: string | null; notes: string | null; file_hash: string | null;
+  chain_tx_hash: string | null;
   purok: string | null; ctc_no: string | null; ctc_date_issued: string | null;
   ctc_place_issued: string | null; business_name: string | null;
   deceased_name: string | null; deceased_age: string | null;
