@@ -11,6 +11,14 @@
  *   const result = await verifyDocumentOnChain(sha256HexString);
  */
 
+declare global {
+  interface Window {
+    ethereum?: any;
+  }
+}
+ /*const result = await verifyDocumentOnChain(sha256HexString);*/
+ 
+
 import { BrowserProvider, Contract, zeroPadValue, toBeHex } from 'ethers';
 
 // Set in .env.local after deploying the contract
