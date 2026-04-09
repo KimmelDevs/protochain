@@ -1,7 +1,7 @@
 'use client';
 
 import { use, useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, type Variants } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/Card';
 import Badge from '@/app/components/ui/Badge';
 import Button from '@/app/components/ui/Button';
@@ -31,6 +31,30 @@ interface Profile {
   phone: string; address: string;
 }
 
+/* ─── Variants ───────────────────────────────────────────────── */
+const EASE = [0.25, 0.46, 0.45, 0.94] as [number, number, number, number];
+
+const fadeUp = (delay = 0) => ({
+  initial:    { opacity: 0, y: 20 },
+  animate:    { opacity: 1, y: 0 },
+  transition: { duration: 0.4, delay, ease: EASE },
+});
+
+const slideInRight = (delay = 0) => ({
+  initial:    { opacity: 0, x: 24 },
+  animate:    { opacity: 1, x: 0 },
+  transition: { duration: 0.4, delay, ease: EASE },
+});
+
+const staggerContainer: Variants = {
+  animate: { transition: { staggerChildren: 0.07 } },
+};
+
+const staggerItem: Variants = {
+  initial: { opacity: 0, y: 14 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.32, ease: EASE } },
+};
+
 export default function RequestDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id }   = use(params);
   const router   = useRouter();
@@ -41,7 +65,6 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    // Sync dark mode from localStorage
     if (localStorage.getItem('theme') === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
@@ -53,17 +76,14 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { router.push('/login'); return; }
 
-        // ── /api/requests decrypts all sensitive fields server-side ──────────
         const reqRes = await fetch(`/api/requests?id=${id}&user_id=${user.id}`);
         if (!reqRes.ok) { setNotFound(true); return; }
         const reqJson = await reqRes.json();
         const data: RequestDetail | undefined = reqJson.data?.[0];
 
-        // Ownership check — never show another user's request
         if (!data || data.user_id !== user.id) { setNotFound(true); return; }
         setRequest(data);
 
-        // ── /api/profile decrypts firstName, lastName, phone, address, etc. ──
         const profileRes = await fetch(`/api/profile?id=${user.id}`);
         if (profileRes.ok) {
           const profileJson = await profileRes.json();
@@ -89,23 +109,42 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
-      <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }}
+      >
+        <Loader2 className="w-8 h-8 text-orange-500" />
+      </motion.div>
     </div>
   );
 
   if (notFound || !request) return (
-    <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center">
-      <Card><CardContent className="p-8 text-center">
-        <p className="text-gray-400 mb-4">Request not found</p>
-        <Link href="/my-requests"><Button>Back to Requests</Button></Link>
-      </CardContent></Card>
-    </div>
+    <motion.div
+      initial={{ opacity: 0, scale: 0.96 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="min-h-screen p-4 lg:p-8 flex items-center justify-center"
+    >
+      <Card>
+        <CardContent className="p-8 text-center">
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.15 }}
+            className="text-gray-400 mb-4"
+          >
+            Request not found
+          </motion.p>
+          <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+            <Link href="/my-requests"><Button>Back to Requests</Button></Link>
+          </motion.div>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 
   const displayPurpose = request.purpose === 'others' && request.custom_purpose
     ? request.custom_purpose : request.purpose;
 
-  // Build document-specific extra fields
   const extraDetails: { label: string; value: string | null }[] = [];
   if (request.document_type === 'barangay-clearance') {
     extraDetails.push(
@@ -144,119 +183,214 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
     );
   }
 
+  const statusIcon = {
+    approved: <CheckCircle className="w-6 h-6 text-green-400" />,
+    pending:  <Clock       className="w-6 h-6 text-yellow-400" />,
+    rejected: <XCircle     className="w-6 h-6 text-red-400"    />,
+  }[request.status] ?? <Clock className="w-6 h-6 text-gray-400" />;
+
+  const statusMsg = {
+    pending:  'Your request is being reviewed.',
+    approved: 'Your document is ready.',
+    rejected: 'Your request was not approved.',
+  }[request.status] ?? '';
+
   return (
     <div className="min-h-screen p-4 lg:p-8 bg-gray-50 dark:bg-[#0f0f23] text-gray-900 dark:text-white transition-colors duration-300">
       <div className="max-w-5xl mx-auto">
 
-        <Link href="/my-requests">
-          <Button variant="ghost" className="mb-6 gap-2">
-            <ArrowLeft className="w-4 h-4" />Back to Requests
-          </Button>
-        </Link>
+        {/* Back button */}
+        <motion.div {...fadeUp(0)} className="mb-6">
+          <Link href="/my-requests">
+            <motion.div
+              whileHover={{ x: -4 }}
+              transition={{ type: 'spring', stiffness: 400 }}
+              className="inline-block"
+            >
+              <Button variant="ghost" className="gap-2">
+                <ArrowLeft className="w-4 h-4" />Back to Requests
+              </Button>
+            </motion.div>
+          </Link>
+        </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+        {/* Title row */}
+        <motion.div {...fadeUp(0.08)} className="mb-6">
           <div className="flex items-center justify-between mb-2">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{request.type ?? request.document_type}</h1>
-            <Badge variant={request.status as any}>{request.status}</Badge>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              {request.type ?? request.document_type}
+            </h1>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.7 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 300, delay: 0.2 }}
+            >
+              <Badge variant={request.status as any}>{request.status}</Badge>
+            </motion.div>
           </div>
-          <p className="text-gray-500 dark:text-gray-400 font-mono text-sm">ID: {request.id.toUpperCase()}</p>
+          <p className="text-gray-500 dark:text-gray-400 font-mono text-sm">
+            ID: {request.id.toUpperCase()}
+          </p>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
 
+          {/* Main column */}
+          <motion.div
+            variants={staggerContainer}
+            initial="initial"
+            animate="animate"
+            className="lg:col-span-2 space-y-6"
+          >
             {/* Request details */}
-            <Card>
-              <CardHeader><CardTitle>Request Details</CardTitle></CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  <DetailRow label="Document Type"  value={request.type ?? request.document_type} />
-                  <DetailRow label="Purpose"         value={displayPurpose ?? '—'} />
-                  <DetailRow label="Date Requested"  value={new Date(request.created_at).toLocaleDateString()} />
-                  <DetailRow label="Date Processed"  value={request.processed_at ? new Date(request.processed_at).toLocaleDateString() : 'Pending'} />
-                  {request.additional_info && (
-                    <div className="col-span-2">
-                      <DetailRow label="Additional Info" value={request.additional_info} />
-                    </div>
-                  )}
-                  {request.notes && (
-                    <div className="col-span-2">
-                      <DetailRow label="Admin Notes" value={request.notes} />
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Document-specific submitted info */}
-            {extraDetails.length > 0 && (
+            <motion.div variants={staggerItem}>
               <Card>
-                <CardHeader><CardTitle>Submitted Information</CardTitle></CardHeader>
+                <CardHeader><CardTitle>Request Details</CardTitle></CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 gap-4">
-                    {extraDetails.map(d => <DetailRow key={d.label} label={d.label} value={d.value ?? '—'} />)}
-                  </div>
+                  <motion.div
+                    variants={staggerContainer}
+                    initial="initial"
+                    animate="animate"
+                    className="grid grid-cols-2 gap-4"
+                  >
+                    <motion.div variants={staggerItem}><DetailRow label="Document Type"  value={request.type ?? request.document_type} /></motion.div>
+                    <motion.div variants={staggerItem}><DetailRow label="Purpose"        value={displayPurpose ?? '—'} /></motion.div>
+                    <motion.div variants={staggerItem}><DetailRow label="Date Requested" value={new Date(request.created_at).toLocaleDateString()} /></motion.div>
+                    <motion.div variants={staggerItem}><DetailRow label="Date Processed" value={request.processed_at ? new Date(request.processed_at).toLocaleDateString() : 'Pending'} /></motion.div>
+                    {request.additional_info && (
+                      <motion.div variants={staggerItem} className="col-span-2">
+                        <DetailRow label="Additional Info" value={request.additional_info} />
+                      </motion.div>
+                    )}
+                    {request.notes && (
+                      <motion.div variants={staggerItem} className="col-span-2">
+                        <DetailRow label="Admin Notes" value={request.notes} />
+                      </motion.div>
+                    )}
+                  </motion.div>
                 </CardContent>
               </Card>
+            </motion.div>
+
+            {/* Extra fields */}
+            {extraDetails.length > 0 && (
+              <motion.div variants={staggerItem}>
+                <Card>
+                  <CardHeader><CardTitle>Submitted Information</CardTitle></CardHeader>
+                  <CardContent>
+                    <motion.div
+                      variants={staggerContainer}
+                      initial="initial"
+                      animate="animate"
+                      className="grid grid-cols-2 gap-4"
+                    >
+                      {extraDetails.map(d => (
+                        <motion.div key={d.label} variants={staggerItem}>
+                          <DetailRow label={d.label} value={d.value ?? '—'} />
+                        </motion.div>
+                      ))}
+                    </motion.div>
+                  </CardContent>
+                </Card>
+              </motion.div>
             )}
 
             {/* Profile */}
             {profile && (
-              <Card>
-                <CardHeader><CardTitle>Applicant Information</CardTitle></CardHeader>
-                <CardContent className="space-y-3">
-                  <IconRow icon={<User  className="w-5 h-5 text-gray-500 dark:text-gray-400" />} label="Name"    value={`${profile.firstName} ${profile.lastName}`} />
-                  <IconRow icon={<Mail  className="w-5 h-5 text-gray-500 dark:text-gray-400" />} label="Email"   value={profile.email}   />
-                  <IconRow icon={<Phone className="w-5 h-5 text-gray-500 dark:text-gray-400" />} label="Phone"   value={profile.phone}   />
-                  <IconRow icon={<MapPin className="w-5 h-5 text-gray-500 dark:text-gray-400" />} label="Address" value={profile.address} />
-                </CardContent>
-              </Card>
+              <motion.div variants={staggerItem}>
+                <Card>
+                  <CardHeader><CardTitle>Applicant Information</CardTitle></CardHeader>
+                  <CardContent>
+                    <motion.div
+                      variants={staggerContainer}
+                      initial="initial"
+                      animate="animate"
+                      className="space-y-3"
+                    >
+                      {[
+                        { icon: <User   className="w-5 h-5 text-gray-500 dark:text-gray-400" />, label: 'Name',    value: `${profile.firstName} ${profile.lastName}` },
+                        { icon: <Mail   className="w-5 h-5 text-gray-500 dark:text-gray-400" />, label: 'Email',   value: profile.email   },
+                        { icon: <Phone  className="w-5 h-5 text-gray-500 dark:text-gray-400" />, label: 'Phone',   value: profile.phone   },
+                        { icon: <MapPin className="w-5 h-5 text-gray-500 dark:text-gray-400" />, label: 'Address', value: profile.address },
+                      ].map(row => (
+                        <motion.div key={row.label} variants={staggerItem}>
+                          <IconRow icon={row.icon} label={row.label} value={row.value} />
+                        </motion.div>
+                      ))}
+                    </motion.div>
+                  </CardContent>
+                </Card>
+              </motion.div>
             )}
-          </div>
+          </motion.div>
 
           {/* Sidebar */}
           <div className="space-y-6">
-            <Card>
-              <CardHeader><CardTitle>Status</CardTitle></CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-3 p-3 bg-gray-100 dark:bg-white/5 rounded-lg">
-                  {request.status === 'approved' && <CheckCircle className="w-6 h-6 text-green-400" />}
-                  {request.status === 'pending'  && <Clock       className="w-6 h-6 text-yellow-400" />}
-                  {request.status === 'rejected' && <XCircle     className="w-6 h-6 text-red-400"    />}
-                  <div>
-                    <p className="text-gray-900 dark:text-white font-medium capitalize">{request.status}</p>
-                    <p className="text-gray-500 dark:text-gray-400 text-xs">
-                      {request.status === 'pending'  && 'Your request is being reviewed.'}
-                      {request.status === 'approved' && 'Your document is ready.'}
-                      {request.status === 'rejected' && 'Your request was not approved.'}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
 
+            {/* Status card */}
+            <motion.div {...slideInRight(0.18)}>
+              <Card>
+                <CardHeader><CardTitle>Status</CardTitle></CardHeader>
+                <CardContent>
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.92 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.28, duration: 0.3 }}
+                    className="flex items-center gap-3 p-3 bg-gray-100 dark:bg-white/5 rounded-lg"
+                  >
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: 'spring', stiffness: 400, delay: 0.35 }}
+                    >
+                      {statusIcon}
+                    </motion.div>
+                    <div>
+                      <p className="text-gray-900 dark:text-white font-medium capitalize">{request.status}</p>
+                      <p className="text-gray-500 dark:text-gray-400 text-xs">{statusMsg}</p>
+                    </div>
+                  </motion.div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Download card */}
             {request.status === 'approved' && request.file_url && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Your Document</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <a href={request.file_url} target="_blank" rel="noopener noreferrer" download>
-                  <Button variant="orange" className="w-full gap-2">
-                    <Download className="w-4 h-4" />
-                    Download Document
-                  </Button>
-                </a>
-              </CardContent>
-            </Card>
-          )}
+              <motion.div {...slideInRight(0.26)}>
+                <Card>
+                  <CardHeader><CardTitle>Your Document</CardTitle></CardHeader>
+                  <CardContent>
+                    <a href={request.file_url} target="_blank" rel="noopener noreferrer" download>
+                      <motion.div
+                        whileHover={{ scale: 1.02, y: -1 }}
+                        whileTap={{ scale: 0.97 }}
+                      >
+                        <Button variant="orange" className="w-full gap-2">
+                          <motion.div
+                            animate={{ y: [0, -2, 0] }}
+                            transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
+                          >
+                            <Download className="w-4 h-4" />
+                          </motion.div>
+                          Download Document
+                        </Button>
+                      </motion.div>
+                    </a>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
 
             {request.status === 'approved' && !request.file_url && (
-              <Card><CardContent className="p-4">
-                <p className="text-gray-500 dark:text-gray-400 text-sm text-center">
-                  Your request is approved. Please visit the barangay office to claim your document.
-                </p>
-              </CardContent></Card>
+              <motion.div {...slideInRight(0.26)}>
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-gray-500 dark:text-gray-400 text-sm text-center">
+                      Your request is approved. Please visit the barangay office to claim your document.
+                    </p>
+                  </CardContent>
+                </Card>
+              </motion.div>
             )}
           </div>
         </div>
@@ -277,7 +411,13 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 function IconRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="flex items-start gap-3">
-      <div className="mt-0.5">{icon}</div>
+      <motion.div
+        whileHover={{ scale: 1.2, rotate: 6 }}
+        transition={{ type: 'spring', stiffness: 400 }}
+        className="mt-0.5 shrink-0"
+      >
+        {icon}
+      </motion.div>
       <div>
         <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
         <p className="text-gray-900 dark:text-white">{value}</p>
