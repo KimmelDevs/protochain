@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import {
   FileText, Clock, CheckCircle, XCircle,
   TrendingUp, Calendar, Eye, ArrowRight, Plus, Inbox, Loader2,
@@ -36,19 +36,21 @@ const getStatusStyle = (status: string) => {
 };
 
 /* ─── Reusable variants ─────────────────────────────────────── */
+const EASE = [0.25, 0.46, 0.45, 0.94] as [number, number, number, number];
+
 const fadeUp = (delay = 0) => ({
-  initial:   { opacity: 0, y: 20 },
-  animate:   { opacity: 1, y: 0 },
-  transition: { duration: 0.4, delay, ease: [0.25, 0.46, 0.45, 0.94] },
+  initial:    { opacity: 0, y: 20 },
+  animate:    { opacity: 1, y: 0 },
+  transition: { duration: 0.4, delay, ease: EASE },
 });
 
-const staggerContainer = {
+const staggerContainer: Variants = {
   animate: { transition: { staggerChildren: 0.07 } },
 };
 
-const staggerItem = {
-  initial:   { opacity: 0, y: 16 },
-  animate:   { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] } },
+const staggerItem: Variants = {
+  initial: { opacity: 0, y: 16 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.35, ease: EASE } },
 };
 
 /* ─── Animated counter ──────────────────────────────────────── */
