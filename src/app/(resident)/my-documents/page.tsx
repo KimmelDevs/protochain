@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import Badge from '@/app/components/ui/Badge';
 import Input from '@/app/components/ui/Input';
 import Select from '@/app/components/ui/Select';
@@ -24,12 +24,31 @@ interface RequestDoc {
   custom_purpose: string | null;
 }
 
+/* ─── Variants ───────────────────────────────────────────────── */
+const EASE = [0.25, 0.46, 0.45, 0.94] as [number, number, number, number];
+
+const fadeUp = (delay = 0) => ({
+  initial:    { opacity: 0, y: 20 },
+  animate:    { opacity: 1, y: 0 },
+  transition: { duration: 0.4, delay, ease: EASE },
+});
+
+const staggerContainer: Variants = {
+  animate: { transition: { staggerChildren: 0.06 } },
+};
+
+const cardVariants: Variants = {
+  initial: { opacity: 0, y: 20, scale: 0.97 },
+  animate: { opacity: 1, y: 0,  scale: 1,    transition: { duration: 0.35, ease: EASE } },
+  exit:    { opacity: 0, y: -10, scale: 0.97, transition: { duration: 0.2 } },
+};
+
 export default function MyDocumentsPage() {
   const router = useRouter();
-  const [documents, setDocuments] = useState<RequestDoc[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [typeFilter, setTypeFilter]   = useState('all');
+  const [documents,    setDocuments]    = useState<RequestDoc[]>([]);
+  const [loading,      setLoading]      = useState(true);
+  const [searchQuery,  setSearchQuery]  = useState('');
+  const [typeFilter,   setTypeFilter]   = useState('all');
 
   useEffect(() => {
     (async () => {
@@ -37,7 +56,6 @@ export default function MyDocumentsPage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { router.push('/login'); return; }
 
-        // ── Use /api/requests so all sensitive fields are decrypted ──────────
         const res = await fetch(`/api/requests?user_id=${user.id}&status=approved`);
         if (!res.ok) throw new Error('Failed to load documents');
         const json = await res.json();
@@ -66,7 +84,12 @@ export default function MyDocumentsPage() {
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f0f23] transition-colors duration-300">
-      <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }}
+      >
+        <Loader2 className="w-8 h-8 text-orange-500" />
+      </motion.div>
     </div>
   );
 
@@ -75,139 +98,206 @@ export default function MyDocumentsPage() {
       <div className="max-w-7xl mx-auto">
 
         {/* Header */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+        <motion.div {...fadeUp(0)} className="mb-8">
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">My Documents</h1>
           <p className="text-gray-500 dark:text-gray-400">View and download your approved barangay documents</p>
         </motion.div>
 
         {/* Stats */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          variants={staggerContainer}
+          initial="initial"
+          animate="animate"
           className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"
         >
           {[
-            { label: 'Total Documents', value: documents.length,                           icon: <CheckCircle className="w-8 h-8 text-green-400" /> },
-            { label: 'With File',       value: documents.filter(d => d.file_url).length,   icon: <FileText    className="w-8 h-8 text-blue-400"  /> },
-            { label: 'Document Types',  value: new Set(documents.map(d => d.type)).size,   icon: <FileText    className="w-8 h-8 text-purple-400" /> },
+            { label: 'Total Documents', value: documents.length,                         icon: <CheckCircle className="w-8 h-8 text-green-400" /> },
+            { label: 'With File',       value: documents.filter(d => d.file_url).length, icon: <FileText    className="w-8 h-8 text-blue-400"  /> },
+            { label: 'Document Types',  value: new Set(documents.map(d => d.type)).size, icon: <FileText    className="w-8 h-8 text-purple-400" /> },
           ].map(s => (
-            <div key={s.label} className="bg-white/5 dark:bg-white/10 border border-gray-300 dark:border-white/10 rounded-xl p-4 transition-colors duration-300">
+            <motion.div
+              key={s.label}
+              variants={cardVariants}
+              whileHover={{ y: -3, transition: { duration: 0.2 } }}
+              className="bg-white/5 dark:bg-white/10 border border-gray-300 dark:border-white/10 rounded-xl p-4 transition-colors duration-300 cursor-default"
+            >
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-white">{s.value}</div>
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 300, delay: 0.2 }}
+                    className="text-2xl font-bold text-gray-900 dark:text-white"
+                  >
+                    {s.value}
+                  </motion.div>
                   <div className="text-sm text-gray-500 dark:text-gray-400">{s.label}</div>
                 </div>
-                {s.icon}
+                <motion.div
+                  whileHover={{ rotate: 8, scale: 1.1 }}
+                  transition={{ type: 'spring', stiffness: 300 }}
+                >
+                  {s.icon}
+                </motion.div>
               </div>
-            </div>
+            </motion.div>
           ))}
         </motion.div>
 
         {/* Filters */}
-        {documents.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-            className="bg-white/5 dark:bg-white/10 border border-gray-300 dark:border-white/10 rounded-xl p-6 mb-6 transition-colors duration-300"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
-                <Input
-                  placeholder="Search documents..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 text-gray-900 dark:text-white"
+        <AnimatePresence>
+          {documents.length > 0 && (
+            <motion.div
+              {...fadeUp(0.2)}
+              exit={{ opacity: 0, y: -10 }}
+              className="bg-white/5 dark:bg-white/10 border border-gray-300 dark:border-white/10 rounded-xl p-6 mb-6 transition-colors duration-300"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
+                  <Input
+                    placeholder="Search documents..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 text-gray-900 dark:text-white transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(249,115,22,0.15)]"
+                  />
+                </div>
+                <Select
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
+                  options={uniqueTypes.map(t => ({ value: t, label: t === 'all' ? 'All Types' : t }))}
                 />
               </div>
-              <Select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-                options={uniqueTypes.map(t => ({ value: t, label: t === 'all' ? 'All Types' : t }))}
-              />
-            </div>
-          </motion.div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Document Cards */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+          variants={staggerContainer}
+          initial="initial"
+          animate="animate"
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         >
-          {documents.length === 0 && (
-            <div className="col-span-full">
-              <div className="bg-white/5 dark:bg-white/10 border border-gray-300 dark:border-white/10 rounded-xl p-12 text-center transition-colors duration-300">
-                <div className="w-20 h-20 bg-white/5 dark:bg-white/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <FileText className="w-10 h-10 text-gray-500 dark:text-gray-400" />
+          <AnimatePresence mode="popLayout">
+            {documents.length === 0 && (
+              <motion.div
+                key="empty"
+                variants={cardVariants}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="col-span-full"
+              >
+                <div className="bg-white/5 dark:bg-white/10 border border-gray-300 dark:border-white/10 rounded-xl p-12 text-center transition-colors duration-300">
+                  <motion.div
+                    animate={{ y: [0, -8, 0] }}
+                    transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+                    className="w-20 h-20 bg-white/5 dark:bg-white/10 rounded-full flex items-center justify-center mx-auto mb-6"
+                  >
+                    <FileText className="w-10 h-10 text-gray-500 dark:text-gray-400" />
+                  </motion.div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No Documents Yet</h3>
+                  <p className="text-gray-500 dark:text-gray-400 mb-2">You don't have any approved documents yet.</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">Once your request is approved, it will appear here.</p>
+                  <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                    <Link href="/request-document">
+                      <button className="bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 rounded-lg font-semibold transition-colors">
+                        Request a Document
+                      </button>
+                    </Link>
+                  </motion.div>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No Documents Yet</h3>
-                <p className="text-gray-500 dark:text-gray-400 mb-2">You don't have any approved documents yet.</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">Once your request is approved, it will appear here.</p>
-                <Link href="/request-document">
-                  <button className="bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity">
-                    Request a Document
-                  </button>
-                </Link>
-              </div>
-            </div>
-          )}
+              </motion.div>
+            )}
 
-          {documents.length > 0 && filtered.length === 0 && (
-            <div className="col-span-full">
-              <div className="bg-white/5 dark:bg-white/10 border border-gray-300 dark:border-white/10 rounded-xl p-12 text-center transition-colors duration-300">
-                <Search className="w-10 h-10 text-gray-500 dark:text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Results Found</h3>
-                <button
-                  onClick={() => { setSearchQuery(''); setTypeFilter('all'); }}
-                  className="text-blue-500 dark:text-blue-400 text-sm hover:text-blue-400 dark:hover:text-blue-300 transition-colors"
+            {documents.length > 0 && filtered.length === 0 && (
+              <motion.div
+                key="no-results"
+                variants={cardVariants}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="col-span-full"
+              >
+                <div className="bg-white/5 dark:bg-white/10 border border-gray-300 dark:border-white/10 rounded-xl p-12 text-center transition-colors duration-300">
+                  <motion.div
+                    animate={{ rotate: [0, -10, 10, -10, 0] }}
+                    transition={{ delay: 0.3, duration: 0.5 }}
+                  >
+                    <Search className="w-10 h-10 text-gray-500 dark:text-gray-400 mx-auto mb-4" />
+                  </motion.div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Results Found</h3>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => { setSearchQuery(''); setTypeFilter('all'); }}
+                    className="text-blue-500 dark:text-blue-400 text-sm hover:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                  >
+                    Clear filters
+                  </motion.button>
+                </div>
+              </motion.div>
+            )}
+
+            {filtered.map((doc) => (
+              <motion.div
+                key={doc.id}
+                variants={cardVariants}
+                layout
+                whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                className="bg-white/5 dark:bg-white/10 border border-gray-300 dark:border-white/10 rounded-xl p-6 hover:border-blue-500/30 transition-colors duration-300 group"
+              >
+                <motion.div
+                  whileHover={{ scale: 1.08, rotate: 3 }}
+                  transition={{ type: 'spring', stiffness: 300 }}
+                  className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-4"
                 >
-                  Clear filters
-                </button>
-              </div>
-            </div>
-          )}
+                  <FileText className="w-6 h-6 text-white" />
+                </motion.div>
 
-          {filtered.map((doc) => (
-            <div
-              key={doc.id}
-              className="bg-white/5 dark:bg-white/10 border border-gray-300 dark:border-white/10 rounded-xl p-6 hover:border-blue-500/30 transition-all duration-300 group"
-            >
-              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
-                <FileText className="w-6 h-6 text-white" />
-              </div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3 group-hover:text-blue-400 transition-colors duration-200">
+                  {doc.type ?? doc.document_type}
+                </h3>
 
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3">{doc.type ?? doc.document_type}</h3>
-
-              <div className="space-y-2 mb-4">
-                <p className="text-xs font-mono text-gray-500 dark:text-gray-400">{doc.id.slice(0, 8).toUpperCase()}</p>
-                <div className="flex items-center gap-2 text-sm text-gray-400">
-                  <Calendar className="w-4 h-4 shrink-0" />
-                  <span>Approved: {new Date(doc.created_at).toLocaleDateString()}</span>
+                <div className="space-y-2 mb-4">
+                  <p className="text-xs font-mono text-gray-500 dark:text-gray-400">{doc.id.slice(0, 8).toUpperCase()}</p>
+                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                    <Calendar className="w-4 h-4 shrink-0" />
+                    <span>Approved: {new Date(doc.created_at).toLocaleDateString()}</span>
+                  </div>
+                  <p className="text-sm text-gray-400 capitalize">Purpose: {displayPurpose(doc)}</p>
                 </div>
-                <p className="text-sm text-gray-400 capitalize">Purpose: {displayPurpose(doc)}</p>
-              </div>
 
-              <div className="mb-4">
-                <Badge variant={doc.file_url ? 'approved' : 'pending'}>
-                  {doc.file_url ? 'File Available' : 'Pending Upload'}
-                </Badge>
-              </div>
+                <motion.div
+                  initial={{ opacity: 0, x: -6 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.15 }}
+                  className="mb-4"
+                >
+                  <Badge variant={doc.file_url ? 'approved' : 'pending'}>
+                    {doc.file_url ? 'File Available' : 'Pending Upload'}
+                  </Badge>
+                </motion.div>
 
-              <div className="flex gap-2">
-                <Link href={`/my-documents/${doc.id}`} className="flex-1">
-                  <Button variant="orange" size="sm" className="w-full gap-2">
-                    <Eye className="w-4 h-4" />View
-                  </Button>
-                </Link>
+                <div className="flex gap-2">
+                  <Link href={`/my-documents/${doc.id}`} className="flex-1">
+                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
+                      <Button variant="orange" size="sm" className="w-full gap-2">
+                        <Eye className="w-4 h-4" />View
+                      </Button>
+                    </motion.div>
+                  </Link>
 
-                {doc.file_url && (
-                  <a href={doc.file_url} target="_blank" rel="noopener noreferrer" download>
-                    <Button variant="orange" size="sm" className="px-3">
-                      <Download className="w-4 h-4" />
-                    </Button>
-                  </a>
-                )}
-              </div>
-            </div>
-          ))}
+                  {doc.file_url && (
+                    <a href={doc.file_url} target="_blank" rel="noopener noreferrer" download>
+                      <motion.div whileHover={{ scale: 1.08, y: -1 }} whileTap={{ scale: 0.94 }}>
+                        <Button variant="orange" size="sm" className="px-3">
+                          <Download className="w-4 h-4" />
+                        </Button>
+                      </motion.div>
+                    </a>
+                  )}
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </motion.div>
       </div>
     </div>
