@@ -526,3 +526,11 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
     </>
   );
 }
+function setChainTxHash(chain_tx_hash: string) {
+  throw new Error('Function not implemented.');
+}
+
+function setChainError(arg0: string) {
+  throw new Error('Function not implemented.');
+}
+
