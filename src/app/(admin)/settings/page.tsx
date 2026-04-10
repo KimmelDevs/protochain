@@ -4,9 +4,10 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Building2, Bell, Shield, Save, Upload,
-  Key, Loader2, Settings as SettingsIcon, Check, X,
+  Key, Loader2, Settings as SettingsIcon, Check, X, PenTool,
 } from 'lucide-react';
 import { supabase } from '@/app/lib/supabase';
+import { SignaturePad, type SignatureRecord } from '@/app/components/SignaturePad';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -192,12 +193,13 @@ function Toast({
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-type TabKey = 'general' | 'notifications' | 'system';
+type TabKey = 'general' | 'notifications' | 'system' | 'signatures';
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'general',       label: 'General'       },
   { key: 'notifications', label: 'Notifications' },
   { key: 'system',        label: 'System'        },
+  { key: 'signatures',    label: 'Signatures'    },
 ];
 
 export default function SettingsPage() {
@@ -224,11 +226,36 @@ export default function SettingsPage() {
 
   // ── System state ───────────────────────────────────────────────────────────
   const [sysSettings, setSysSettings] = useState({
-    maxFileSize:         '5',
-    allowedFileTypes:    '.pdf, .jpg, .png',
-    processingDays:      '2',
-    requireVerification: true,
+    maxFileSize:           '5',
+    allowedFileTypes:      '.pdf, .jpg, .png',
+    processingDays:        '2',
+    requireVerification:   true,
+    bypassTwoStepApproval: false,
   });
+  const [loadingBypass, setLoadingBypass] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('barangay_settings').select('bypass_two_step_approval').eq('id', 1).single();
+        if (data) {
+          setSysSettings(p => ({ ...p, bypassTwoStepApproval: data.bypass_two_step_approval ?? false }));
+        }
+      } catch { /* column may not exist yet */ }
+      finally { setLoadingBypass(false); }
+    })();
+  }, []);
+
+  const handleSaveBypass = async (val: boolean) => {
+    setSysSettings(p => ({ ...p, bypassTwoStepApproval: val }));
+    await supabase.from('barangay_settings').upsert({
+      id: 1, bypass_two_step_approval: val, updated_at: new Date().toISOString(),
+    });
+    showToast(val
+      ? 'Bypass enabled — Captain can approve without Secretary.'
+      : 'Bypass disabled — 2-step approval enforced.');
+  };
 
   // ── Toast ──────────────────────────────────────────────────────────────────
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
@@ -297,7 +324,42 @@ export default function SettingsPage() {
     }
   };
 
-  // ── Tab: General ───────────────────────────────────────────────────────────
+  // ── Signature state ────────────────────────────────────────────────────────
+  const [captainSig,    setCaptainSig]    = useState<SignatureRecord | null>(null);
+  const [secretarySig,  setSecretarySig]  = useState<SignatureRecord | null>(null);
+  const [loadingSigs,   setLoadingSigs]   = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('admin_signatures')
+          .select('*');
+        if (data) {
+          const cap = data.find((r: any) => r.role === 'captain');
+          const sec = data.find((r: any) => r.role === 'secretary');
+          if (cap) setCaptainSig(cap.record_json as SignatureRecord);
+          if (sec) setSecretarySig(sec.record_json as SignatureRecord);
+        }
+      } catch { /* table may not exist yet */ }
+      finally { setLoadingSigs(false); }
+    })();
+  }, []);
+
+  const handleSaveSignature = async (record: SignatureRecord) => {
+    const { error } = await supabase
+      .from('admin_signatures')
+      .upsert(
+        { role: record.role, record_json: record, updated_at: new Date().toISOString() },
+        { onConflict: 'role' },
+      );
+    if (error) throw new Error('Failed to save: ' + error.message);
+    if (record.role === 'captain')   setCaptainSig(record);
+    if (record.role === 'secretary') setSecretarySig(record);
+    showToast('Signature saved and ECDSA-signed successfully!');
+  };
+
+  // ── Tab: Signatures ────────────────────────────────────────────────────────
   const generalTab = loadingInfo ? (
     <div className="flex items-center justify-center py-20">
       <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
@@ -460,6 +522,30 @@ export default function SettingsPage() {
           />
         </div>
 
+        {/* 2-step approval bypass toggle */}
+        <div className={`flex items-center justify-between py-3.5 border-b border-[#e8e5e0] dark:border-[#222228] ${sysSettings.bypassTwoStepApproval ? 'bg-amber-50/50 dark:bg-amber-950/10 px-3 -mx-3' : ''}`}>
+          <div>
+            <div className="flex items-center gap-2">
+              <p className="text-[14px] font-medium text-[#1a1917] dark:text-[#f0eee8] leading-none">
+                Bypass 2-Step Approval
+              </p>
+              {sysSettings.bypassTwoStepApproval && (
+                <span className="mono text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700">
+                  ACTIVE
+                </span>
+              )}
+            </div>
+            <p className="text-[12px] text-[#5c5a54] dark:text-[#9e9b94] mt-1.5 leading-snug">
+              When ON, the Captain can approve documents without waiting for the Secretary.
+              Use this for testing or emergency approvals only.
+            </p>
+          </div>
+          <Toggle
+            checked={sysSettings.bypassTwoStepApproval}
+            onChange={handleSaveBypass}
+          />
+        </div>
+
         <div className="flex justify-end mt-5">
           <SaveButton
             onClick={() => showToast('System settings updated successfully!')}
@@ -520,10 +606,60 @@ export default function SettingsPage() {
     </div>
   );
 
+  // ── Tab: Signatures ────────────────────────────────────────────────────────
+  const signaturesTab = loadingSigs ? (
+    <div className="flex items-center justify-center py-20">
+      <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
+    </div>
+  ) : (
+    <div className="space-y-10">
+
+      {/* Info banner */}
+      <div className="border-l-2 border-orange-500 pl-4 py-0.5">
+        <p className="mono text-[11px] font-bold tracking-[0.1em] uppercase text-orange-600 dark:text-orange-400 leading-none mb-1">
+          ECDSA Digital Signatures
+        </p>
+        <p className="text-[13px] text-[#3d3b36] dark:text-[#c9c6be]">
+          Draw and save official signatures for the Barangay Captain and Secretary. Each signature
+          is cryptographically signed using <strong>ECDSA P-256</strong> and will be automatically
+          embedded into generated documents. The public key is stored for verification; the private
+          key is never persisted.
+        </p>
+      </div>
+
+      {/* Captain Signature */}
+      <div className="border border-[#e8e5e0] dark:border-[#222228] p-6">
+        <SectionLabel label="Barangay Captain / Punong Barangay" />
+        <SignaturePad
+          role="captain"
+          label="Captain's Official Signature"
+          existingRecord={captainSig}
+          onSave={handleSaveSignature}
+        />
+      </div>
+
+      {/* Divider */}
+      <div className="border-t border-[#e8e5e0] dark:border-[#222228]" />
+
+      {/* Secretary Signature */}
+      <div className="border border-[#e8e5e0] dark:border-[#222228] p-6">
+        <SectionLabel label="Barangay Secretary" />
+        <SignaturePad
+          role="secretary"
+          label="Secretary's Official Signature"
+          existingRecord={secretarySig}
+          onSave={handleSaveSignature}
+        />
+      </div>
+
+    </div>
+  );
+
   const TAB_CONTENT: Record<TabKey, React.ReactNode> = {
     general:       generalTab,
     notifications: notificationsTab,
     system:        systemTab,
+    signatures:    signaturesTab,
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
