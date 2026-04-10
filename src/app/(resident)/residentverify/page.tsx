@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ShieldCheck, ShieldX, Loader2, Search,
+  ShieldCheck, ShieldX, ShieldAlert, Loader2, Search,
   Upload, FileText, ExternalLink, Copy, Check,
 } from 'lucide-react';
 import { verifyDocumentOnChain, type VerifyResult } from '@/app/lib/blockchain';
@@ -17,21 +17,29 @@ async function computeSha256(file: File): Promise<string> {
     .join('');
 }
 
+/**
+ * Formats any document type string regardless of separator style:
+ *   "BARANGAY_CLEARANCE"  → "Barangay Clearance"
+ *   "barangay-clearance"  → "Barangay Clearance"
+ *   "Barangay Clearance"  → "Barangay Clearance"
+ */
 const fmtDocType = (s: string) =>
-  s.split(/[\s-]/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+  s.split(/[\s\-_]+/)
+   .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+   .join(' ');
 
 /* ─── page ──────────────────────────────────────────────────────────────── */
 export default function VerifyPage() {
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [hash,       setHash]       = useState('');
-  const [fileName,   setFileName]   = useState('');
-  const [result,     setResult]     = useState<VerifyResult | null>(null);
-  const [loading,    setLoading]    = useState(false);
-  const [hashing,    setHashing]    = useState(false);
-  const [error,      setError]      = useState('');
-  const [copied,     setCopied]     = useState(false);
-  const [activeTab,  setActiveTab]  = useState<'hash' | 'file'>('file');
+  const [hash,      setHash]      = useState('');
+  const [fileName,  setFileName]  = useState('');
+  const [result,    setResult]    = useState<VerifyResult | null>(null);
+  const [loading,   setLoading]   = useState(false);
+  const [hashing,   setHashing]   = useState(false);
+  const [error,     setError]     = useState('');
+  const [copied,    setCopied]    = useState(false);
+  const [activeTab, setActiveTab] = useState<'hash' | 'file'>('file');
 
   /* ── file drop / pick ─────────────────────────────────────────────────── */
   const handleFile = async (file: File) => {
@@ -75,6 +83,17 @@ export default function VerifyPage() {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  /* ── result state helpers ─────────────────────────────────────────────── */
+  const isAuthentic  = result?.exists && !result?.isRevoked;
+  const isRevoked    = result?.exists && result?.isRevoked;
+  const isNotFound   = result && !result.exists;
+
+  const resultBorderClass = isAuthentic
+    ? 'border-emerald-400 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/20'
+    : isRevoked
+    ? 'border-amber-400 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/20'
+    : 'border-red-400 dark:border-red-700 bg-red-50 dark:bg-red-950/20';
 
   return (
     <>
@@ -204,15 +223,11 @@ export default function VerifyPage() {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className={`border-2 p-6 ${
-                  result.exists
-                    ? 'border-emerald-400 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/20'
-                    : 'border-red-400 dark:border-red-700 bg-red-50 dark:bg-red-950/20'
-                }`}
+                className={`border-2 p-6 ${resultBorderClass}`}
               >
-                {result.exists ? (
+                {/* ── Authentic ── */}
+                {isAuthentic && (
                   <>
-                    {/* Authentic */}
                     <div className="flex items-center gap-3 mb-6">
                       <ShieldCheck className="w-7 h-7 text-emerald-600 dark:text-emerald-400 shrink-0" />
                       <div>
@@ -229,21 +244,23 @@ export default function VerifyPage() {
                       <div>
                         <p className="mono text-[10px] font-bold tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">Document Type</p>
                         <p className="text-[13px] font-semibold text-[#1a1917] dark:text-[#f0eee8]">
-                          {fmtDocType(result.documentType)}
+                          {result.documentType ? fmtDocType(result.documentType) : '—'}
                         </p>
                       </div>
                       <div>
                         <p className="mono text-[10px] font-bold tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">Recorded On</p>
                         <p className="text-[13px] font-semibold text-[#1a1917] dark:text-[#f0eee8]">
-                          {new Date(result.timestamp * 1000).toLocaleString('en-PH', {
-                            year: 'numeric', month: 'long', day: 'numeric',
-                            hour: '2-digit', minute: '2-digit',
-                          })}
+                          {result.timestamp
+                            ? new Date(result.timestamp * 1000).toLocaleString('en-PH', {
+                                year: 'numeric', month: 'long', day: 'numeric',
+                                hour: '2-digit', minute: '2-digit',
+                              })
+                            : '—'}
                         </p>
                       </div>
                       <div className="sm:col-span-2">
                         <p className="mono text-[10px] font-bold tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">Recorded By (Wallet)</p>
-                        <p className="mono text-[11px] text-[#3d3b36] dark:text-[#c9c6be] break-all">{result.recordedBy}</p>
+                        <p className="mono text-[11px] text-[#3d3b36] dark:text-[#c9c6be] break-all">{result.recordedBy || '—'}</p>
                       </div>
                       <div className="sm:col-span-2">
                         <p className="mono text-[10px] font-bold tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">Document Hash</p>
@@ -251,35 +268,81 @@ export default function VerifyPage() {
                       </div>
                     </div>
 
-                    {/* Etherscan link */}
                     <a
                       href={`https://sepolia.etherscan.io/address/${result.recordedBy}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 mono text-[11px] font-bold tracking-[0.1em] uppercase text-emerald-700 dark:text-emerald-400 hover:underline"
                     >
-                      <ExternalLink className="w-3.5 h-3.5" /> View on Etherscan
+                      <ExternalLink className="w-3.5 h-3.5" /> View Recorder on Etherscan
                     </a>
                   </>
-                ) : (
+                )}
+
+                {/* ── Revoked ── */}
+                {isRevoked && (
                   <>
-                    {/* Not found */}
-                    <div className="flex items-start gap-3">
-                      <ShieldX className="w-7 h-7 text-red-500 shrink-0 mt-0.5" />
+                    <div className="flex items-center gap-3 mb-4">
+                      <ShieldAlert className="w-7 h-7 text-amber-600 dark:text-amber-400 shrink-0" />
                       <div>
-                        <p className="mono text-[14px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wide mb-1">
-                          Not Found on Blockchain
+                        <p className="mono text-[14px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wide">
+                          Document Revoked
                         </p>
-                        <p className="text-[13px] text-red-500/80 dark:text-red-400/70 leading-relaxed">
-                          No record exists for this hash. The document may not have been issued by the barangay, or the file may have been tampered with.
+                        <p className="text-[12px] text-amber-600/80 dark:text-amber-400/70 mt-0.5">
+                          This document exists on-chain but has been officially revoked and is no longer valid.
                         </p>
-                        <div className="mt-4 border-l-2 border-red-400/40 pl-3">
-                          <p className="mono text-[10px] font-bold tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">Hash Checked</p>
-                          <p className="mono text-[10px] text-[#5c5a54] dark:text-[#9e9b94] break-all">{hash}</p>
-                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mb-4 p-3 bg-amber-100 dark:bg-amber-900/30 border-l-4 border-amber-500">
+                      <p className="mono text-[11px] font-bold text-amber-700 dark:text-amber-400">
+                        ⚠ THIS DOCUMENT HAS BEEN REVOKED — DO NOT ACCEPT AS VALID
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-6">
+                      <div>
+                        <p className="mono text-[10px] font-bold tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">Document Type</p>
+                        <p className="text-[13px] font-semibold text-[#1a1917] dark:text-[#f0eee8]">
+                          {result.documentType ? fmtDocType(result.documentType) : '—'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="mono text-[10px] font-bold tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">Originally Recorded</p>
+                        <p className="text-[13px] font-semibold text-[#1a1917] dark:text-[#f0eee8]">
+                          {result.timestamp
+                            ? new Date(result.timestamp * 1000).toLocaleString('en-PH', {
+                                year: 'numeric', month: 'long', day: 'numeric',
+                                hour: '2-digit', minute: '2-digit',
+                              })
+                            : '—'}
+                        </p>
+                      </div>
+                      <div className="sm:col-span-2">
+                        <p className="mono text-[10px] font-bold tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">Document Hash</p>
+                        <p className="mono text-[10px] text-[#3d3b36] dark:text-[#c9c6be] break-all">{hash}</p>
                       </div>
                     </div>
                   </>
+                )}
+
+                {/* ── Not Found ── */}
+                {isNotFound && (
+                  <div className="flex items-start gap-3">
+                    <ShieldX className="w-7 h-7 text-red-500 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="mono text-[14px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wide mb-1">
+                        Not Found on Blockchain
+                      </p>
+                      <p className="text-[13px] text-red-500/80 dark:text-red-400/70 leading-relaxed">
+                        No record exists for this hash. The document may not have been issued by the barangay, or the file may have been tampered with.
+                      </p>
+                      <div className="mt-4 border-l-2 border-red-400/40 pl-3">
+                        <p className="mono text-[10px] font-bold tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">Hash Checked</p>
+                        <p className="mono text-[10px] text-[#5c5a54] dark:text-[#9e9b94] break-all">{hash}</p>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </motion.div>
             )}
