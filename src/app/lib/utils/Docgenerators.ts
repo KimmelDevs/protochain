@@ -5,18 +5,20 @@
  *  1. Fetching the .docx template from /public/files/
  *  2. Replacing text placeholders with actual data via JSZip XML patching
  *  3. Injecting ECDSA signature images at {%SIGNATURE_1} and {%SIGNATURE_2} placeholders
+ *     - Signatures are fetched from the `admin_signatures` Supabase table
+ *       (stored as record_json.signatureDataUrl — a base64 PNG data URL)
+ *  4. Injecting a QR code image at {%QR_CODE} placeholder
+ *     - QR payload = rsEncodeHex(sha256 of the request id) for error-correction
+ *     - QR is rendered to a canvas, converted to PNG, then embedded in the docx
  *
- * HOW THE SIGNATURE PLACEHOLDER WORKS:
- *  - In your .docx template, type exactly:  {%SIGNATURE_1}
- *    on its own line/paragraph in the cell where the Secretary signature should appear.
- *  - Type {%SIGNATURE_2} where the Captain's signature should appear.
- *  - The code below finds those paragraphs in the XML and replaces the entire
- *    <w:p>...</w:p> block with an inline image drawing.
- *
- * NOTE: QR code injection is handled separately by existing code — do not add it here.
+ * TEMPLATE PLACEHOLDERS (type these exactly in your .docx template):
+ *   {%SIGNATURE_1}  → Secretary signature image
+ *   {%SIGNATURE_2}  → Barangay Captain signature image
+ *   {%QR_CODE}      → QR code image
  */
 
 import { supabase } from '@/app/lib/supabase';
+import { rsEncodeHex } from '@/app/lib/utils/reedsolomon';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -35,7 +37,6 @@ export interface RequestDetail {
   chain_tx_hash?:            string;
   created_at:                string;
   processed_at?:             string;
-  // Document-specific fields
   purok?:                    string;
   ctc_no?:                   string;
   ctc_date_issued?:          string;
@@ -88,6 +89,14 @@ export async function sha256Hex(blob: Blob): Promise<string> {
     .join('');
 }
 
+async function sha256HexStr(str: string): Promise<string> {
+  const buf    = new TextEncoder().encode(str);
+  const digest = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(digest))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
 const xmlEscape = (s: string) =>
   s.replace(/&/g, '&amp;')
    .replace(/</g, '&lt;')
@@ -117,45 +126,85 @@ async function loadJSZip(): Promise<any> {
 }
 
 // ─── Signature fetcher ────────────────────────────────────────────────────────
+// Signatures live in `admin_signatures` table:
+//   { role: 'captain'|'secretary', record_json: { signatureDataUrl: string, ... } }
 
 interface SignatureImages {
-  secretary: string | null; // base64 data URL
-  captain:   string | null; // base64 data URL
+  secretary: string | null;
+  captain:   string | null;
 }
 
 async function fetchSignatureImages(): Promise<SignatureImages> {
   try {
     const { data, error } = await supabase
-      .from('barangay_settings')
-      .select('secretary_signature_url, captain_signature_url')
-      .single();
+      .from('admin_signatures')
+      .select('role, record_json');
 
-    if (error || !data) return { secretary: null, captain: null };
+    if (error || !data || data.length === 0) {
+      console.warn('[Docgenerators] No signatures found in admin_signatures table');
+      return { secretary: null, captain: null };
+    }
 
-    const toBase64 = async (url: string | null): Promise<string | null> => {
-      if (!url) return null;
-      try {
-        const res  = await fetch(url);
-        const blob = await res.blob();
-        return await new Promise<string>((resolve, reject) => {
-          const reader   = new FileReader();
-          reader.onload  = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        });
-      } catch {
-        return null;
-      }
+    const capRow = data.find((r: any) => r.role === 'captain');
+    const secRow = data.find((r: any) => r.role === 'secretary');
+
+    return {
+      secretary: secRow?.record_json?.signatureDataUrl ?? null,
+      captain:   capRow?.record_json?.signatureDataUrl ?? null,
     };
-
-    const [secretary, captain] = await Promise.all([
-      toBase64(data.secretary_signature_url),
-      toBase64(data.captain_signature_url),
-    ]);
-
-    return { secretary, captain };
-  } catch {
+  } catch (e) {
+    console.error('[Docgenerators] Failed to fetch signatures:', e);
     return { secretary: null, captain: null };
+  }
+}
+
+// ─── QR code generator ────────────────────────────────────────────────────────
+// Payload = rsEncodeHex(sha256(requestId), 32) — Reed-Solomon with ~25% correction
+
+async function generateQRDataUrl(requestId: string): Promise<string | null> {
+  try {
+    const hash    = await sha256HexStr(requestId);
+    const payload = rsEncodeHex(hash, 32);
+
+    // @ts-ignore
+    if (typeof window.QRCode === 'undefined') {
+      await new Promise<void>((resolve, reject) => {
+        const s   = document.createElement('script');
+        s.src     = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+        s.onload  = () => resolve();
+        s.onerror = () => reject(new Error('Failed to load QRCode.js'));
+        document.head.appendChild(s);
+      });
+    }
+
+    return await new Promise<string>((resolve, reject) => {
+      const div = document.createElement('div');
+      div.style.cssText = 'position:absolute;left:-9999px;top:-9999px;';
+      document.body.appendChild(div);
+
+      // @ts-ignore
+      new window.QRCode(div, {
+        text:         payload,
+        width:        256,
+        height:       256,
+        colorDark:    '#000000',
+        colorLight:   '#ffffff',
+        correctLevel: 2,
+      });
+
+      setTimeout(() => {
+        const canvas = div.querySelector('canvas') as HTMLCanvasElement | null;
+        document.body.removeChild(div);
+        if (canvas) {
+          resolve(canvas.toDataURL('image/png'));
+        } else {
+          reject(new Error('QR canvas not found'));
+        }
+      }, 150);
+    });
+  } catch (e) {
+    console.error('[Docgenerators] QR generation failed:', e);
+    return null;
   }
 }
 
@@ -171,42 +220,23 @@ function buildInlineImageParagraph(
   const jc = align === 'center' ? '<w:jc w:val="center"/>'
            : align === 'right'  ? '<w:jc w:val="right"/>'
            : '';
-
   return (
     `<w:p>` +
     `<w:pPr>${jc}<w:spacing w:before="0" w:after="0"/></w:pPr>` +
-    `<w:r>` +
-      `<w:drawing>` +
-        `<wp:inline distT="0" distB="0" distL="0" distR="0" ` +
-            `xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">` +
-          `<wp:extent cx="${widthEmu}" cy="${heightEmu}"/>` +
-          `<wp:effectExtent l="0" t="0" r="0" b="0"/>` +
-          `<wp:docPr id="1" name="${xmlEscape(descr)}" descr="${xmlEscape(descr)}"/>` +
-          `<wp:cNvGraphicFramePr>` +
-            `<a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/>` +
-          `</wp:cNvGraphicFramePr>` +
-          `<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">` +
-            `<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">` +
-              `<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">` +
-                `<pic:nvPicPr>` +
-                  `<pic:cNvPr id="0" name="${xmlEscape(descr)}"/>` +
-                  `<pic:cNvPicPr/>` +
-                `</pic:nvPicPr>` +
-                `<pic:blipFill>` +
-                  `<a:blip r:embed="${rId}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>` +
-                  `<a:stretch><a:fillRect/></a:stretch>` +
-                `</pic:blipFill>` +
-                `<pic:spPr>` +
-                  `<a:xfrm><a:off x="0" y="0"/><a:ext cx="${widthEmu}" cy="${heightEmu}"/></a:xfrm>` +
-                  `<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>` +
-                `</pic:spPr>` +
-              `</pic:pic>` +
-            `</a:graphicData>` +
-          `</a:graphic>` +
-        `</wp:inline>` +
-      `</w:drawing>` +
-    `</w:r>` +
-    `</w:p>`
+    `<w:r><w:drawing>` +
+    `<wp:inline distT="0" distB="0" distL="0" distR="0" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">` +
+    `<wp:extent cx="${widthEmu}" cy="${heightEmu}"/>` +
+    `<wp:effectExtent l="0" t="0" r="0" b="0"/>` +
+    `<wp:docPr id="1" name="${xmlEscape(descr)}" descr="${xmlEscape(descr)}"/>` +
+    `<wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr>` +
+    `<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">` +
+    `<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">` +
+    `<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">` +
+    `<pic:nvPicPr><pic:cNvPr id="0" name="${xmlEscape(descr)}"/><pic:cNvPicPr/></pic:nvPicPr>` +
+    `<pic:blipFill><a:blip r:embed="${rId}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>` +
+    `<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${widthEmu}" cy="${heightEmu}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>` +
+    `</pic:pic></a:graphicData></a:graphic></wp:inline>` +
+    `</w:drawing></w:r></w:p>`
   );
 }
 
@@ -227,15 +257,15 @@ async function injectImageIntoZip(
   if (!relsFile) return;
   let relsXml: string = await relsFile.async('string');
 
-  // Only add if not already present (avoids duplicates on re-run)
   if (!relsXml.includes(`Id="${rId}"`)) {
     const imageType  = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/image';
-    const newRelLine = `<Relationship Id="${rId}" Type="${imageType}" Target="media/${fileName}"/>`;
-    relsXml = relsXml.replace('</Relationships>', `${newRelLine}\n</Relationships>`);
+    relsXml = relsXml.replace(
+      '</Relationships>',
+      `<Relationship Id="${rId}" Type="${imageType}" Target="media/${fileName}"/>\n</Relationships>`,
+    );
     zip.file('word/_rels/document.xml.rels', relsXml);
   }
 
-  // Register PNG content type if missing
   const ctFile = zip.file('[Content_Types].xml');
   if (ctFile) {
     let ctXml: string = await ctFile.async('string');
@@ -246,18 +276,12 @@ async function injectImageIntoZip(
   }
 }
 
-// ─── Signature placeholder replacer ──────────────────────────────────────────
-//
-// The key fix: Word often splits a text run like {%SIGNATURE_1} across
-// multiple <w:r> elements when you type it (due to spell-check, font hints,
-// autocorrect marks, etc.).
-//
-// Strategy:
-//  1. Strip all XML tags from each <w:p> block to get its plain text.
-//  2. If that plain text contains the placeholder string, replace the entire
-//     <w:p>...</w:p> with the image paragraph.
-//
-// This is far more reliable than regex-matching the placeholder inside raw XML.
+// ─── Placeholder replacer ─────────────────────────────────────────────────────
+// Word splits typed text across multiple <w:r> runs, so we can't reliably
+// regex-match the placeholder inside raw XML. Instead:
+//  1. Walk paragraph by paragraph
+//  2. Strip all XML tags → get plain text of each paragraph
+//  3. If plain text contains the placeholder → replace the whole <w:p> block
 
 async function replacePlaceholderWithImage(
   zip:           any,
@@ -273,107 +297,73 @@ async function replacePlaceholderWithImage(
   if (!docFile) return;
 
   const xml: string = await docFile.async('string');
-
-  // Inject image bytes + relationship first
   await injectImageIntoZip(zip, base64DataUrl, fileName, rId);
 
   const widthEmu     = Math.round(widthInches  * 914400);
   const heightEmu    = Math.round(heightInches * 914400);
   const imgParagraph = buildInlineImageParagraph(rId, widthEmu, heightEmu, placeholder, align);
-
-  // Split the full XML into individual <w:p>…</w:p> blocks, replacing any
-  // paragraph whose stripped plain text contains the placeholder.
-  //
-  // We use a stateful split approach instead of a greedy regex so that we
-  // correctly handle paragraphs that contain nested elements.
-  const result   = replaceParagraphContaining(xml, placeholder, imgParagraph);
+  const result       = replaceParagraphContaining(xml, placeholder, imgParagraph);
 
   if (result === xml) {
-    console.warn(`[Docgenerators] Placeholder "${placeholder}" not found in any paragraph — check your template.`);
+    console.warn(`[Docgenerators] Placeholder "${placeholder}" not found — check your .docx template.`);
   }
 
   zip.file('word/document.xml', result);
 }
 
-/**
- * Splits the XML string into segments around <w:p> tags and replaces any
- * paragraph whose concatenated text-run content includes `searchText`.
- *
- * Uses a simple bracket-counting approach so it correctly handles nested
- * elements without backtracking regex issues.
- */
 function replaceParagraphContaining(
-  xml:        string,
-  searchText: string,
+  xml:         string,
+  searchText:  string,
   replacement: string,
 ): string {
   const OPEN  = '<w:p>';
-  const OPEN2 = '<w:p ';   // paragraph with attributes, e.g. <w:p w:rsidR="...">
+  const OPEN2 = '<w:p ';
   const CLOSE = '</w:p>';
 
   let result = '';
   let i      = 0;
 
   while (i < xml.length) {
-    // Find the next paragraph opening tag
     const nextOpen  = xml.indexOf(OPEN,  i);
     const nextOpen2 = xml.indexOf(OPEN2, i);
 
-    // Determine which comes first
     let pStart = -1;
-    if (nextOpen  === -1 && nextOpen2 === -1) break;
+    if (nextOpen === -1 && nextOpen2 === -1) break;
     if (nextOpen  === -1) pStart = nextOpen2;
     else if (nextOpen2 === -1) pStart = nextOpen;
     else pStart = Math.min(nextOpen, nextOpen2);
 
-    // Append everything before this paragraph
     result += xml.slice(i, pStart);
 
-    // Find the matching </w:p>
-    // We count depth to handle <w:p> nested inside bookmarks / structured
-    // document tags — though in practice Word rarely nests w:p inside w:p.
-    let depth   = 1;
-    let cursor  = pStart + (xml[pStart + 4] === ' ' ? OPEN2.length : OPEN.length);
+    let depth  = 1;
+    let cursor = pStart + (xml[pStart + 4] === ' ' ? OPEN2.length : OPEN.length);
 
     while (cursor < xml.length && depth > 0) {
       const closeIdx = xml.indexOf(CLOSE, cursor);
       const openIdx  = xml.indexOf(OPEN,  cursor);
       const open2Idx = xml.indexOf(OPEN2, cursor);
 
-      const nextCloseAt = closeIdx === -1 ? Infinity : closeIdx;
+      const nextCloseAt = closeIdx  === -1 ? Infinity : closeIdx;
       const nextOpenAt  = Math.min(
         openIdx  === -1 ? Infinity : openIdx,
         open2Idx === -1 ? Infinity : open2Idx,
       );
 
-      if (nextCloseAt < nextOpenAt) {
+      if (nextCloseAt <= nextOpenAt) {
         depth--;
         cursor = closeIdx + CLOSE.length;
-      } else if (nextOpenAt < nextCloseAt) {
+      } else {
         depth++;
         cursor = nextOpenAt + (xml[nextOpenAt + 4] === ' ' ? OPEN2.length : OPEN.length);
-      } else {
-        // No more tags — malformed XML, bail
-        cursor = xml.length;
       }
     }
 
-    const pEnd     = cursor; // points right after </w:p>
-    const pBlock   = xml.slice(pStart, pEnd);
-
-    // Strip all XML tags to get plain text of this paragraph
+    const pBlock    = xml.slice(pStart, cursor);
     const plainText = pBlock.replace(/<[^>]+>/g, '');
-
-    if (plainText.includes(searchText)) {
-      result += replacement;
-    } else {
-      result += pBlock;
-    }
-
-    i = pEnd;
+    result += plainText.includes(searchText) ? replacement : pBlock;
+    i = cursor;
   }
 
-  // Append any remaining XML after the last paragraph
   result += xml.slice(i);
   return result;
 }
@@ -392,16 +382,12 @@ async function loadTemplate(documentType: string): Promise<{ zip: any }> {
   const JSZip = await loadJSZip();
   const url   = TEMPLATE_MAP[documentType];
   if (!url) throw new Error(`No template found for document type: ${documentType}`);
-
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Could not load template (${response.status}): ${url}`);
-
   const buffer = await response.arrayBuffer();
   const zip    = await JSZip.loadAsync(buffer);
   return { zip };
 }
-
-// ─── XML patch helper ─────────────────────────────────────────────────────────
 
 async function patchXml(
   zip:      any,
@@ -410,9 +396,7 @@ async function patchXml(
 ): Promise<void> {
   const file = zip.file(filename);
   if (!file) return;
-  const xml     = await file.async('string');
-  const updated = patcher(xml);
-  zip.file(filename, updated);
+  zip.file(filename, patcher(await file.async('string')));
 }
 
 // ─── Per-document text injectors ─────────────────────────────────────────────
@@ -426,30 +410,18 @@ async function injectBarangayClearance(zip: any, req: RequestDetail, profile: Pr
   const ctcDate     = req.ctc_date_issued  ?? '___________';
   const ctcPlace    = req.ctc_place_issued ?? '___________';
   const purpose     = req.purpose === 'others' && req.custom_purpose
-                      ? req.custom_purpose
-                      : (req.purpose ?? 'general purposes');
+                      ? req.custom_purpose : (req.purpose ?? 'general purposes');
   const date        = getToday();
-
   await patchXml(zip, 'word/document.xml', xml => {
     const certifyText = `${xmlEscape(name)} of legal age, ${xmlEscape(sex)}, ${xmlEscape(civilStatus)}, Filipino citizen, whose name and signature/right thumb mark appears below is a BONAFIDE and permanent resident of ${xmlEscape(purok)}, BRGY. GUIN-ON, Calbayog City,`;
     const furtherCert = `Further certifies that he/ she has no derogatory record and has good moral character as per our Barangay record in connected. This clearance is issued upon request for ${xmlEscape(purpose)} and for whatever legal purpose it may serve.`;
-
     return xml
-      .replace(
-        /_____________________ of legal age, male\/female, single\/married\/widow\/ widower, Filipino citizen, whose name and signature\/right thumb mark appears below is a BONAFIDE and permanent resident of BRGY\. GUIN-ON, Calbayog City, /g,
-        certifyText,
-      )
-      .replace(
-        /Issued this ___ day of JANUARY, 2024 at Brgy\. Guin-on, Calbayog City, Samar, Philippines\./g,
-        `Issued this ${xmlEscape(date)} at Brgy. Guin-on, Calbayog City, Samar, Philippines.`,
-      )
+      .replace(/_____________________ of legal age, male\/female, single\/married\/widow\/ widower, Filipino citizen, whose name and signature\/right thumb mark appears below is a BONAFIDE and permanent resident of BRGY\. GUIN-ON, Calbayog City, /g, certifyText)
+      .replace(/Issued this ___ day of JANUARY, 2024 at Brgy\. Guin-on, Calbayog City, Samar, Philippines\./g, `Issued this ${xmlEscape(date)} at Brgy. Guin-on, Calbayog City, Samar, Philippines.`)
       .replace(/CTC #: __________________ /g,  `CTC #: ${xmlEscape(ctcNo)} `)
       .replace(/Date Issued: ______________ /g, `Date Issued: ${xmlEscape(ctcDate)} `)
       .replace(/Place Issued: ______________/g, `Place Issued: ${xmlEscape(ctcPlace)}`)
-      .replace(
-        /Further certifies that he\/ she has no derogatory record and has good moral character as per our Barangay record in connected\. /g,
-        furtherCert + ' ',
-      );
+      .replace(/Further certifies that he\/ she has no derogatory record and has good moral character as per our Barangay record in connected\. /g, furtherCert + ' ');
   });
 }
 
@@ -462,7 +434,6 @@ async function injectBusinessClearance(zip: any, req: RequestDetail, profile: Pr
   const suffix   = day === '1' ? 'st' : day === '2' ? 'nd' : day === '3' ? 'rd' : 'th';
   const month    = now.toLocaleString('en-PH', { month: 'long' }).toUpperCase();
   const year     = String(now.getFullYear());
-
   await patchXml(zip, 'word/document.xml', xml =>
     xml
       .replace(/Grante GREGORIO BALDOMARO GOMEZ, /g, `Granted to ${xmlEscape(owner)}, `)
@@ -472,19 +443,17 @@ async function injectBusinessClearance(zip: any, req: RequestDetail, profile: Pr
       .replace(/(<w:t[^>]*>)04(<\/w:t>)/,             `$1${xmlEscape(day)}$2`)
       .replace(/(<w:t[^>]*>)th(<\/w:t>)/,             `$1${xmlEscape(suffix)}$2`)
       .replace(/of DECEMBER /g,                        `of ${xmlEscape(month)} `)
-      .replace(/(<w:t[^>]*>)2025(<\/w:t>)/g,          `$1${xmlEscape(year)}$2`),
-  );
+      .replace(/(<w:t[^>]*>)2025(<\/w:t>)/g,          `$1${xmlEscape(year)}$2`));
 }
 
 async function injectCertificationOfDeath(zip: any, req: RequestDetail, profile: Profile): Promise<void> {
   const requestor   = `${profile.firstName} ${profile.lastName}`.toUpperCase();
-  const deceased    = (req.deceased_name  ?? '___________').toUpperCase();
-  const age         = req.deceased_age    ?? '___';
-  const dateOfDeath = req.date_of_death   ?? '___________';
-  const place       = req.place_of_death  ?? '___________';
+  const deceased    = (req.deceased_name ?? '___________').toUpperCase();
+  const age         = req.deceased_age   ?? '___';
+  const dateOfDeath = req.date_of_death  ?? '___________';
+  const place       = req.place_of_death ?? '___________';
   const relation    = req.relationship_to_deceased ?? '___________';
   const date        = getToday();
-
   await patchXml(zip, 'word/document.xml', xml =>
     xml
       .replace(/JUAN DELA CRUZ/g,                  xmlEscape(requestor))
@@ -493,8 +462,7 @@ async function injectCertificationOfDeath(zip: any, req: RequestDetail, profile:
       .replace(/JANUARY 1, 2024/g,                  xmlEscape(dateOfDeath))
       .replace(/Calbayog City Samar Philippines/g,  xmlEscape(place))
       .replace(/Son\/Daughter\/Spouse/g,             xmlEscape(relation))
-      .replace(/_+day of [A-Z]+, 20\d\d/g,          date),
-  );
+      .replace(/_+day of [A-Z]+, 20\d\d/g,          date));
 }
 
 async function injectJobSeekerCert(zip: any, req: RequestDetail, profile: Profile): Promise<void> {
@@ -507,7 +475,6 @@ async function injectJobSeekerCert(zip: any, req: RequestDetail, profile: Profil
   const suffix = day === '1' ? 'st' : day === '2' ? 'nd' : day === '3' ? 'rd' : 'th';
   const month  = now.toLocaleString('en-PH', { month: 'long' }).toUpperCase();
   const year   = String(now.getFullYear());
-
   await patchXml(zip, 'word/document.xml', xml =>
     xml
       .replace(/JIRAH JALAYAJAY ARIMALA/g,  xmlEscape(name))
@@ -520,8 +487,7 @@ async function injectJobSeekerCert(zip: any, req: RequestDetail, profile: Profil
       .replace(/(<w:t[^>]*>)OCTOBER (<\/w:t>)/g,       `$1${xmlEscape(month)} $2`)
       .replace(/2025, in Calbayog City, Samar\./g,     `${xmlEscape(year)}, in Calbayog City, Samar.`)
       .replace(/(<w:t[^>]*>)OCTOBER 06(<\/w:t>)/g,    `$1${xmlEscape(month)} ${xmlEscape(day)}$2`)
-      .replace(/(<w:t[^>]*>), 2025(<\/w:t>)/g,         `$1, ${xmlEscape(year)}$2`),
-  );
+      .replace(/(<w:t[^>]*>), 2025(<\/w:t>)/g,         `$1, ${xmlEscape(year)}$2`));
 }
 
 async function injectOathOfUndertaking(zip: any, req: RequestDetail, profile: Profile): Promise<void> {
@@ -533,15 +499,12 @@ async function injectOathOfUndertaking(zip: any, req: RequestDetail, profile: Pr
   const suffix = day === '1' ? 'st' : day === '2' ? 'nd' : day === '3' ? 'rd' : 'th';
   const month  = now.toLocaleString('en-PH', { month: 'long' }).toUpperCase();
   const year   = String(now.getFullYear());
-
   await patchXml(zip, 'word/document.xml', xml =>
     xml
       .replace(/EGBERT KIA DELA CRUZ/g,  xmlEscape(name))
       .replace(/Samar for 5 years,/g,    `Samar for ${xmlEscape(years)} years,`)
-      .replace(/ 2024, in Barangay Guin-on, Calbayog City, Samar\./g,
-               ` ${xmlEscape(year)}, in Barangay Guin-on, Calbayog City, Samar.`)
-      .replace(/(<w:t[^>]*>) SEPTEMBER (<\/w:t>)/g, `$1 ${xmlEscape(month)} $2`),
-  );
+      .replace(/ 2024, in Barangay Guin-on, Calbayog City, Samar\./g, ` ${xmlEscape(year)}, in Barangay Guin-on, Calbayog City, Samar.`)
+      .replace(/(<w:t[^>]*>) SEPTEMBER (<\/w:t>)/g, `$1 ${xmlEscape(month)} $2`));
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
@@ -566,38 +529,32 @@ export async function generateDocument(
       console.warn(`[Docgenerators] No text injector for document type: ${docType}`);
   }
 
-  // 3. Fetch signature images from Supabase (admin settings)
+  // 3. Fetch ECDSA signatures from admin_signatures table
   const sigs = await fetchSignatureImages();
 
-  // 4. Replace {%SIGNATURE_1} with Secretary signature image
+  // 4. Inject {%SIGNATURE_1} — Secretary
   if (sigs.secretary) {
-    await replacePlaceholderWithImage(
-      zip,
-      '{%SIGNATURE_1}',
-      sigs.secretary,
-      'rId100',
-      'sig_secretary.png',
-      1.8,   // width in inches  — adjust to fit your template cell
-      0.6,   // height in inches — adjust to fit your template cell
-      'left',
-    );
+    await replacePlaceholderWithImage(zip, '{%SIGNATURE_1}', sigs.secretary, 'rId100', 'sig_secretary.png', 1.8, 0.6, 'left');
+  } else {
+    console.warn('[Docgenerators] Secretary signature missing — save it in Admin > Settings > Signatures');
   }
 
-  // 5. Replace {%SIGNATURE_2} with Captain signature image
+  // 5. Inject {%SIGNATURE_2} — Captain
   if (sigs.captain) {
-    await replacePlaceholderWithImage(
-      zip,
-      '{%SIGNATURE_2}',
-      sigs.captain,
-      'rId101',
-      'sig_captain.png',
-      1.8,   // width in inches
-      0.6,   // height in inches
-      'left',
-    );
+    await replacePlaceholderWithImage(zip, '{%SIGNATURE_2}', sigs.captain, 'rId101', 'sig_captain.png', 1.8, 0.6, 'left');
+  } else {
+    console.warn('[Docgenerators] Captain signature missing — save it in Admin > Settings > Signatures');
   }
 
-  // 6. Generate output blob
+  // 6. Inject {%QR_CODE} — Reed-Solomon encoded QR of the request ID hash
+  const qrDataUrl = await generateQRDataUrl(req.id);
+  if (qrDataUrl) {
+    await replacePlaceholderWithImage(zip, '{%QR_CODE}', qrDataUrl, 'rId102', 'qr_code.png', 1.0, 1.0, 'center');
+  } else {
+    console.warn('[Docgenerators] QR code generation failed');
+  }
+
+  // 7. Build output blob
   const outBuffer = await zip.generateAsync({ type: 'arraybuffer' });
   const blob = new Blob([outBuffer], {
     type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
