@@ -215,20 +215,38 @@ async function generateQRDataUrl(requestId: string): Promise<string | null> {
       div.style.cssText = 'position:absolute;left:-9999px;top:-9999px;';
       document.body.appendChild(div);
 
-      // Watch for the canvas that QRCode.js will append into div
-      const observer = new MutationObserver((mutations) => {
+      // Single cleanup gate — whichever observer fires first wins.
+      // Subsequent calls from the other observer are silent no-ops.
+      let settled = false;
+      let timeoutId: ReturnType<typeof setTimeout>;
+
+      const cleanup = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeoutId);
+        canvasObserver.disconnect();
+        imgObserver.disconnect();
+        if (div.parentNode) div.parentNode.removeChild(div);
+      };
+
+      const settle = (result: string | Error) => {
+        cleanup();
+        if (result instanceof Error) reject(result);
+        else resolve(result);
+      };
+
+      // Path A — QRCode.js renders a <canvas> (desktop browsers)
+      const canvasObserver = new MutationObserver((mutations) => {
         for (const m of mutations) {
           for (const node of Array.from(m.addedNodes)) {
             if ((node as HTMLElement).tagName === 'CANVAS') {
-              observer.disconnect();
-              // Let QRCode finish drawing (it sets src after append)
+              // Let QRCode finish drawing before we read the pixels
               requestAnimationFrame(() => {
-                const canvas = node as HTMLCanvasElement;
-                document.body.removeChild(div);
+                if (settled) return;
                 try {
-                  resolve(canvas.toDataURL('image/png'));
+                  settle((node as HTMLCanvasElement).toDataURL('image/png'));
                 } catch (e) {
-                  reject(e);
+                  settle(e instanceof Error ? e : new Error(String(e)));
                 }
               });
               return;
@@ -236,28 +254,21 @@ async function generateQRDataUrl(requestId: string): Promise<string | null> {
           }
         }
       });
+      canvasObserver.observe(div, { childList: true, subtree: true });
 
-      observer.observe(div, { childList: true, subtree: true });
-
-      // Fallback: if QRCode lib adds an <img> instead of <canvas>
+      // Path B — QRCode.js renders an <img> (some mobile / older builds)
       const imgObserver = new MutationObserver(() => {
+        if (settled) return;
         const img = div.querySelector('img') as HTMLImageElement | null;
-        if (img && img.src) {
-          imgObserver.disconnect();
-          observer.disconnect();
-          document.body.removeChild(div);
-          resolve(img.src);
-        }
+        if (img && img.src) settle(img.src);
       });
       imgObserver.observe(div, { childList: true, subtree: true, attributes: true });
 
-      // Safety timeout — 8 seconds (generous but bounded)
-      const timeout = setTimeout(() => {
-        observer.disconnect();
-        imgObserver.disconnect();
-        if (div.parentNode) document.body.removeChild(div);
-        reject(new Error('QR code generation timed out after 8s'));
-      }, 8000);
+      // Safety net — 8 s hard timeout
+      timeoutId = setTimeout(
+        () => settle(new Error('QR code generation timed out after 8s')),
+        8000,
+      );
 
       try {
         // @ts-ignore
@@ -270,16 +281,8 @@ async function generateQRDataUrl(requestId: string): Promise<string | null> {
           correctLevel: 2,
         });
       } catch (e) {
-        clearTimeout(timeout);
-        observer.disconnect();
-        imgObserver.disconnect();
-        if (div.parentNode) document.body.removeChild(div);
-        reject(e);
+        settle(e instanceof Error ? e : new Error(String(e)));
       }
-
-      // Clear the safety timeout once either observer fires (they call resolve/reject)
-      // We can't easily wire this up cleanly without more refactoring, so the
-      // timeout simply acts as a hard upper-bound safety net.
     });
   } catch (e) {
     console.error('[Docgenerators] QR generation failed:', e);
