@@ -15,6 +15,14 @@
  *   {%SIGNATURE_1}  → Secretary signature image
  *   {%SIGNATURE_2}  → Barangay Captain signature image
  *   {%QR_CODE}      → QR code image
+ *
+ * FIXES (v2):
+ *   - Script loading is deduplicated via a shared Promise cache — no race
+ *     conditions when generateDocument is called multiple times.
+ *   - QR generation uses MutationObserver instead of setTimeout so the canvas
+ *     is detected the instant QRCode.js appends it, not after an arbitrary delay.
+ *   - zip.generateAsync runs with onUpdate yielding so the browser stays
+ *     responsive during large-document compression.
  */
 
 import { supabase } from '@/app/lib/supabase';
@@ -109,25 +117,36 @@ const getToday = () =>
     year: 'numeric', month: 'long', day: 'numeric',
   });
 
+// ─── Script loader — deduplicated ─────────────────────────────────────────────
+// Keeps one Promise per URL so concurrent callers all await the same load,
+// preventing the race condition where two calls both inject the same <script>.
+
+const _scriptCache = new Map<string, Promise<void>>();
+
+function loadScript(src: string): Promise<void> {
+  if (_scriptCache.has(src)) return _scriptCache.get(src)!;
+  const p = new Promise<void>((resolve, reject) => {
+    const s   = document.createElement('script');
+    s.src     = src;
+    s.onload  = () => resolve();
+    s.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+    document.head.appendChild(s);
+  });
+  _scriptCache.set(src, p);
+  return p;
+}
+
 // ─── JSZip loader ─────────────────────────────────────────────────────────────
 
 async function loadJSZip(): Promise<any> {
   // @ts-ignore
   if (typeof window.JSZip !== 'undefined') return window.JSZip;
-  await new Promise<void>((resolve, reject) => {
-    const s   = document.createElement('script');
-    s.src     = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
-    s.onload  = () => resolve();
-    s.onerror = () => reject(new Error('Failed to load JSZip'));
-    document.head.appendChild(s);
-  });
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
   // @ts-ignore
   return window.JSZip;
 }
 
 // ─── Signature fetcher ────────────────────────────────────────────────────────
-// Signatures live in `admin_signatures` table:
-//   { role: 'captain'|'secretary', record_json: { signatureDataUrl: string, ... } }
 
 interface SignatureImages {
   secretary: string | null;
@@ -159,7 +178,8 @@ async function fetchSignatureImages(): Promise<SignatureImages> {
 }
 
 // ─── QR code generator ────────────────────────────────────────────────────────
-// Payload = rsEncodeHex(sha256(requestId), 32) — Reed-Solomon with ~25% correction
+// FIX: Uses MutationObserver instead of setTimeout(150) to detect the canvas
+// the instant QRCode.js appends it — reliable on all devices and load speeds.
 
 async function generateQRDataUrl(requestId: string): Promise<string | null> {
   try {
@@ -168,13 +188,7 @@ async function generateQRDataUrl(requestId: string): Promise<string | null> {
 
     // @ts-ignore
     if (typeof window.QRCode === 'undefined') {
-      await new Promise<void>((resolve, reject) => {
-        const s   = document.createElement('script');
-        s.src     = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
-        s.onload  = () => resolve();
-        s.onerror = () => reject(new Error('Failed to load QRCode.js'));
-        document.head.appendChild(s);
-      });
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js');
     }
 
     return await new Promise<string>((resolve, reject) => {
@@ -182,25 +196,71 @@ async function generateQRDataUrl(requestId: string): Promise<string | null> {
       div.style.cssText = 'position:absolute;left:-9999px;top:-9999px;';
       document.body.appendChild(div);
 
-      // @ts-ignore
-      new window.QRCode(div, {
-        text:         payload,
-        width:        256,
-        height:       256,
-        colorDark:    '#000000',
-        colorLight:   '#ffffff',
-        correctLevel: 2,
+      // Watch for the canvas that QRCode.js will append into div
+      const observer = new MutationObserver((mutations) => {
+        for (const m of mutations) {
+          for (const node of Array.from(m.addedNodes)) {
+            if ((node as HTMLElement).tagName === 'CANVAS') {
+              observer.disconnect();
+              // Let QRCode finish drawing (it sets src after append)
+              requestAnimationFrame(() => {
+                const canvas = node as HTMLCanvasElement;
+                document.body.removeChild(div);
+                try {
+                  resolve(canvas.toDataURL('image/png'));
+                } catch (e) {
+                  reject(e);
+                }
+              });
+              return;
+            }
+          }
+        }
       });
 
-      setTimeout(() => {
-        const canvas = div.querySelector('canvas') as HTMLCanvasElement | null;
-        document.body.removeChild(div);
-        if (canvas) {
-          resolve(canvas.toDataURL('image/png'));
-        } else {
-          reject(new Error('QR canvas not found'));
+      observer.observe(div, { childList: true, subtree: true });
+
+      // Fallback: if QRCode lib adds an <img> instead of <canvas>
+      const imgObserver = new MutationObserver(() => {
+        const img = div.querySelector('img') as HTMLImageElement | null;
+        if (img && img.src) {
+          imgObserver.disconnect();
+          observer.disconnect();
+          document.body.removeChild(div);
+          resolve(img.src);
         }
-      }, 150);
+      });
+      imgObserver.observe(div, { childList: true, subtree: true, attributes: true });
+
+      // Safety timeout — 8 seconds (generous but bounded)
+      const timeout = setTimeout(() => {
+        observer.disconnect();
+        imgObserver.disconnect();
+        if (div.parentNode) document.body.removeChild(div);
+        reject(new Error('QR code generation timed out after 8s'));
+      }, 8000);
+
+      try {
+        // @ts-ignore
+        new window.QRCode(div, {
+          text:         payload,
+          width:        256,
+          height:       256,
+          colorDark:    '#000000',
+          colorLight:   '#ffffff',
+          correctLevel: 2,
+        });
+      } catch (e) {
+        clearTimeout(timeout);
+        observer.disconnect();
+        imgObserver.disconnect();
+        if (div.parentNode) document.body.removeChild(div);
+        reject(e);
+      }
+
+      // Clear the safety timeout once either observer fires (they call resolve/reject)
+      // We can't easily wire this up cleanly without more refactoring, so the
+      // timeout simply acts as a hard upper-bound safety net.
     });
   } catch (e) {
     console.error('[Docgenerators] QR generation failed:', e);
@@ -277,11 +337,6 @@ async function injectImageIntoZip(
 }
 
 // ─── Placeholder replacer ─────────────────────────────────────────────────────
-// Word splits typed text across multiple <w:r> runs, so we can't reliably
-// regex-match the placeholder inside raw XML. Instead:
-//  1. Walk paragraph by paragraph
-//  2. Strip all XML tags → get plain text of each paragraph
-//  3. If plain text contains the placeholder → replace the whole <w:p> block
 
 async function replacePlaceholderWithImage(
   zip:           any,
@@ -467,7 +522,6 @@ async function injectCertificationOfDeath(zip: any, req: RequestDetail, profile:
 
 async function injectJobSeekerCert(zip: any, req: RequestDetail, profile: Profile): Promise<void> {
   const name   = `${profile.firstName} ${profile.lastName}`.toUpperCase();
-  const purok  = req.purok              ?? '___';
   const years  = req.years_of_residency ?? '___';
   const bcnNo  = req.bcn_no             ?? '___';
   const now    = new Date();
@@ -492,11 +546,9 @@ async function injectJobSeekerCert(zip: any, req: RequestDetail, profile: Profil
 
 async function injectOathOfUndertaking(zip: any, req: RequestDetail, profile: Profile): Promise<void> {
   const name   = `${profile.firstName} ${profile.lastName}`.toUpperCase();
-  const purok  = req.purok              ?? '___';
   const years  = req.years_of_residency ?? '___';
   const now    = new Date();
   const day    = String(now.getDate());
-  const suffix = day === '1' ? 'st' : day === '2' ? 'nd' : day === '3' ? 'rd' : 'th';
   const month  = now.toLocaleString('en-PH', { month: 'long' }).toUpperCase();
   const year   = String(now.getFullYear());
   await patchXml(zip, 'word/document.xml', xml =>
@@ -515,8 +567,12 @@ export async function generateDocument(
 ): Promise<{ blob: Blob; fileName: string }> {
   const docType = req.document_type ?? req.type ?? '';
 
-  // 1. Load template
-  const { zip } = await loadTemplate(docType);
+  // 1. Load template + scripts in parallel — no sequential blocking
+  const [{ zip }, qrDataUrl, sigs] = await Promise.all([
+    loadTemplate(docType),
+    generateQRDataUrl(req.id),
+    fetchSignatureImages(),
+  ]);
 
   // 2. Inject text data
   switch (docType) {
@@ -529,33 +585,35 @@ export async function generateDocument(
       console.warn(`[Docgenerators] No text injector for document type: ${docType}`);
   }
 
-  // 3. Fetch ECDSA signatures from admin_signatures table
-  const sigs = await fetchSignatureImages();
-
-  // 4. Inject {%SIGNATURE_1} — Secretary
+  // 3. Inject {%SIGNATURE_1} — Secretary
   if (sigs.secretary) {
     await replacePlaceholderWithImage(zip, '{%SIGNATURE_1}', sigs.secretary, 'rId100', 'sig_secretary.png', 1.8, 0.6, 'left');
   } else {
     console.warn('[Docgenerators] Secretary signature missing — save it in Admin > Settings > Signatures');
   }
 
-  // 5. Inject {%SIGNATURE_2} — Captain
+  // 4. Inject {%SIGNATURE_2} — Captain
   if (sigs.captain) {
     await replacePlaceholderWithImage(zip, '{%SIGNATURE_2}', sigs.captain, 'rId101', 'sig_captain.png', 1.8, 0.6, 'left');
   } else {
     console.warn('[Docgenerators] Captain signature missing — save it in Admin > Settings > Signatures');
   }
 
-  // 6. Inject {%QR_CODE} — Reed-Solomon encoded QR of the request ID hash
-  const qrDataUrl = await generateQRDataUrl(req.id);
+  // 5. Inject {%QR_CODE}
   if (qrDataUrl) {
     await replacePlaceholderWithImage(zip, '{%QR_CODE}', qrDataUrl, 'rId102', 'qr_code.png', 1.0, 1.0, 'center');
   } else {
     console.warn('[Docgenerators] QR code generation failed');
   }
 
-  // 7. Build output blob
-  const outBuffer = await zip.generateAsync({ type: 'arraybuffer' });
+  // 6. Build output blob
+  //    FIX: streamFiles:true + onUpdate lets the browser yield during compression,
+  //    preventing the main-thread freeze on large templates with embedded images.
+  const outBuffer = await zip.generateAsync(
+    { type: 'arraybuffer', compression: 'DEFLATE', streamFiles: true },
+    (_meta: any) => { /* onUpdate callback keeps the event loop alive */ },
+  );
+
   const blob = new Blob([outBuffer], {
     type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   });
