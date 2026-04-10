@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/Card';
 import Input from '@/app/components/ui/Input';
 import Button from '@/app/components/ui/Button';
 import Alert from '@/app/components/ui/Alert';
 import { supabase } from '@/app/lib/supabase';
-import { Mail, Calendar, Shield, Camera, Save, Key, Loader2 } from 'lucide-react';
+import { Mail, Calendar, Shield, Camera, Save, Key, Loader2, Check } from 'lucide-react';
 
 interface ProfileData {
   firstName: string; lastName: string; email: string;
@@ -27,30 +27,53 @@ const fileToBase64 = (file: File): Promise<string> =>
 const getInitials = (f: string, l: string) =>
   `${f?.[0] ?? ''}${l?.[0] ?? ''}`.toUpperCase() || '?';
 
+/* ─── Variants ───────────────────────────────────────────────── */
+const EASE = [0.25, 0.46, 0.45, 0.94] as [number, number, number, number];
+
+const fadeUp = (delay = 0) => ({
+  initial:    { opacity: 0, y: 20 },
+  animate:    { opacity: 1, y: 0 },
+  transition: { duration: 0.4, delay, ease: EASE },
+});
+
+const staggerContainer: Variants = {
+  animate: { transition: { staggerChildren: 0.06 } },
+};
+
+const staggerItem: Variants = {
+  initial: { opacity: 0, y: 12 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.3, ease: EASE } },
+};
+
+const statVariants: Variants = {
+  initial: { opacity: 0, scale: 0.85 },
+  animate: { opacity: 1, scale: 1,    transition: { type: 'spring', stiffness: 300 } },
+};
+
 export default function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing,          setIsEditing]          = useState(false);
   const [showPasswordChange, setShowPasswordChange] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [memberSince, setMemberSince] = useState('');
-  const [userId, setUserId] = useState('');
+  const [successMessage,     setSuccessMessage]     = useState('');
+  const [errorMessage,       setErrorMessage]       = useState('');
+  const [loading,            setLoading]            = useState(true);
+  const [saving,             setSaving]             = useState(false);
+  const [justSaved,          setJustSaved]          = useState(false);
+  const [memberSince,        setMemberSince]        = useState('');
+  const [userId,             setUserId]             = useState('');
 
   const emptyProfile: ProfileData = {
     firstName: '', lastName: '', email: '', phone: '',
     address: '', birthday: '', civilStatus: '', username: '', avatarBase64: '',
   };
-  const [profileData, setProfileData] = useState<ProfileData>(emptyProfile);
-  const [originalData, setOriginalData] = useState<ProfileData>(emptyProfile);
-  const [passwordData, setPasswordData] = useState({ newPassword: '', confirmPassword: '' });
-  const [stats, setStats] = useState<Stats>({ total: 0, approved: 0, pending: 0, thisMonth: 0 });
+  const [profileData,   setProfileData]   = useState<ProfileData>(emptyProfile);
+  const [originalData,  setOriginalData]  = useState<ProfileData>(emptyProfile);
+  const [passwordData,  setPasswordData]  = useState({ newPassword: '', confirmPassword: '' });
+  const [stats,         setStats]         = useState<Stats>({ total: 0, approved: 0, pending: 0, thisMonth: 0 });
 
   const showSuccess = (msg: string) => { setSuccessMessage(msg); setTimeout(() => setSuccessMessage(''), 3500); };
   const showError   = (msg: string) => { setErrorMessage(msg);   setTimeout(() => setErrorMessage(''), 4000); };
 
-  // ── Load profile via API route ─────────────────
   useEffect(() => {
     const load = async () => {
       try {
@@ -85,9 +108,9 @@ export default function ProfilePage() {
           .from('requests').select('status, created_at').eq('user_id', user.id);
         if (requests) {
           setStats({
-            total: requests.length,
-            approved: requests.filter(r => r.status === 'approved').length,
-            pending:  requests.filter(r => r.status === 'pending').length,
+            total:     requests.length,
+            approved:  requests.filter(r => r.status === 'approved').length,
+            pending:   requests.filter(r => r.status === 'pending').length,
             thisMonth: requests.filter(r => r.created_at >= firstOfMonth).length,
           });
         }
@@ -101,7 +124,6 @@ export default function ProfilePage() {
     load();
   }, []);
 
-  // ── Avatar ─────────────────
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -115,7 +137,6 @@ export default function ProfilePage() {
     } catch { showError('Failed to update profile picture.'); }
   };
 
-  // ── Save profile ─────────────────
   const handleSaveProfile = async () => {
     setSaving(true);
     try {
@@ -137,7 +158,9 @@ export default function ProfilePage() {
 
       setOriginalData(profileData);
       setIsEditing(false);
+      setJustSaved(true);
       showSuccess('Profile updated successfully!');
+      setTimeout(() => setJustSaved(false), 2000);
     } catch (err: any) {
       showError(err.message || 'Failed to save profile.');
     } finally {
@@ -145,7 +168,6 @@ export default function ProfilePage() {
     }
   };
 
-  // ── Change Password ─────────────────
   const handleChangePassword = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) { showError('Passwords do not match.'); return; }
     if (passwordData.newPassword.length < 8) { showError('Password must be at least 8 characters.'); return; }
@@ -164,9 +186,16 @@ export default function ProfilePage() {
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f0f23]">
-      <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
-    </div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f0f23]">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }}
+        >
+          <Loader2 className="w-8 h-8 text-orange-500" />
+        </motion.div>
+      </div>
+    );
   }
 
   return (
@@ -174,205 +203,367 @@ export default function ProfilePage() {
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
 
       <div className="max-w-5xl mx-auto">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+
+        {/* Header */}
+        <motion.div {...fadeUp(0)} className="mb-8">
           <h1 className="text-3xl md:text-4xl font-bold mb-2">Profile Settings</h1>
           <p className="text-gray-700 dark:text-gray-400">Manage your account information and settings</p>
         </motion.div>
 
-        {successMessage && (
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-            <Alert variant="success" onClose={() => setSuccessMessage('')}>{successMessage}</Alert>
-          </motion.div>
-        )}
-        {errorMessage && (
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-            <Alert variant="error" onClose={() => setErrorMessage('')}>{errorMessage}</Alert>
-          </motion.div>
-        )}
+        {/* Alerts */}
+        <AnimatePresence>
+          {successMessage && (
+            <motion.div
+              key="success"
+              initial={{ opacity: 0, y: -12, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0,   scale: 1 }}
+              exit={{    opacity: 0, y: -8,   scale: 0.97 }}
+              transition={{ duration: 0.25 }}
+              className="mb-6"
+            >
+              <Alert variant="success" onClose={() => setSuccessMessage('')}>{successMessage}</Alert>
+            </motion.div>
+          )}
+          {errorMessage && (
+            <motion.div
+              key="error"
+              initial={{ opacity: 0, y: -12, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0,   scale: 1 }}
+              exit={{    opacity: 0, y: -8,   scale: 0.97 }}
+              transition={{ duration: 0.25 }}
+              className="mb-6"
+            >
+              <Alert variant="error" onClose={() => setErrorMessage('')}>{errorMessage}</Alert>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
           {/* Left sidebar */}
-          <div className="lg:col-span-1">
+          <motion.div {...fadeUp(0.1)} className="lg:col-span-1">
             <Card className="bg-white dark:bg-[#1a1a3a] border border-gray-300 dark:border-white/10">
               <CardContent className="p-6">
                 <div className="text-center mb-6">
                   <div className="relative inline-block">
-                    {profileData.avatarBase64 ? (
-                      <img src={profileData.avatarBase64} alt="Profile" className="w-32 h-32 rounded-full object-cover border-4 border-gray-300 dark:border-white/10" />
-                    ) : (
-                      <div className="w-32 h-32 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-4xl font-bold">
-                        {getInitials(profileData.firstName, profileData.lastName)}
-                      </div>
-                    )}
-                    <button onClick={() => fileInputRef.current?.click()}
-                      className="absolute bottom-0 right-0 w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white hover:bg-blue-600 transition-colors">
+
+                    {/* Avatar */}
+                    <motion.div
+                      whileHover={{ scale: 1.04 }}
+                      transition={{ type: 'spring', stiffness: 300 }}
+                    >
+                      {profileData.avatarBase64 ? (
+                        <motion.img
+                          key={profileData.avatarBase64.slice(-20)}
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ duration: 0.3 }}
+                          src={profileData.avatarBase64}
+                          alt="Profile"
+                          className="w-32 h-32 rounded-full object-cover border-4 border-gray-300 dark:border-white/10"
+                        />
+                      ) : (
+                        <div className="w-32 h-32 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-4xl font-bold">
+                          {getInitials(profileData.firstName, profileData.lastName)}
+                        </div>
+                      )}
+                    </motion.div>
+
+                    {/* Camera button */}
+                    <motion.button
+                      whileHover={{ scale: 1.15 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => fileInputRef.current?.click()}
+                      className="absolute bottom-0 right-0 w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white hover:bg-blue-600 transition-colors"
+                    >
                       <Camera className="w-5 h-5" />
-                    </button>
+                    </motion.button>
                   </div>
-                  <h2 className="text-xl font-bold mt-4">{profileData.firstName} {profileData.lastName}</h2>
-                  <p className="text-sm text-gray-700 dark:text-gray-400">{profileData.email}</p>
-                  {profileData.username && <p className="text-xs text-gray-500 mt-1">@{profileData.username}</p>}
+
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                  >
+                    <h2 className="text-xl font-bold mt-4">{profileData.firstName} {profileData.lastName}</h2>
+                    <p className="text-sm text-gray-700 dark:text-gray-400">{profileData.email}</p>
+                    {profileData.username && (
+                      <p className="text-xs text-gray-500 mt-1">@{profileData.username}</p>
+                    )}
+                  </motion.div>
                 </div>
 
-                <div className="space-y-3 pt-4 border-t border-gray-300 dark:border-white/10">
-                  <div className="flex items-center gap-3 text-sm">
+                <motion.div
+                  variants={staggerContainer}
+                  initial="initial"
+                  animate="animate"
+                  className="space-y-3 pt-4 border-t border-gray-300 dark:border-white/10"
+                >
+                  <motion.div variants={staggerItem} className="flex items-center gap-3 text-sm">
                     <Shield className="w-4 h-4 text-green-400" />
                     <span className="text-gray-700 dark:text-gray-400">Account Verified</span>
-                  </div>
+                  </motion.div>
                   {memberSince && (
-                    <div className="flex items-center gap-3 text-sm">
+                    <motion.div variants={staggerItem} className="flex items-center gap-3 text-sm">
                       <Calendar className="w-4 h-4 text-blue-400 dark:text-white" />
                       <span className="text-gray-700 dark:text-gray-400">Member since {memberSince}</span>
-                    </div>
+                    </motion.div>
                   )}
-                </div>
+                </motion.div>
 
-                <div className="mt-6">
-                  <Button
-                    variant="outline"
-                    className="w-full gap-2 border-orange-500 text-black hover:bg-orange-500 transition-colors"
-                    onClick={() => setShowPasswordChange(p => !p)}
-                  >
-                    <Key className="w-4 h-4" />Change Password
-                  </Button>
-                </div>
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.35 }}
+                  className="mt-6"
+                >
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
+                    <Button
+                      variant="outline"
+                      className="w-full gap-2 border-orange-500 text-black hover:bg-orange-500 transition-colors"
+                      onClick={() => setShowPasswordChange(p => !p)}
+                    >
+                      <Key className="w-4 h-4" />Change Password
+                    </Button>
+                  </motion.div>
+                </motion.div>
               </CardContent>
             </Card>
-          </div>
+          </motion.div>
 
           {/* Right forms */}
-          <div className="lg:col-span-2 space-y-6">
+          <motion.div {...fadeUp(0.15)} className="lg:col-span-2 space-y-6">
+
+            {/* Personal info card */}
             <Card className="bg-white dark:bg-[#1a1a3a] border border-gray-300 dark:border-white/10">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>Personal Information</CardTitle>
-                  {!isEditing ? (
-                    <button
-                      className="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg font-semibold transition-opacity hover:opacity-90"
-                      onClick={() => setIsEditing(true)}
-                    >
-                      Edit Profile
-                    </button>
-                  ) : (
-                    <div className="flex gap-2">
-                      <button
-                        className="bg-transparent border border-gray-400 dark:border-gray-600 text-black dark:text-white px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-                        onClick={() => { setProfileData(originalData); setIsEditing(false); }}
-                      >
-                        Cancel
-                      </button>
 
-                      <button
-                        className="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-opacity hover:opacity-90"
-                        onClick={handleSaveProfile}
-                        disabled={saving}
+                  <AnimatePresence mode="wait">
+                    {!isEditing ? (
+                      <motion.button
+                        key="edit"
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{    opacity: 0, scale: 0.9 }}
+                        whileHover={{ scale: 1.04 }}
+                        whileTap={{ scale: 0.96 }}
+                        className="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
+                        onClick={() => setIsEditing(true)}
                       >
-                        {saving ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Save className="w-4 h-4" />
-                        )}
-                        Save Changes
-                      </button>
-                    </div>
-                  )}
+                        Edit Profile
+                      </motion.button>
+                    ) : (
+                      <motion.div
+                        key="actions"
+                        initial={{ opacity: 0, x: 8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{    opacity: 0, x: 8 }}
+                        className="flex gap-2"
+                      >
+                        <motion.button
+                          whileHover={{ scale: 1.03 }}
+                          whileTap={{ scale: 0.97 }}
+                          className="bg-transparent border border-gray-400 dark:border-gray-600 text-black dark:text-white px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                          onClick={() => { setProfileData(originalData); setIsEditing(false); }}
+                        >
+                          Cancel
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.03, y: -1 }}
+                          whileTap={{ scale: 0.97 }}
+                          className="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-colors"
+                          onClick={handleSaveProfile}
+                          disabled={saving}
+                        >
+                          {saving ? (
+                            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 0.7, ease: 'linear' }}>
+                              <Loader2 className="w-4 h-4" />
+                            </motion.div>
+                          ) : justSaved ? (
+                            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 400 }}>
+                              <Check className="w-4 h-4" />
+                            </motion.div>
+                          ) : (
+                            <Save className="w-4 h-4" />
+                          )}
+                          {justSaved ? 'Saved!' : 'Save Changes'}
+                        </motion.button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input label="First Name" name="firstName" value={profileData.firstName} onChange={e => setProfileData(p => ({ ...p, firstName: e.target.value }))} disabled={!isEditing} />
-                    <Input label="Last Name" name="lastName" value={profileData.lastName} onChange={e => setProfileData(p => ({ ...p, lastName: e.target.value }))} disabled={!isEditing} />
-                  </div>
-                  <Input label="Username" name="username" value={profileData.username} onChange={e => setProfileData(p => ({ ...p, username: e.target.value }))} disabled={!isEditing} />
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <motion.div
+                  variants={staggerContainer}
+                  initial="initial"
+                  animate="animate"
+                  className="space-y-4"
+                >
+                  <motion.div variants={staggerItem} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Input label="First Name"  name="firstName" value={profileData.firstName} onChange={e => setProfileData(p => ({ ...p, firstName: e.target.value }))} disabled={!isEditing} />
+                    <Input label="Last Name"   name="lastName"  value={profileData.lastName}  onChange={e => setProfileData(p => ({ ...p, lastName:  e.target.value }))} disabled={!isEditing} />
+                  </motion.div>
+                  <motion.div variants={staggerItem}>
+                    <Input label="Username" name="username" value={profileData.username} onChange={e => setProfileData(p => ({ ...p, username: e.target.value }))} disabled={!isEditing} />
+                  </motion.div>
+                  <motion.div variants={staggerItem} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Input label="Email Address" name="email" type="email" value={profileData.email} onChange={() => {}} disabled />
-                    <Input label="Phone Number" name="phone" type="tel" value={profileData.phone} onChange={e => setProfileData(p => ({ ...p, phone: e.target.value }))} disabled={!isEditing} />
-                  </div>
-                  <Input label="Complete Address" name="address" value={profileData.address} onChange={e => setProfileData(p => ({ ...p, address: e.target.value }))} disabled={!isEditing} />
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input label="Birthday" name="birthday" type="date" value={profileData.birthday} onChange={e => setProfileData(p => ({ ...p, birthday: e.target.value }))} disabled={!isEditing} />
-                    <Input label="Civil Status" name="civilStatus" value={profileData.civilStatus} onChange={e => setProfileData(p => ({ ...p, civilStatus: e.target.value }))} disabled={!isEditing} />
-                  </div>
-                </div>
+                    <Input label="Phone Number"  name="phone" type="tel"   value={profileData.phone}  onChange={e => setProfileData(p => ({ ...p, phone: e.target.value }))} disabled={!isEditing} />
+                  </motion.div>
+                  <motion.div variants={staggerItem}>
+                    <Input label="Complete Address" name="address" value={profileData.address} onChange={e => setProfileData(p => ({ ...p, address: e.target.value }))} disabled={!isEditing} />
+                  </motion.div>
+                  <motion.div variants={staggerItem} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Input label="Birthday"     name="birthday"     type="date" value={profileData.birthday}    onChange={e => setProfileData(p => ({ ...p, birthday:    e.target.value }))} disabled={!isEditing} />
+                    <Input label="Civil Status" name="civilStatus"              value={profileData.civilStatus}  onChange={e => setProfileData(p => ({ ...p, civilStatus: e.target.value }))} disabled={!isEditing} />
+                  </motion.div>
+                </motion.div>
               </CardContent>
             </Card>
 
-            {showPasswordChange && (
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-                <Card className="bg-white dark:bg-[#1a1a3a] border border-gray-300 dark:border-white/10">
-                  <CardHeader><CardTitle>Change Password</CardTitle></CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <Input label="New Password" name="newPassword" type="password" value={passwordData.newPassword} onChange={e => setPasswordData(p => ({ ...p, newPassword: e.target.value }))} placeholder="Enter new password" />
-                      <Input label="Confirm New Password" name="confirmPassword" type="password" value={passwordData.confirmPassword} onChange={e => setPasswordData(p => ({ ...p, confirmPassword: e.target.value }))} placeholder="Confirm new password" />
-                      <p className="text-xs text-gray-400">You are already authenticated — Supabase will verify the session.</p>
-                      <div className="flex gap-2 pt-2">
-                        <Button variant="outline" className="flex-1" onClick={() => setShowPasswordChange(false)}>Cancel</Button>
-                        <Button className="flex-1" onClick={handleChangePassword} disabled={saving}>
-                          {saving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}Update Password
-                        </Button>
+            {/* Password change */}
+            <AnimatePresence>
+              {showPasswordChange && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0, y: -10 }}
+                  animate={{ opacity: 1, height: 'auto', y: 0 }}
+                  exit={{    opacity: 0, height: 0,      y: -10 }}
+                  transition={{ duration: 0.3, ease: EASE }}
+                  style={{ overflow: 'hidden' }}
+                >
+                  <Card className="bg-white dark:bg-[#1a1a3a] border border-gray-300 dark:border-white/10">
+                    <CardHeader><CardTitle>Change Password</CardTitle></CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <Input label="New Password"     name="newPassword"     type="password" value={passwordData.newPassword}     onChange={e => setPasswordData(p => ({ ...p, newPassword:     e.target.value }))} placeholder="Enter new password" />
+                        <Input label="Confirm Password" name="confirmPassword" type="password" value={passwordData.confirmPassword} onChange={e => setPasswordData(p => ({ ...p, confirmPassword: e.target.value }))} placeholder="Confirm new password" />
+                        <p className="text-xs text-gray-400">You are already authenticated — Supabase will verify the session.</p>
+                        <div className="flex gap-2 pt-2">
+                          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} className="flex-1">
+                            <Button variant="outline" className="w-full" onClick={() => setShowPasswordChange(false)}>Cancel</Button>
+                          </motion.div>
+                          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} className="flex-1">
+                            <Button className="w-full" onClick={handleChangePassword} disabled={saving}>
+                              {saving && (
+                                <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 0.7, ease: 'linear' }} className="mr-2">
+                                  <Loader2 className="w-4 h-4" />
+                                </motion.div>
+                              )}
+                              Update Password
+                            </Button>
+                          </motion.div>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-            <Card className="bg-white dark:bg-[#1a1a3a] border border-gray-300 dark:border-white/10">
-              <CardHeader><CardTitle>Account Statistics</CardTitle></CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <StatBox value={stats.total} label="Total Requests" color="text-blue-400" />
-                  <StatBox value={stats.approved} label="Approved" color="text-green-400" />
-                  <StatBox value={stats.pending} label="Pending" color="text-yellow-400" />
-                  <StatBox value={stats.thisMonth} label="This Month" color="text-purple-400" />
-                </div>
-              </CardContent>
-            </Card>
+            {/* Stats */}
+            <motion.div {...fadeUp(0.25)}>
+              <Card className="bg-white dark:bg-[#1a1a3a] border border-gray-300 dark:border-white/10">
+                <CardHeader><CardTitle>Account Statistics</CardTitle></CardHeader>
+                <CardContent>
+                  <motion.div
+                    variants={staggerContainer}
+                    initial="initial"
+                    animate="animate"
+                    className="grid grid-cols-2 md:grid-cols-4 gap-4"
+                  >
+                    {[
+                      { value: stats.total,     label: 'Total Requests', color: 'text-blue-400'   },
+                      { value: stats.approved,  label: 'Approved',       color: 'text-green-400'  },
+                      { value: stats.pending,   label: 'Pending',        color: 'text-yellow-400' },
+                      { value: stats.thisMonth, label: 'This Month',     color: 'text-purple-400' },
+                    ].map(s => (
+                      <motion.div
+                        key={s.label}
+                        variants={statVariants}
+                        whileHover={{ y: -3, transition: { duration: 0.15 } }}
+                        className="text-center p-4 bg-gray-100 dark:bg-white/5 rounded-lg cursor-default"
+                      >
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ type: 'spring', stiffness: 300, delay: 0.3 }}
+                          className={`text-2xl font-bold ${s.color}`}
+                        >
+                          {s.value}
+                        </motion.div>
+                        <div className="text-sm text-gray-700 dark:text-gray-400">{s.label}</div>
+                      </motion.div>
+                    ))}
+                  </motion.div>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-            <Card className="bg-white dark:bg-[#1a1a3a] border border-gray-300 dark:border-white/10">
-              <CardHeader><CardTitle>Privacy & Security</CardTitle></CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-gray-100 dark:bg-white/5 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <Mail className="w-5 h-5 text-blue-400" />
-                      <div>
-                        <p className="font-medium text-black dark:text-white">Email Notifications</p>
-                        <p className="text-sm text-gray-700 dark:text-gray-400">Receive updates via email</p>
-                      </div>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" defaultChecked className="sr-only peer" />
-                      <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
-                    </label>
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-gray-100 dark:bg-white/5 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <Shield className="w-5 h-5 text-green-400" />
-                      <div>
-                        <p className="font-medium text-black dark:text-white">Two-Factor Authentication</p>
-                        <p className="text-sm text-gray-700 dark:text-gray-400">Add extra security to your account</p>
-                      </div>
-                    </div>
-                    <Button size="sm" variant="outline">Enable</Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+            {/* Privacy & Security */}
+            <motion.div {...fadeUp(0.3)}>
+              <Card className="bg-white dark:bg-[#1a1a3a] border border-gray-300 dark:border-white/10">
+                <CardHeader><CardTitle>Privacy & Security</CardTitle></CardHeader>
+                <CardContent>
+                  <motion.div
+                    variants={staggerContainer}
+                    initial="initial"
+                    animate="animate"
+                    className="space-y-4"
+                  >
+                    {[
+                      {
+                        icon: <Mail className="w-5 h-5 text-blue-400" />,
+                        title: 'Email Notifications',
+                        desc: 'Receive updates via email',
+                        control: (
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" defaultChecked className="sr-only peer" />
+                            <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
+                          </label>
+                        ),
+                      },
+                      {
+                        icon: <Shield className="w-5 h-5 text-green-400" />,
+                        title: 'Two-Factor Authentication',
+                        desc: 'Add extra security to your account',
+                        control: (
+                          <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
+                            <Button size="sm" variant="outline">Enable</Button>
+                          </motion.div>
+                        ),
+                      },
+                    ].map(item => (
+                      <motion.div
+                        key={item.title}
+                        variants={staggerItem}
+                        className="flex items-center justify-between p-4 bg-gray-100 dark:bg-white/5 rounded-lg"
+                      >
+                        <div className="flex items-center gap-3">
+                          <motion.div
+                            whileHover={{ rotate: 8, scale: 1.1 }}
+                            transition={{ type: 'spring', stiffness: 400 }}
+                          >
+                            {item.icon}
+                          </motion.div>
+                          <div>
+                            <p className="font-medium text-black dark:text-white">{item.title}</p>
+                            <p className="text-sm text-gray-700 dark:text-gray-400">{item.desc}</p>
+                          </div>
+                        </div>
+                        {item.control}
+                      </motion.div>
+                    ))}
+                  </motion.div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+          </motion.div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function StatBox({ value, label, color }: { value: number; label: string; color: string }) {
-  return (
-    <div className="text-center p-4 bg-gray-100 dark:bg-white/5 rounded-lg">
-      <div className={`text-2xl font-bold ${color}`}>{value}</div>
-      <div className="text-sm text-gray-700 dark:text-gray-400">{label}</div>
     </div>
   );
 }

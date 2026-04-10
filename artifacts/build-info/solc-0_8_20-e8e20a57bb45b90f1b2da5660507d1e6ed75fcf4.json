@@ -1,0 +1,36 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_20-e8e20a57bb45b90f1b2da5660507d1e6ed75fcf4",
+  "solcVersion": "0.8.20",
+  "solcLongVersion": "0.8.20+commit.a1b79de6",
+  "compilerType": "solc",
+  "userSourceNameMap": {
+    "contracts/DocumentRegistry.sol": "project/contracts/DocumentRegistry.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "shanghai",
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/DocumentRegistry.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\n\n/**\n * @title  DocumentRegistry\n * @notice Records and verifies SHA-256 hashes of barangay documents on-chain.\n *         Only the contract owner (the deployer wallet) may record new hashes,\n *         preventing arbitrary writes from residents.\n *         Anyone may call verifyDocument() — no wallet required for read calls.\n */\ncontract DocumentRegistry {\n\n    // ── Storage ───────────────────────────────────────────────────────────────\n\n    struct DocRecord {\n        bool   exists;\n        address recordedBy;\n        uint256 timestamp;\n        string  documentType;\n    }\n\n    /// @dev docHash (bytes32) → record\n    mapping(bytes32 => DocRecord) private _records;\n\n    /// @dev Only this address can record new documents\n    address public owner;\n\n    // ── Events ────────────────────────────────────────────────────────────────\n\n    event DocumentRecorded(\n        bytes32 indexed docHash,\n        address indexed recordedBy,\n        uint256 timestamp,\n        string  documentType\n    );\n\n    // ── Errors ────────────────────────────────────────────────────────────────\n\n    error NotOwner();\n    error AlreadyRecorded(bytes32 docHash);\n    error EmptyDocumentType();\n\n    // ── Constructor ───────────────────────────────────────────────────────────\n\n    constructor() {\n        owner = msg.sender;\n    }\n\n    // ── Modifiers ─────────────────────────────────────────────────────────────\n\n    modifier onlyOwner() {\n        if (msg.sender != owner) revert NotOwner();\n        _;\n    }\n\n    // ── Write ─────────────────────────────────────────────────────────────────\n\n    /**\n     * @notice Record a document hash on-chain.\n     * @dev    Can only be called by the owner (admin wallet via MetaMask).\n     *         Reverts if the hash was already recorded or documentType is empty.\n     * @param  docHash      SHA-256 hash of the document (bytes32)\n     * @param  documentType Human-readable type, e.g. \"barangay-clearance\"\n     */\n    function recordDocument(\n        bytes32 docHash,\n        string calldata documentType\n    ) external onlyOwner {\n        if (_records[docHash].exists) revert AlreadyRecorded(docHash);\n        if (bytes(documentType).length == 0) revert EmptyDocumentType();\n\n        _records[docHash] = DocRecord({\n            exists:       true,\n            recordedBy:   msg.sender,\n            timestamp:    block.timestamp,\n            documentType: documentType\n        });\n\n        emit DocumentRecorded(docHash, msg.sender, block.timestamp, documentType);\n    }\n\n    /**\n     * @notice Transfer ownership to a new admin wallet.\n     * @param  newOwner  Address of the new owner\n     */\n    function transferOwnership(address newOwner) external onlyOwner {\n        require(newOwner != address(0), \"Zero address\");\n        owner = newOwner;\n    }\n\n    // ── Read ──────────────────────────────────────────────────────────────────\n\n    /**\n     * @notice Check whether a document hash is registered.\n     * @param  docHash  SHA-256 hash to look up\n     * @return exists        true if the hash was recorded\n     * @return recordedBy    wallet that recorded it\n     * @return timestamp     Unix timestamp of the recording\n     * @return documentType  document type string\n     */\n    function verifyDocument(bytes32 docHash)\n        external\n        view\n        returns (\n            bool    exists,\n            address recordedBy,\n            uint256 timestamp,\n            string  memory documentType\n        )\n    {\n        DocRecord storage r = _records[docHash];\n        return (r.exists, r.recordedBy, r.timestamp, r.documentType);\n    }\n}\n"
+      }
+    }
+  }
+}

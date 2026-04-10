@@ -29,12 +29,15 @@ const ACTION_STYLE: Record<string, { pill: string; dot: string; label: string }>
 const FILTERS = ['all', 'role_changed', 'position_changed', 'user_deleted', 'approved', 'rejected'];
 
 export default function AuditPage() {
-  const [logs,    setLogs]    = useState<AuditLog[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filter,  setFilter]  = useState('all');
+  const [logs,      setLogs]      = useState<AuditLog[]>([]);
+  const [loading,   setLoading]   = useState(true);
+  const [filter,    setFilter]    = useState('all');
+  const [spinning,  setSpinning]  = useState(false);
+  const [mounted,   setMounted]   = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setSpinning(true);
     const { data } = await supabase
       .from('audit_logs')
       .select('*')
@@ -42,62 +45,165 @@ export default function AuditPage() {
       .limit(200);
     setLogs(data ?? []);
     setLoading(false);
+    setTimeout(() => setSpinning(false), 600);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load().then(() => {
+      requestAnimationFrame(() => setMounted(true));
+    });
+  }, [load]);
+
+  const handleFilter = (f: string) => {
+    setMounted(false);
+    setFilter(f);
+    requestAnimationFrame(() => requestAnimationFrame(() => setMounted(true)));
+  };
 
   const filtered = filter === 'all' ? logs : logs.filter(l => l.action === filter);
 
   return (
-    <div className="p-8" style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}>
+    <div
+      className="p-8"
+      style={{
+        fontFamily: "'IBM Plex Sans', sans-serif",
+        animation: 'pageEnter 0.35s ease both',
+      }}
+    >
+      <style>{`
+        @keyframes pageEnter {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes logRowIn {
+          from { opacity: 0; transform: translateX(-6px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes spinOnce {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
+        @keyframes dotPulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50%       { transform: scale(1.5); opacity: 0.7; }
+        }
+        @keyframes pillPop {
+          0%   { transform: scale(0.85); opacity: 0; }
+          60%  { transform: scale(1.05); }
+          100% { transform: scale(1);   opacity: 1; }
+        }
+        .filter-btn {
+          transition: background-color 0.15s ease, border-color 0.15s ease,
+                      color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+        }
+        .filter-btn:active { transform: scale(0.94); }
+        .filter-btn.active {
+          box-shadow: 0 1px 4px rgba(249,115,22,0.18);
+        }
+        .refresh-btn {
+          transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+        }
+        .refresh-btn:hover  { transform: rotate(15deg); }
+        .refresh-btn:active { transform: rotate(15deg) scale(0.92); }
+        .log-row {
+          transition: background-color 0.12s ease;
+        }
+        .log-row:hover .row-dot {
+          animation: dotPulse 0.6s ease;
+        }
+        .row-dot {
+          transition: transform 0.15s ease;
+        }
+        .action-pill {
+          animation: pillPop 0.25s ease both;
+        }
+        .spin-icon {
+          animation: spinOnce 0.6s ease;
+        }
+      `}</style>
 
       {/* Header */}
-      <div className="mb-6">
-        <p style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-           className="text-[10px] tracking-[0.18em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">
+      <div className="mb-6" style={{ animation: 'pageEnter 0.35s 0.05s ease both', opacity: 0 }}>
+        <p
+          style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+          className="text-[10px] tracking-[0.18em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1"
+        >
           History
         </p>
         <h1 className="text-2xl font-semibold text-[#1a1917] dark:text-[#f0eee8]">Audit Log</h1>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-2 mb-5 items-center">
+      <div
+        className="flex flex-wrap gap-2 mb-5 items-center"
+        style={{ animation: 'pageEnter 0.35s 0.1s ease both', opacity: 0 }}
+      >
         <Filter className="w-3.5 h-3.5 text-[#7a7870] dark:text-[#7e7b75]" />
         {FILTERS.map(f => (
-          <button key={f} onClick={() => setFilter(f)}
-            className={`px-3 py-1.5 rounded text-[12px] border transition-colors
+          <button
+            key={f}
+            onClick={() => handleFilter(f)}
+            className={`filter-btn px-3 py-1.5 rounded text-[12px] border
               ${filter === f
-                ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-400'
+                ? 'active bg-orange-50 dark:bg-orange-900/20 border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-400'
                 : 'bg-white dark:bg-[#1a1a20] border-[#dedad4] dark:border-[#2a2a32] text-[#5c5a54] dark:text-[#9e9b94] hover:bg-[#eeecea] dark:hover:bg-[#1e1e24]'
-              }`}>
+              }`}
+          >
             {f === 'all' ? 'All' : (ACTION_STYLE[f]?.label || f)}
           </button>
         ))}
-        <button onClick={load}
-          className="ml-auto p-2 rounded border border-[#dedad4] dark:border-[#2a2a32] bg-white dark:bg-[#1a1a20]
-            text-[#5c5a54] dark:text-[#9e9b94] hover:bg-[#eeecea] dark:hover:bg-[#1e1e24] transition-colors">
-          <RefreshCw className="w-3.5 h-3.5" />
+        <button
+          onClick={load}
+          className="refresh-btn ml-auto p-2 rounded border border-[#dedad4] dark:border-[#2a2a32] bg-white dark:bg-[#1a1a20]
+            text-[#5c5a54] dark:text-[#9e9b94] hover:bg-[#eeecea] dark:hover:bg-[#1e1e24]"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${spinning ? 'spin-icon' : ''}`} />
         </button>
       </div>
 
       {/* Log list */}
-      <div className="rounded-lg border border-[#dedad4] dark:border-[#2a2a32] bg-white dark:bg-[#1a1a20] divide-y divide-[#f0ede8] dark:divide-[#22222a]">
+      <div
+        className="rounded-lg border border-[#dedad4] dark:border-[#2a2a32] bg-white dark:bg-[#1a1a20] divide-y divide-[#f0ede8] dark:divide-[#22222a]"
+        style={{ animation: 'pageEnter 0.4s 0.15s ease both', opacity: 0 }}
+      >
         {loading ? (
-          <div className="text-center py-14 text-[#7a7870] dark:text-[#7e7b75] text-sm">Loading…</div>
+          <div className="text-center py-14 text-[#7a7870] dark:text-[#7e7b75] text-sm">
+            <div
+              className="inline-block w-5 h-5 border-2 border-orange-400 border-t-transparent rounded-full mb-3"
+              style={{ animation: 'spinOnce 0.8s linear infinite' }}
+            />
+            <p>Loading…</p>
+          </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-14 text-[#7a7870] dark:text-[#7e7b75] text-sm">No log entries found.</div>
-        ) : filtered.map(log => {
+          <div
+            className="text-center py-14 text-[#7a7870] dark:text-[#7e7b75] text-sm"
+            style={{ animation: 'pageEnter 0.3s ease both' }}
+          >
+            No log entries found.
+          </div>
+        ) : filtered.map((log, idx) => {
           const style = ACTION_STYLE[log.action] || {
             dot: 'bg-gray-400', label: log.action,
             pill: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
           };
           return (
-            <div key={log.id} className="flex items-start gap-4 px-5 py-4 hover:bg-[#fafaf9] dark:hover:bg-[#1e1e24] transition-colors">
-              <div className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${style.dot}`} />
+            <div
+              key={log.id}
+              className="log-row flex items-start gap-4 px-5 py-4 hover:bg-[#fafaf9] dark:hover:bg-[#1e1e24]"
+              style={
+                mounted
+                  ? { animation: `logRowIn 0.3s ${idx * 0.03}s ease both` }
+                  : { opacity: 0 }
+              }
+            >
+              <div className={`row-dot w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${style.dot}`} />
 
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2 mb-1">
-                  <span className={`inline-block px-2 py-0.5 rounded text-[9px] tracking-[0.1em] uppercase font-medium ${style.pill}`}>
+                  <span
+                    className={`action-pill inline-block px-2 py-0.5 rounded text-[9px] tracking-[0.1em] uppercase font-medium ${style.pill}`}
+                    style={{ animationDelay: `${idx * 0.03 + 0.05}s` }}
+                  >
                     {style.label}
                   </span>
 
@@ -123,8 +229,10 @@ export default function AuditPage() {
                     ? <span>By <span className="text-[#5c5a54] dark:text-[#9e9b94]">{log.performer_email}</span></span>
                     : 'System'}
                   {log.target_user && (
-                    <span style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-                          className="ml-2 text-[#a09e98] dark:text-[#5c5a54]">
+                    <span
+                      style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                      className="ml-2 text-[#a09e98] dark:text-[#5c5a54]"
+                    >
                       {log.target_user.slice(0, 8)}…
                     </span>
                   )}
@@ -136,8 +244,10 @@ export default function AuditPage() {
                 <p className="text-[11px] text-[#7a7870] dark:text-[#7e7b75]">
                   {new Date(log.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
                 </p>
-                <p style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-                   className="text-[10px] text-[#a09e98] dark:text-[#5c5a54]">
+                <p
+                  style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                  className="text-[10px] text-[#a09e98] dark:text-[#5c5a54]"
+                >
                   {new Date(log.created_at).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
@@ -146,8 +256,10 @@ export default function AuditPage() {
         })}
       </div>
 
-      <p style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-         className="text-[10px] text-[#a09e98] dark:text-[#5c5a54] mt-3">
+      <p
+        style={{ fontFamily: "'IBM Plex Mono', monospace", animation: 'pageEnter 0.4s 0.2s ease both', opacity: 0 }}
+        className="text-[10px] text-[#a09e98] dark:text-[#5c5a54] mt-3"
+      >
         {filtered.length} entries
       </p>
     </div>

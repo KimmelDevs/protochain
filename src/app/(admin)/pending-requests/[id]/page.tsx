@@ -14,6 +14,7 @@ import {
   type RequestDetail, type Profile,
   normaliseProfile, sha256Hex, generateDocument,
 } from '@/app/lib/utils/Docgenerators';
+import { recordDocumentOnChain } from '@/app/lib/blockchain';
 
 /* ─── helpers ─────────────────────────────────────────────────────────── */
 const toSentenceCase = (s: string) =>
@@ -84,13 +85,13 @@ const ActionBtn = ({ label, icon: Icon, onClick, disabled, variant='default', lo
     </button>
   );
 };
-const HashDisplay = ({ hash }: { hash: string }) => {
+const HashDisplay = ({ hash, txHash }: { hash: string; txHash?: string | null }) => {
   const [copied, setCopied] = useState(false);
   return (
     <div className="border-l-2 border-emerald-500 pl-3 py-1">
-      <div className="flex items-center gap-2 mb-1"><ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400"/><span className="mono text-[10px] font-bold tracking-[0.1em] uppercase text-emerald-600 dark:text-emerald-400">SHA-256 Hash</span></div>
+      <div className="flex items-center gap-2 mb-1"><ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /><span className="mono text-[10px] font-bold tracking-[0.1em] uppercase text-emerald-600 dark:text-emerald-400">SHA-256 Hash</span></div>
       <p className="mono text-[10px] text-[#5c5a54] dark:text-[#9e9b94] break-all leading-relaxed mb-1">{hash}</p>
-      <button onClick={() => { navigator.clipboard.writeText(hash); setCopied(true); setTimeout(()=>setCopied(false),2000); }} className="mono text-[10px] text-orange-600 dark:text-orange-400 hover:underline">{copied ? 'Copied' : 'Copy hash'}</button>
+      <button onClick={() => { navigator.clipboard.writeText(hash); setCopied(true); setTimeout(() => setCopied(false), 2000); }} className="mono text-[10px] text-orange-600 dark:text-orange-400 hover:underline">{copied ? '✓ Copied' : 'Copy hash'}</button>
     </div>
   );
 };
@@ -188,7 +189,7 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
   const [uploading,         setUploading]         = useState(false);
   const [generatedBlob,     setGeneratedBlob]     = useState<Blob|null>(null);
   const [generatedFileName, setGeneratedFileName] = useState('');
-  const [uploadedHash,      setUploadedHash]      = useState<string|null>(null);
+  const [uploadedHash,      setUploadedHash]      = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -213,6 +214,7 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
         const rd: RequestDetail = j.data[0];
         setRequest(rd);
         if (rd.file_hash) setUploadedHash(rd.file_hash);
+        if (rd.chain_tx_hash) setChainTxHash(rd.chain_tx_hash);
 
         const pr = await fetch(`/api/profile?id=${rd.user_id}`);
         if (pr.ok) { const pj = await pr.json(); setProfile(normaliseProfile(pj.data)); }
@@ -286,7 +288,7 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
   };
 
   const uploadFile = async (file: Blob, fileName: string) => {
-    setUploading(true); setError('');
+    setUploading(true); setError(''); setChainError('');
     try {
       const hash = await sha256Hex(file);
       const path = `documents/${id}/${fileName}`;
@@ -302,7 +304,7 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
       setRequest(p => p ? {...p, file_url: urlData.publicUrl, file_hash: hash} : p);
       setUploadedHash(hash);
       setSuccess('Document uploaded. The resident can now download it.');
-    } catch(e:unknown) { setError(e instanceof Error ? e.message : 'Failed to upload.'); }
+    } catch (e: unknown) { setError(e instanceof Error ? e.message : 'Failed to upload.'); }
     finally { setUploading(false); }
   };
 
@@ -442,23 +444,26 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
               <div>
                 <SectionLabel label="Document"/>
                 <div className="space-y-2.5">
-                  {request.file_url&&(<>
-                    <a href={request.file_url} target="_blank" rel="noopener noreferrer" download>
-                      <button className="flex items-center justify-center gap-2 w-full px-4 py-2.5 border border-[#c8c6c0] dark:border-[#2a2a32] text-[12px] font-semibold text-[#3d3b36] dark:text-[#c9c6be] hover:border-[#1a1917] dark:hover:border-[#f0eee8] hover:text-[#1a1917] dark:hover:text-[#f0eee8] transition-colors">
-                        <Download className="w-4 h-4"/>Download Uploaded Document
-                      </button>
-                    </a>
-                    {uploadedHash&&<HashDisplay hash={uploadedHash}/>}
-                    <div className="flex items-center gap-3 py-1"><div className="flex-1 h-px bg-[#e0deda] dark:bg-[#222228]"/><span className="mono text-[10px] text-[#7a7870] dark:text-[#7e7b75] uppercase tracking-wider">or replace</span><div className="flex-1 h-px bg-[#e0deda] dark:bg-[#222228]"/></div>
-                  </>)}
-                  {!request.file_url&&<p className="text-[12px] text-[#5c5a54] dark:text-[#9e9b94] leading-relaxed mb-1">Generate the document, then upload it so the resident can download it.</p>}
-                  <ActionBtn label={request.file_url?'Re-generate Document':'Step 1: Generate .docx'} icon={Wand2} onClick={handleGenerate} loading={generating} disabled={generating||uploading}/>
-                  {generatedBlob&&<ActionBtn label={`Step 2: Upload "${generatedFileName}"`} icon={Upload} onClick={()=>uploadFile(generatedBlob,generatedFileName)} loading={uploading} disabled={uploading}/>}
-                  <div className="flex items-center gap-3 py-1"><div className="flex-1 h-px bg-[#e0deda] dark:bg-[#222228]"/><span className="mono text-[10px] text-[#7a7870] dark:text-[#7e7b75] uppercase tracking-wider">or upload manually</span><div className="flex-1 h-px bg-[#e0deda] dark:bg-[#222228]"/></div>
-                  <button onClick={()=>uploadRef.current?.click()} disabled={uploading} className="flex items-center justify-center gap-2 w-full px-4 py-2.5 border border-[#c8c6c0] dark:border-[#2a2a32] text-[12px] font-semibold text-[#3d3b36] dark:text-[#c9c6be] hover:border-[#1a1917] dark:hover:border-[#f0eee8] hover:text-[#1a1917] dark:hover:text-[#f0eee8] transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-                    <Upload className="w-4 h-4"/>Upload Existing File (.docx or .pdf)
+                  {request.file_url ? (
+                    <>
+                      <a href={request.file_url} target="_blank" rel="noopener noreferrer" download>
+                        <button className="flex items-center justify-center gap-2 w-full px-4 py-2.5 border border-[#c8c6c0] dark:border-[#2a2a32] text-[12px] font-semibold text-[#3d3b36] dark:text-[#c9c6be] hover:border-[#1a1917] dark:hover:border-[#f0eee8] hover:text-[#1a1917] dark:hover:text-[#f0eee8] transition-colors">
+                          <Download className="w-4 h-4" />Download Uploaded Document
+                        </button>
+                      </a>
+                      {uploadedHash && <HashDisplay hash={uploadedHash} />}
+                      <div className="flex items-center gap-3 py-1"><div className="flex-1 h-px bg-[#e0deda] dark:bg-[#222228]" /><span className="mono text-[10px] text-[#7a7870] dark:text-[#7e7b75] uppercase tracking-wider">or replace</span><div className="flex-1 h-px bg-[#e0deda] dark:bg-[#222228]" /></div>
+                    </>
+                  ) : (
+                    <p className="text-[12px] text-[#5c5a54] dark:text-[#9e9b94] leading-relaxed mb-1">Generate the document, then upload it so the resident can download it.</p>
+                  )}
+                  <ActionBtn label={request.file_url ? 'Re-generate Document' : 'Step 1: Generate .docx'} icon={Wand2} onClick={handleGenerate} loading={generating} disabled={generating || uploading} />
+                  {generatedBlob && <ActionBtn label={`Step 2: Upload "${generatedFileName}"`} icon={Upload} onClick={() => uploadFile(generatedBlob, generatedFileName)} loading={uploading} disabled={uploading} />}
+                  <div className="flex items-center gap-3 py-1"><div className="flex-1 h-px bg-[#e0deda] dark:bg-[#222228]" /><span className="mono text-[10px] text-[#7a7870] dark:text-[#7e7b75] uppercase tracking-wider">or upload manually</span><div className="flex-1 h-px bg-[#e0deda] dark:bg-[#222228]" /></div>
+                  <button onClick={() => uploadRef.current?.click()} disabled={uploading} className="flex items-center justify-center gap-2 w-full px-4 py-2.5 border border-[#c8c6c0] dark:border-[#2a2a32] text-[12px] font-semibold text-[#3d3b36] dark:text-[#c9c6be] hover:border-[#1a1917] dark:hover:border-[#f0eee8] hover:text-[#1a1917] dark:hover:text-[#f0eee8] transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                    <Upload className="w-4 h-4" />Upload Existing File (.docx or .pdf)
                   </button>
-                  {!request.file_url&&uploadedHash&&<HashDisplay hash={uploadedHash}/>}
+                  {!request.file_url && uploadedHash && <HashDisplay hash={uploadedHash} />}
                 </div>
               </div>
             </motion.div>
