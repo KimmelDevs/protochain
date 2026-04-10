@@ -12,16 +12,18 @@ import {
   LogOut,
   Shield,
   Moon,
-  Sun
+  Sun,
+  ShieldCheck,
 } from 'lucide-react';
 import Image from "next/image";
 
 const menuItems = [
-  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Request Document', href: '/request-document', icon: FileText },
-  { label: 'My Requests', href: '/my-requests', icon: Clock },
-  { label: 'My Documents', href: '/my-documents', icon: CheckCircle },
-  { label: 'Profile', href: '/profile', icon: User },
+  { label: 'Dashboard',        href: '/dashboard',        icon: LayoutDashboard },
+  { label: 'Request Document', href: '/request-document', icon: FileText        },
+  { label: 'My Requests',      href: '/my-requests',      icon: Clock           },
+  { label: 'My Documents',     href: '/my-documents',     icon: CheckCircle     },
+  { label: 'Verify Document',  href: '/verify',           icon: ShieldCheck     },
+  { label: 'Profile',          href: '/profile',          icon: User            },
 ];
 
 export default function Sidebar() {

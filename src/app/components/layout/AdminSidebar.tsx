@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
 import {
   LayoutDashboard, Clock, CheckCircle, XCircle,
-  Users, Settings, LogOut, BarChart3, Moon, Sun, ScrollText,
+  Users, Settings, LogOut, BarChart3, Moon, Sun, ScrollText, ShieldCheck,
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -18,6 +18,7 @@ const NAV = [
   { label: 'Residents',          href: '/residents',          icon: Users           },
   { label: 'Reports',            href: '/reports',            icon: BarChart3       },
   { label: 'Audit Logs',         href: '/audit-logs',         icon: ScrollText      },
+  { label: 'Verify Document',    href: '/verify',             icon: ShieldCheck     },
 ];
 
 const SECONDARY = [
