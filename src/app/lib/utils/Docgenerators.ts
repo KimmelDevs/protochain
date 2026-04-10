@@ -5,16 +5,11 @@
  *  1. Fetching the .docx template from /public/files/
  *  2. Replacing text placeholders with actual data via JSZip XML patching
  *  3. Injecting ECDSA signature images at {%SIGNATURE_1} and {%SIGNATURE_2} placeholders
- *     - Signatures are fetched from the `admin_signatures` Supabase table
- *       (stored as record_json.signatureDataUrl — a base64 PNG data URL)
- *  4. Injecting a QR code image at {%QR_CODE} placeholder
- *     - QR payload = rsEncodeHex(sha256 of the request id) for error-correction
- *     - QR is rendered to a canvas, converted to PNG, then embedded in the docx
+ *     — Signatures fetched from `admin_signatures` table as record_json.signatureDataUrl
+ *  4. Injecting a QR code at {%QR_CODE} placeholder
+ *     — Payload = rsEncodeHex(sha256(requestId), 32) via Reed-Solomon
  *
- * TEMPLATE PLACEHOLDERS (type these exactly in your .docx template):
- *   {%SIGNATURE_1}  → Secretary signature image
- *   {%SIGNATURE_2}  → Barangay Captain signature image
- *   {%QR_CODE}      → QR code image
+ * FIX: All heavy work is yielded via setTimeout(0) so the UI never freezes.
  */
 
 import { supabase } from '@/app/lib/supabase';
@@ -109,6 +104,9 @@ const getToday = () =>
     year: 'numeric', month: 'long', day: 'numeric',
   });
 
+/** Yield to the browser event loop — prevents UI freezing during heavy work */
+const yieldToUI = () => new Promise<void>(resolve => setTimeout(resolve, 0));
+
 // ─── JSZip loader ─────────────────────────────────────────────────────────────
 
 async function loadJSZip(): Promise<any> {
@@ -126,8 +124,7 @@ async function loadJSZip(): Promise<any> {
 }
 
 // ─── Signature fetcher ────────────────────────────────────────────────────────
-// Signatures live in `admin_signatures` table:
-//   { role: 'captain'|'secretary', record_json: { signatureDataUrl: string, ... } }
+// Table: admin_signatures  { role: 'captain'|'secretary', record_json: { signatureDataUrl: string } }
 
 interface SignatureImages {
   secretary: string | null;
@@ -141,7 +138,7 @@ async function fetchSignatureImages(): Promise<SignatureImages> {
       .select('role, record_json');
 
     if (error || !data || data.length === 0) {
-      console.warn('[Docgenerators] No signatures found in admin_signatures table');
+      console.warn('[Docgenerators] No rows in admin_signatures');
       return { secretary: null, captain: null };
     }
 
@@ -153,19 +150,23 @@ async function fetchSignatureImages(): Promise<SignatureImages> {
       captain:   capRow?.record_json?.signatureDataUrl ?? null,
     };
   } catch (e) {
-    console.error('[Docgenerators] Failed to fetch signatures:', e);
+    console.error('[Docgenerators] fetchSignatureImages failed:', e);
     return { secretary: null, captain: null };
   }
 }
 
 // ─── QR code generator ────────────────────────────────────────────────────────
-// Payload = rsEncodeHex(sha256(requestId), 32) — Reed-Solomon with ~25% correction
+// Payload: rsEncodeHex(sha256(requestId), 32) — Reed-Solomon ~25% error correction
 
 async function generateQRDataUrl(requestId: string): Promise<string | null> {
   try {
+    // 1. Build RS-protected payload
     const hash    = await sha256HexStr(requestId);
     const payload = rsEncodeHex(hash, 32);
 
+    await yieldToUI(); // yield after RS encoding (CPU-intensive)
+
+    // 2. Load QRCode.js if needed
     // @ts-ignore
     if (typeof window.QRCode === 'undefined') {
       await new Promise<void>((resolve, reject) => {
@@ -177,30 +178,48 @@ async function generateQRDataUrl(requestId: string): Promise<string | null> {
       });
     }
 
+    // 3. Render QR to canvas and extract PNG
     return await new Promise<string>((resolve, reject) => {
       const div = document.createElement('div');
-      div.style.cssText = 'position:absolute;left:-9999px;top:-9999px;';
+      div.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:256px;height:256px;';
       document.body.appendChild(div);
 
-      // @ts-ignore
-      new window.QRCode(div, {
-        text:         payload,
-        width:        256,
-        height:       256,
-        colorDark:    '#000000',
-        colorLight:   '#ffffff',
-        correctLevel: 2,
-      });
-
-      setTimeout(() => {
-        const canvas = div.querySelector('canvas') as HTMLCanvasElement | null;
+      try {
+        // @ts-ignore
+        new window.QRCode(div, {
+          text:         payload,
+          width:        256,
+          height:       256,
+          colorDark:    '#000000',
+          colorLight:   '#ffffff',
+          correctLevel: 2, // QRCode.CorrectLevel.H
+        });
+      } catch (e) {
         document.body.removeChild(div);
-        if (canvas) {
-          resolve(canvas.toDataURL('image/png'));
-        } else {
-          reject(new Error('QR canvas not found'));
+        reject(e);
+        return;
+      }
+
+      // QRCode.js renders asynchronously into a canvas — wait for it
+      setTimeout(() => {
+        try {
+          const canvas = div.querySelector('canvas') as HTMLCanvasElement | null;
+          document.body.removeChild(div);
+          if (canvas) {
+            resolve(canvas.toDataURL('image/png'));
+          } else {
+            // QRCode.js sometimes creates an <img> instead of canvas on some browsers
+            const img = div.querySelector('img') as HTMLImageElement | null;
+            if (img && img.src) {
+              resolve(img.src);
+            } else {
+              reject(new Error('QR canvas/img not found'));
+            }
+          }
+        } catch (e) {
+          reject(e);
         }
-      }, 150);
+      }, 200); // 200ms is enough for QRCode.js to finish rendering
     });
   } catch (e) {
     console.error('[Docgenerators] QR generation failed:', e);
@@ -212,6 +231,7 @@ async function generateQRDataUrl(requestId: string): Promise<string | null> {
 
 function buildInlineImageParagraph(
   rId:       string,
+  docPrId:   number,   // unique per image to avoid Word validation errors
   widthEmu:  number,
   heightEmu: number,
   descr:     string,
@@ -220,6 +240,7 @@ function buildInlineImageParagraph(
   const jc = align === 'center' ? '<w:jc w:val="center"/>'
            : align === 'right'  ? '<w:jc w:val="right"/>'
            : '';
+  const safeDescr = xmlEscape(descr);
   return (
     `<w:p>` +
     `<w:pPr>${jc}<w:spacing w:before="0" w:after="0"/></w:pPr>` +
@@ -227,14 +248,20 @@ function buildInlineImageParagraph(
     `<wp:inline distT="0" distB="0" distL="0" distR="0" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">` +
     `<wp:extent cx="${widthEmu}" cy="${heightEmu}"/>` +
     `<wp:effectExtent l="0" t="0" r="0" b="0"/>` +
-    `<wp:docPr id="1" name="${xmlEscape(descr)}" descr="${xmlEscape(descr)}"/>` +
+    `<wp:docPr id="${docPrId}" name="${safeDescr}" descr="${safeDescr}"/>` +
     `<wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr>` +
     `<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">` +
     `<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">` +
     `<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">` +
-    `<pic:nvPicPr><pic:cNvPr id="0" name="${xmlEscape(descr)}"/><pic:cNvPicPr/></pic:nvPicPr>` +
-    `<pic:blipFill><a:blip r:embed="${rId}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>` +
-    `<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${widthEmu}" cy="${heightEmu}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>` +
+    `<pic:nvPicPr><pic:cNvPr id="${docPrId}" name="${safeDescr}"/><pic:cNvPicPr/></pic:nvPicPr>` +
+    `<pic:blipFill>` +
+    `<a:blip r:embed="${rId}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>` +
+    `<a:stretch><a:fillRect/></a:stretch>` +
+    `</pic:blipFill>` +
+    `<pic:spPr>` +
+    `<a:xfrm><a:off x="0" y="0"/><a:ext cx="${widthEmu}" cy="${heightEmu}"/></a:xfrm>` +
+    `<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>` +
+    `</pic:spPr>` +
     `</pic:pic></a:graphicData></a:graphic></wp:inline>` +
     `</w:drawing></w:r></w:p>`
   );
@@ -248,24 +275,29 @@ async function injectImageIntoZip(
   fileName:      string,
   rId:           string,
 ): Promise<void> {
-  const base64 = base64DataUrl.split(',')[1];
+  // Handle both data URLs ("data:image/png;base64,XXX") and raw base64
+  const base64 = base64DataUrl.includes(',')
+    ? base64DataUrl.split(',')[1]
+    : base64DataUrl;
   if (!base64) return;
 
   zip.file(`word/media/${fileName}`, base64, { base64: true });
 
+  // Register relationship
   const relsFile = zip.file('word/_rels/document.xml.rels');
-  if (!relsFile) return;
-  let relsXml: string = await relsFile.async('string');
-
-  if (!relsXml.includes(`Id="${rId}"`)) {
-    const imageType  = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/image';
-    relsXml = relsXml.replace(
-      '</Relationships>',
-      `<Relationship Id="${rId}" Type="${imageType}" Target="media/${fileName}"/>\n</Relationships>`,
-    );
-    zip.file('word/_rels/document.xml.rels', relsXml);
+  if (relsFile) {
+    let relsXml: string = await relsFile.async('string');
+    if (!relsXml.includes(`Id="${rId}"`)) {
+      const imageType = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/image';
+      relsXml = relsXml.replace(
+        '</Relationships>',
+        `<Relationship Id="${rId}" Type="${imageType}" Target="media/${fileName}"/>\n</Relationships>`,
+      );
+      zip.file('word/_rels/document.xml.rels', relsXml);
+    }
   }
 
+  // Register PNG content type (only once)
   const ctFile = zip.file('[Content_Types].xml');
   if (ctFile) {
     let ctXml: string = await ctFile.async('string');
@@ -277,11 +309,12 @@ async function injectImageIntoZip(
 }
 
 // ─── Placeholder replacer ─────────────────────────────────────────────────────
-// Word splits typed text across multiple <w:r> runs, so we can't reliably
-// regex-match the placeholder inside raw XML. Instead:
-//  1. Walk paragraph by paragraph
-//  2. Strip all XML tags → get plain text of each paragraph
-//  3. If plain text contains the placeholder → replace the whole <w:p> block
+//
+// Word splits typed text ({%SIGNATURE_1} etc.) across multiple <w:r> runs,
+// so regex-matching inside raw XML is unreliable.
+//
+// Fix: walk paragraph-by-paragraph, strip tags to get plain text,
+// replace the whole <w:p>...</w:p> block when it contains the placeholder.
 
 async function replacePlaceholderWithImage(
   zip:           any,
@@ -289,6 +322,7 @@ async function replacePlaceholderWithImage(
   base64DataUrl: string,
   rId:           string,
   fileName:      string,
+  docPrId:       number,
   widthInches:   number,
   heightInches:  number,
   align:         'left' | 'center' | 'right' = 'left',
@@ -299,18 +333,27 @@ async function replacePlaceholderWithImage(
   const xml: string = await docFile.async('string');
   await injectImageIntoZip(zip, base64DataUrl, fileName, rId);
 
+  await yieldToUI(); // yield before XML walking (can be slow on large docs)
+
   const widthEmu     = Math.round(widthInches  * 914400);
   const heightEmu    = Math.round(heightInches * 914400);
-  const imgParagraph = buildInlineImageParagraph(rId, widthEmu, heightEmu, placeholder, align);
+  const imgParagraph = buildInlineImageParagraph(rId, docPrId, widthEmu, heightEmu, placeholder, align);
   const result       = replaceParagraphContaining(xml, placeholder, imgParagraph);
 
   if (result === xml) {
-    console.warn(`[Docgenerators] Placeholder "${placeholder}" not found — check your .docx template.`);
+    console.warn(`[Docgenerators] Placeholder "${placeholder}" not found in document.xml — add it to your .docx template.`);
+  } else {
+    console.log(`[Docgenerators] Replaced "${placeholder}" ✓`);
   }
 
   zip.file('word/document.xml', result);
 }
 
+/**
+ * Walks the XML string paragraph-by-paragraph.
+ * Strips all XML tags from each <w:p> block to get plain text.
+ * If plain text contains searchText → replaces entire paragraph with replacement.
+ */
 function replaceParagraphContaining(
   xml:         string,
   searchText:  string,
@@ -333,17 +376,20 @@ function replaceParagraphContaining(
     else if (nextOpen2 === -1) pStart = nextOpen;
     else pStart = Math.min(nextOpen, nextOpen2);
 
+    // Append everything before this paragraph
     result += xml.slice(i, pStart);
 
-    let depth  = 1;
-    let cursor = pStart + (xml[pStart + 4] === ' ' ? OPEN2.length : OPEN.length);
+    // Walk forward to find the matching </w:p>, counting nesting depth
+    const tagLen = xml[pStart + 4] === ' ' ? OPEN2.length : OPEN.length;
+    let depth    = 1;
+    let cursor   = pStart + tagLen;
 
     while (cursor < xml.length && depth > 0) {
       const closeIdx = xml.indexOf(CLOSE, cursor);
       const openIdx  = xml.indexOf(OPEN,  cursor);
       const open2Idx = xml.indexOf(OPEN2, cursor);
 
-      const nextCloseAt = closeIdx  === -1 ? Infinity : closeIdx;
+      const nextCloseAt = closeIdx === -1 ? Infinity : closeIdx;
       const nextOpenAt  = Math.min(
         openIdx  === -1 ? Infinity : openIdx,
         open2Idx === -1 ? Infinity : open2Idx,
@@ -351,15 +397,17 @@ function replaceParagraphContaining(
 
       if (nextCloseAt <= nextOpenAt) {
         depth--;
-        cursor = closeIdx + CLOSE.length;
+        cursor = nextCloseAt + CLOSE.length; // advance PAST </w:p>
       } else {
         depth++;
         cursor = nextOpenAt + (xml[nextOpenAt + 4] === ' ' ? OPEN2.length : OPEN.length);
       }
     }
 
+    // cursor now points to the character AFTER </w:p>
     const pBlock    = xml.slice(pStart, cursor);
-    const plainText = pBlock.replace(/<[^>]+>/g, '');
+    const plainText = pBlock.replace(/<[^>]+>/g, ''); // strip all XML tags
+
     result += plainText.includes(searchText) ? replacement : pBlock;
     i = cursor;
   }
@@ -385,7 +433,8 @@ async function loadTemplate(documentType: string): Promise<{ zip: any }> {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Could not load template (${response.status}): ${url}`);
   const buffer = await response.arrayBuffer();
-  const zip    = await JSZip.loadAsync(buffer);
+  await yieldToUI(); // yield after fetch, before decompression
+  const zip = await JSZip.loadAsync(buffer);
   return { zip };
 }
 
@@ -396,7 +445,9 @@ async function patchXml(
 ): Promise<void> {
   const file = zip.file(filename);
   if (!file) return;
-  zip.file(filename, patcher(await file.async('string')));
+  const xml = await file.async('string');
+  await yieldToUI(); // yield before applying regex replacements
+  zip.file(filename, patcher(xml));
 }
 
 // ─── Per-document text injectors ─────────────────────────────────────────────
@@ -515,10 +566,12 @@ export async function generateDocument(
 ): Promise<{ blob: Blob; fileName: string }> {
   const docType = req.document_type ?? req.type ?? '';
 
-  // 1. Load template
+  await yieldToUI(); // yield before starting heavy work
+
+  // 1. Load template (fetch + JSZip decompression)
   const { zip } = await loadTemplate(docType);
 
-  // 2. Inject text data
+  // 2. Inject text data (regex replacements on XML)
   switch (docType) {
     case 'barangay-clearance':     await injectBarangayClearance(zip, req, profile);     break;
     case 'business-clearance':     await injectBusinessClearance(zip, req, profile);     break;
@@ -529,30 +582,51 @@ export async function generateDocument(
       console.warn(`[Docgenerators] No text injector for document type: ${docType}`);
   }
 
-  // 3. Fetch ECDSA signatures from admin_signatures table
-  const sigs = await fetchSignatureImages();
+  await yieldToUI(); // yield between text injection and image injection
 
-  // 4. Inject {%SIGNATURE_1} — Secretary
+  // 3. Fetch signatures (network — already async, but yield after)
+  const sigs = await fetchSignatureImages();
+  await yieldToUI();
+
+  // 4. Inject {%SIGNATURE_1} — Secretary signature
   if (sigs.secretary) {
-    await replacePlaceholderWithImage(zip, '{%SIGNATURE_1}', sigs.secretary, 'rId100', 'sig_secretary.png', 1.8, 0.6, 'left');
+    await replacePlaceholderWithImage(
+      zip, '{%SIGNATURE_1}', sigs.secretary,
+      'rId100', 'sig_secretary.png',
+      101,   // unique docPr id
+      1.8, 0.6, 'left',
+    );
   } else {
-    console.warn('[Docgenerators] Secretary signature missing — save it in Admin > Settings > Signatures');
+    console.warn('[Docgenerators] Secretary signature missing — go to Admin > Settings > Signatures');
   }
 
-  // 5. Inject {%SIGNATURE_2} — Captain
+  // 5. Inject {%SIGNATURE_2} — Captain signature
   if (sigs.captain) {
-    await replacePlaceholderWithImage(zip, '{%SIGNATURE_2}', sigs.captain, 'rId101', 'sig_captain.png', 1.8, 0.6, 'left');
+    await replacePlaceholderWithImage(
+      zip, '{%SIGNATURE_2}', sigs.captain,
+      'rId101', 'sig_captain.png',
+      102,   // unique docPr id
+      1.8, 0.6, 'left',
+    );
   } else {
-    console.warn('[Docgenerators] Captain signature missing — save it in Admin > Settings > Signatures');
+    console.warn('[Docgenerators] Captain signature missing — go to Admin > Settings > Signatures');
   }
 
   // 6. Inject {%QR_CODE} — Reed-Solomon encoded QR of the request ID hash
   const qrDataUrl = await generateQRDataUrl(req.id);
+  await yieldToUI();
   if (qrDataUrl) {
-    await replacePlaceholderWithImage(zip, '{%QR_CODE}', qrDataUrl, 'rId102', 'qr_code.png', 1.0, 1.0, 'center');
+    await replacePlaceholderWithImage(
+      zip, '{%QR_CODE}', qrDataUrl,
+      'rId102', 'qr_code.png',
+      103,   // unique docPr id
+      1.0, 1.0, 'center',
+    );
   } else {
-    console.warn('[Docgenerators] QR code generation failed');
+    console.warn('[Docgenerators] QR generation failed');
   }
+
+  await yieldToUI(); // yield before final ZIP compression
 
   // 7. Build output blob
   const outBuffer = await zip.generateAsync({ type: 'arraybuffer' });
