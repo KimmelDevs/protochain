@@ -23,6 +23,17 @@
  *     is detected the instant QRCode.js appends it, not after an arbitrary delay.
  *   - zip.generateAsync runs with onUpdate yielding so the browser stays
  *     responsive during large-document compression.
+ *
+ * FIXES (v3) — the remaining freeze after v2:
+ *   - rsEncodeHex() is synchronous CPU work. It was called inside Promise.all()
+ *     with no yield, so it blocked the microtask queue before the UI could even
+ *     show the loading spinner. Wrapped in yieldThenRun() (setTimeout 0).
+ *   - replaceParagraphContaining() is a synchronous XML scan called 3 times on
+ *     the full document.xml. Now each call is preceded by a yieldThenRun() so
+ *     the browser can repaint between each image injection.
+ *   - zip.generateAsync onUpdate was an EMPTY callback — JSZip only yields
+ *     between file chunks when the callback returns a Promise that resolves
+ *     asynchronously. Fixed to return `new Promise(r => setTimeout(r, 0))`.
  */
 
 import { supabase } from '@/app/lib/supabase';
@@ -181,10 +192,18 @@ async function fetchSignatureImages(): Promise<SignatureImages> {
 // FIX: Uses MutationObserver instead of setTimeout(150) to detect the canvas
 // the instant QRCode.js appends it — reliable on all devices and load speeds.
 
+// Yields to the event loop once before running synchronous CPU work,
+// preventing it from blocking the microtask queue during Promise.all startup.
+function yieldThenRun<T>(fn: () => T): Promise<T> {
+  return new Promise(resolve => setTimeout(() => resolve(fn()), 0));
+}
+
 async function generateQRDataUrl(requestId: string): Promise<string | null> {
   try {
     const hash    = await sha256HexStr(requestId);
-    const payload = rsEncodeHex(hash, 32);
+    // rsEncodeHex + rsGeneratorPoly are pure-sync CPU — yield first so the
+    // browser can process any pending renders before we block for ~10–30ms.
+    const payload = await yieldThenRun(() => rsEncodeHex(hash, 32));
 
     // @ts-ignore
     if (typeof window.QRCode === 'undefined') {
@@ -357,7 +376,9 @@ async function replacePlaceholderWithImage(
   const widthEmu     = Math.round(widthInches  * 914400);
   const heightEmu    = Math.round(heightInches * 914400);
   const imgParagraph = buildInlineImageParagraph(rId, widthEmu, heightEmu, placeholder, align);
-  const result       = replaceParagraphContaining(xml, placeholder, imgParagraph);
+  // replaceParagraphContaining is a synchronous O(n) scan of potentially large XML.
+  // Yield before running it so the browser can paint any pending loading indicator.
+  const result       = await yieldThenRun(() => replaceParagraphContaining(xml, placeholder, imgParagraph));
 
   if (result === xml) {
     console.warn(`[Docgenerators] Placeholder "${placeholder}" not found — check your .docx template.`);
@@ -609,9 +630,12 @@ export async function generateDocument(
   // 6. Build output blob
   //    FIX: streamFiles:true + onUpdate lets the browser yield during compression,
   //    preventing the main-thread freeze on large templates with embedded images.
+  // FIX: onUpdate must return a Promise that resolves after a setTimeout(0) tick.
+  // An empty callback does NOT yield — JSZip only pauses between file chunks when
+  // the returned Promise resolves asynchronously. This is what prevents the freeze.
   const outBuffer = await zip.generateAsync(
     { type: 'arraybuffer', compression: 'DEFLATE', streamFiles: true },
-    (_meta: any) => { /* onUpdate callback keeps the event loop alive */ },
+    (_meta: any) => new Promise<void>(r => setTimeout(r, 0)),
   );
 
   const blob = new Blob([outBuffer], {
