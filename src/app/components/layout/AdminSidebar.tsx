@@ -18,7 +18,7 @@ const NAV = [
   { label: 'Residents',          href: '/residents',          icon: Users           },
   { label: 'Reports',            href: '/reports',            icon: BarChart3       },
   { label: 'Audit Logs',         href: '/audit-logs',         icon: ScrollText      },
-  { label: 'Verify Document',    href: '/verify',             icon: ShieldCheck     },
+  { label: 'Verify Document',    href: '/adminverify',        icon: ShieldCheck     },
 ];
 
 const SECONDARY = [

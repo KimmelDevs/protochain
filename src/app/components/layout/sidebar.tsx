@@ -22,7 +22,7 @@ const menuItems = [
   { label: 'Request Document', href: '/request-document', icon: FileText        },
   { label: 'My Requests',      href: '/my-requests',      icon: Clock           },
   { label: 'My Documents',     href: '/my-documents',     icon: CheckCircle     },
-  { label: 'Verify Document',  href: '/verify',           icon: ShieldCheck     },
+  { label: 'Verify Document',  href: '/residentverify',     icon: ShieldCheck     },
   { label: 'Profile',          href: '/profile',          icon: User            },
 ];
 
