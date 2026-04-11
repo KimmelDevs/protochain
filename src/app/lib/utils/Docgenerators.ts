@@ -609,11 +609,44 @@ async function injectBarangayClearance(zip: any, req: RequestDetail, profile: Pr
 
   await patchXml(zip, 'word/document.xml', xml => {
 
-    // 1. Name header (appears twice for the duplicate layout)
-    xml = xml.replace(/APPLICANT NAME PLACEHOLDER/g, xmlEscape(name));
+    // ── Normalize split placeholders ────────────────────────────────────────
+    // Word splits {placeholder} across runs and inserts <w:proofErr> spell-check
+    // tags around unknown words. We collapse each back into a plain string first.
+    const SPLIT_RID = 'w:rsidR="00E96396"';
+    xml = xml.replace(
+      `<w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r ${SPLIT_RID}><w:t>fullname</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r ${SPLIT_RID}><w:t>}</w:t>`,
+      `<w:t>{fullname}</w:t>`,
+    );
+    xml = xml.replace(
+      `<w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r ${SPLIT_RID}><w:t>this_day</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r ${SPLIT_RID}><w:t>}</w:t>`,
+      `<w:t>{this_day}</w:t>`,
+    );
+    xml = xml.replace(
+      `<w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r ${SPLIT_RID}><w:t>ctc_no</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r ${SPLIT_RID}><w:t>}</w:t>`,
+      `<w:t>{ctc_no}</w:t>`,
+    );
+    xml = xml.replace(
+      `<w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r ${SPLIT_RID}><w:t>ctc_date_issued</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r ${SPLIT_RID}><w:t>}</w:t>`,
+      `<w:t>{ctc_date_issued}</w:t>`,
+    );
+    // ctc_place_issued has " {" (space+brace) in the preceding run
+    xml = xml.replace(
+      `<w:t>ctc_place_issued</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r ${SPLIT_RID}><w:t>}</w:t>`,
+      `<w:t>ctc_place_issued}</w:t>`,
+    );
+    xml = xml.replace(/ \{ctc_place_issued\}/g, '{ctc_place_issued}');
 
-    // 2. Identity block — Run 2 of Para B contains the entire blank identity sentence.
-    //    We replace it with real name, age, sex, civil status, and purok.
+    // ── Replace placeholders with real data ─────────────────────────────────
+    xml = xml.replace(/APPLICANT NAME PLACEHOLDER/g, xmlEscape(name));
+    xml = xml.replace(/\{fullname\}/g,        xmlEscape(name));
+    xml = xml.replace(/\{this_day\}/g,        xmlEscape(day));
+    xml = xml.replace(/\{month\}/g,           xmlEscape(MONTH));
+    xml = xml.replace(/\{year\}/g,            xmlEscape(year));
+    xml = xml.replace(/\{ctc_no\}/g,          xmlEscape(ctcNo));
+    xml = xml.replace(/\{ctc_date_issued\}/g, xmlEscape(ctcDate));
+    xml = xml.replace(/\{ctc_place_issued\}/g,xmlEscape(ctcPlace));
+
+    // ── Legacy hardcoded replacements (keep for backward compat) ───────────
     xml = xml.replace(
       /_____________________ of legal age, male\/female, single\/married\/widow\/ widower, Filipino citizen, whose name and signature\/right thumb mark appears below is a BONAFIDE and permanent resident of BRGY\. GUIN-ON, Calbayog City, /g,
       `${xmlEscape(name)}, ${xmlEscape(age)} years old, ${xmlEscape(sex)}, ` +
@@ -621,24 +654,17 @@ async function injectBarangayClearance(zip: any, req: RequestDetail, profile: Pr
       `appears below is a BONAFIDE and permanent resident of ${xmlEscape(purok)}, ` +
       `BRGY. GUIN-ON, Calbayog City, `,
     );
-
-    // 3. Issuance date — Para C has 3 separate runs: "Issued this ___ day of " | "JANUARY," | " 2024 at…"
-    //    Replace each run independently so formatting (bold etc.) is preserved.
     xml = xml.replace(/Issued this ___ day of /g,
       `Issued this ${xmlEscape(day)}${xmlEscape(suffix)} day of `);
     xml = xml.replace(/JANUARY,/g, `${xmlEscape(MONTH)},`);
     xml = xml.replace(/ 2024 at Brgy\. Guin-on, Calbayog City, Samar, Philippines\./g,
       ` ${xmlEscape(year)} at Brgy. Guin-on, Calbayog City, Samar, Philippines.`);
-
-    // 4. "Further certifies…" para — append the purpose clause after "in connected. "
     xml = xml.replace(
       /Further certifies that he\/ she has no derogatory record and has good moral character as per our Barangay record in connected\. /g,
       `Further certifies that he/ she has no derogatory record and has good moral character ` +
       `as per our Barangay record in connected. This clearance is issued upon request for ` +
       `${xmlEscape(purpose)} and for whatever legal purpose it may serve. `,
     );
-
-    // 5. CTC fields — each is a standalone paragraph/run
     xml = xml.replace(/CTC #: __________________ /g,  `CTC #: ${xmlEscape(ctcNo)} `);
     xml = xml.replace(/Date Issued: ______________ /g, `Date Issued: ${xmlEscape(ctcDate)} `);
     xml = xml.replace(/Place Issued: ______________/g, `Place Issued: ${xmlEscape(ctcPlace)}`);
