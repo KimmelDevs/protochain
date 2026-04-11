@@ -100,13 +100,12 @@ function Toast({ msg, type, onClose }: { msg: string; type: 'success' | 'error';
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-type TabKey = 'general' | 'notifications' | 'system' | 'signatures';
+type TabKey = 'general' | 'system' | 'signatures';
 
 const TABS: { key: TabKey; label: string }[] = [
-  { key: 'general',       label: 'General'       },
-  { key: 'notifications', label: 'Notifications' },
-  { key: 'system',        label: 'System'        },
-  { key: 'signatures',    label: 'Signatures'    },
+  { key: 'general',    label: 'General'    },
+  { key: 'system',     label: 'System'     },
+  { key: 'signatures', label: 'Signatures' },
 ];
 
 export default function SettingsPage() {
@@ -130,15 +129,6 @@ export default function SettingsPage() {
   const [bypassEnabled, setBypassEnabled] = useState(false);
   const [savingBypass,  setSavingBypass]  = useState(false);
 
-  // Notification toggles (local only, no DB persistence yet)
-  const [notifSettings, setNotifSettings] = useState({
-    emailNotifications:    true,
-    smsNotifications:      false,
-    newRequestAlert:       true,
-    approvalNotifications: true,
-    reminderNotifications: true,
-  });
-
   // System config (local only)
   const [sysSettings, setSysSettings] = useState({
     maxFileSize:         '5',
@@ -147,9 +137,7 @@ export default function SettingsPage() {
     requireVerification: true,
   });
 
-  // ── SINGLE load effect: fetch ALL barangay_settings columns at once ────────
-  // Using select('*') means bypass_two_step_approval is read in the same
-  // request as barangayInfo — no two effects racing and overwriting each other.
+  // ── SINGLE load effect ─────────────────────────────────────────────────────
   useEffect(() => {
     (async () => {
       try {
@@ -170,7 +158,6 @@ export default function SettingsPage() {
             address:      data.address      ?? '',
             logo_url:     data.logo_url     ?? '',
           });
-          // Bypass comes from the exact same row — guaranteed in sync
           setBypassEnabled(data.bypass_two_step_approval ?? false);
         }
       } catch {
@@ -179,9 +166,9 @@ export default function SettingsPage() {
         setLoadingInfo(false);
       }
     })();
-  }, []); // runs once on mount
+  }, []);
 
-  // ── Save barangay info (does NOT touch bypass column) ─────────────────────
+  // ── Save barangay info ─────────────────────────────────────────────────────
   const handleSaveBarangayInfo = async () => {
     setSavingInfo(true);
     const { error } = await supabase.from('barangay_settings').upsert({
@@ -193,9 +180,9 @@ export default function SettingsPage() {
     setSavingInfo(false);
   };
 
-  // ── Bypass toggle: uses UPDATE (not upsert) so ONLY bypass column changes ──
+  // ── Bypass toggle ──────────────────────────────────────────────────────────
   const handleSaveBypass = async (val: boolean) => {
-    setBypassEnabled(val);      // optimistic
+    setBypassEnabled(val);
     setSavingBypass(true);
     try {
       const { error } = await supabase
@@ -204,7 +191,7 @@ export default function SettingsPage() {
         .eq('id', 1);
 
       if (error) {
-        setBypassEnabled(!val); // roll back
+        setBypassEnabled(!val);
         showToast('Failed to save: ' + error.message, 'error');
       } else {
         showToast(
@@ -324,35 +311,6 @@ export default function SettingsPage() {
     </div>
   );
 
-  // ── Tab: Notifications ─────────────────────────────────────────────────────
-  const NOTIF_ITEMS = [
-    { key: 'emailNotifications',    label: 'Email Notifications',    desc: 'Receive notifications via email'              },
-    { key: 'smsNotifications',      label: 'SMS Notifications',      desc: 'Receive notifications via SMS'                },
-    { key: 'newRequestAlert',       label: 'New Request Alerts',     desc: 'Get notified when new requests arrive'        },
-    { key: 'approvalNotifications', label: 'Approval Notifications', desc: 'Notify residents when documents are approved' },
-    { key: 'reminderNotifications', label: 'Reminder Notifications', desc: 'Send reminders for pending requests'          },
-  ] as const;
-
-  const notificationsTab = (
-    <div>
-      <SectionLabel label="Notification Preferences" />
-      <div className="space-y-0.5">
-        {NOTIF_ITEMS.map(({ key, label, desc }) => (
-          <div key={key} className="flex items-center justify-between py-3.5 border-b border-[#e8e5e0] dark:border-[#222228] last:border-0">
-            <div>
-              <p className="text-[14px] font-medium text-[#1a1917] dark:text-[#f0eee8] leading-none">{label}</p>
-              <p className="text-[12px] text-[#5c5a54] dark:text-[#9e9b94] mt-1.5">{desc}</p>
-            </div>
-            <Toggle checked={notifSettings[key]} onChange={val => setNotifSettings(p => ({ ...p, [key]: val }))} />
-          </div>
-        ))}
-      </div>
-      <div className="flex justify-end mt-6">
-        <SaveButton onClick={() => showToast('Notification settings updated successfully!')} loading={false} />
-      </div>
-    </div>
-  );
-
   // ── Tab: System ────────────────────────────────────────────────────────────
   const systemTab = loadingInfo ? (
     <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-orange-500" /></div>
@@ -454,10 +412,9 @@ export default function SettingsPage() {
   );
 
   const TAB_CONTENT: Record<TabKey, React.ReactNode> = {
-    general:       generalTab,
-    notifications: notificationsTab,
-    system:        systemTab,
-    signatures:    signaturesTab,
+    general:    generalTab,
+    system:     systemTab,
+    signatures: signaturesTab,
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
