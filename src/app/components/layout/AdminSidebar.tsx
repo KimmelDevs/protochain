@@ -75,22 +75,27 @@ export default function AdminSidebar() {
         .sb-mono { font-family: 'IBM Plex Mono', monospace; }
       `}</style>
 
+      {/* color-surface (#ffffff) light / color-banner-dark (#171717) dark
+          border: color-border (#e0e1e6) */}
       <aside className="sb w-56 h-screen flex flex-col sticky top-0
-        bg-[#fafaf9]      dark:bg-[#16161a]
-        border-r border-[#dedad4] dark:border-[#2a2a32]
+        bg-[#ffffff]      dark:bg-[#171717]
+        border-r border-[#e0e1e6] dark:border-white/10
         transition-colors duration-200">
 
         {/* ── LOGO ─────────────────────────────────────────── */}
-        <div className="px-5 pt-6 pb-5 border-b border-[#dedad4] dark:border-[#2a2a32]">
+        {/* border: color-border (#e0e1e6) */}
+        <div className="px-5 pt-6 pb-5 border-b border-[#e0e1e6] dark:border-white/10">
           <Link href="/" className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded overflow-hidden flex-shrink-0">
               <Image src="/protochain_logo2.jpg" alt="ProtoChain" width={28} height={28} priority />
             </div>
             <div>
-              <p className="sb-mono text-[13px] font-medium text-[#1a1917] dark:text-[#f0eee8] leading-none tracking-tight">
+              {/* color-body (#1c2024) */}
+              <p className="sb-mono text-[13px] font-medium text-[#1c2024] dark:text-white leading-none tracking-tight">
                 ProtoChain
               </p>
-              <p className="sb-mono text-[10px] tracking-[0.15em] uppercase text-orange-600 dark:text-orange-400 leading-none mt-0.5">
+              {/* color-cta (#E8500A) — brand accent label */}
+              <p className="sb-mono text-[10px] tracking-[0.15em] uppercase text-[#E8500A] leading-none mt-0.5">
                 Admin Portal
               </p>
             </div>
@@ -100,31 +105,35 @@ export default function AdminSidebar() {
         {/* ── PRIMARY NAV ──────────────────────────────────── */}
         <nav className="flex-1 overflow-y-auto px-3 pt-4">
 
-          <p className="sb-mono text-[10px] tracking-[0.18em] uppercase text-[#7a7870] dark:text-[#7e7b75] px-2 mb-2">
+          {/* color-slate (#60646c) section label */}
+          <p className="sb-mono text-[10px] tracking-[0.18em] uppercase text-[#60646c] dark:text-[#b0b4ba] px-2 mb-2">
             Main
           </p>
 
           <ul className="space-y-0.5">
             {NAV.map(({ label, href, icon: Icon }) => {
-              // treat /audit-logs/[id] as active for /audit-logs
               const active = pathname === href || (href !== '/admindashboard' && pathname.startsWith(href + '/'));
               return (
                 <li key={href}>
                   <Link
                     href={href}
                     className={`
-                      relative flex items-center gap-2.5 px-2 py-2.5 rounded
+                      relative flex items-center gap-2.5 px-2 py-2.5 rounded-lg
                       transition-colors duration-150
                       ${active
-                        ? 'bg-[#eeecea] dark:bg-[#1e1e24] text-[#1a1917] dark:text-[#f0eee8]'
-                        : 'text-[#3d3b36] dark:text-[#c9c6be] hover:bg-[#eeecea] dark:hover:bg-[#1e1e24] hover:text-[#1a1917] dark:hover:text-[#f0eee8]'
+                        // Active bg: color-bg (#f0f0f3) light / color-surface-dark (#1a1a1a) dark
+                        ? 'bg-[#f0f0f3] dark:bg-[#1a1a1a] text-[#1c2024] dark:text-white'
+                        // Inactive: color-dark-slate text, same hover bg
+                        : 'text-[#363a3f] dark:text-[#b0b4ba] hover:bg-[#f0f0f3] dark:hover:bg-[#1a1a1a] hover:text-[#1c2024] dark:hover:text-white'
                       }
                     `}
                   >
+                    {/* Active indicator: color-cta (#E8500A) */}
                     {active && (
-                      <span className="absolute left-0 top-1.5 bottom-1.5 w-[2px] bg-orange-500" />
+                      <span className="absolute left-0 top-1.5 bottom-1.5 w-[2px] bg-[#E8500A] rounded-full" />
                     )}
-                    <Icon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-orange-500' : ''}`} />
+                    {/* Icon: color-cta when active, inherit otherwise */}
+                    <Icon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-[#E8500A]' : ''}`} />
                     <span className={`text-[13px] leading-none ${active ? 'font-medium' : 'font-normal'}`}>
                       {label}
                     </span>
@@ -134,7 +143,8 @@ export default function AdminSidebar() {
             })}
           </ul>
 
-          <p className="sb-mono text-[10px] tracking-[0.18em] uppercase text-[#7a7870] dark:text-[#7e7b75] px-2 mt-5 mb-2">
+          {/* color-slate (#60646c) section label */}
+          <p className="sb-mono text-[10px] tracking-[0.18em] uppercase text-[#60646c] dark:text-[#b0b4ba] px-2 mt-5 mb-2">
             System
           </p>
 
@@ -146,18 +156,18 @@ export default function AdminSidebar() {
                   <Link
                     href={href}
                     className={`
-                      relative flex items-center gap-2.5 px-2 py-2.5 rounded
+                      relative flex items-center gap-2.5 px-2 py-2.5 rounded-lg
                       transition-colors duration-150
                       ${active
-                        ? 'bg-[#eeecea] dark:bg-[#1e1e24] text-[#1a1917] dark:text-[#f0eee8]'
-                        : 'text-[#3d3b36] dark:text-[#c9c6be] hover:bg-[#eeecea] dark:hover:bg-[#1e1e24] hover:text-[#1a1917] dark:hover:text-[#f0eee8]'
+                        ? 'bg-[#f0f0f3] dark:bg-[#1a1a1a] text-[#1c2024] dark:text-white'
+                        : 'text-[#363a3f] dark:text-[#b0b4ba] hover:bg-[#f0f0f3] dark:hover:bg-[#1a1a1a] hover:text-[#1c2024] dark:hover:text-white'
                       }
                     `}
                   >
                     {active && (
-                      <span className="absolute left-0 top-1.5 bottom-1.5 w-[2px] bg-orange-500" />
+                      <span className="absolute left-0 top-1.5 bottom-1.5 w-[2px] bg-[#E8500A] rounded-full" />
                     )}
-                    <Icon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-orange-500' : ''}`} />
+                    <Icon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-[#E8500A]' : ''}`} />
                     <span className={`text-[13px] leading-none ${active ? 'font-medium' : 'font-normal'}`}>
                       {label}
                     </span>
@@ -169,13 +179,14 @@ export default function AdminSidebar() {
         </nav>
 
         {/* ── THEME TOGGLE ─────────────────────────────────── */}
+        {/* color-slate text, color-bg hover */}
         <div className="px-3 pb-1">
           <button
             onClick={() => setDarkMode(d => !d)}
-            className="flex items-center gap-2.5 px-2 py-2.5 w-full rounded text-[13px]
-              text-[#5c5a54] dark:text-[#9e9b94]
-              hover:text-[#1a1917] dark:hover:text-[#f0eee8]
-              hover:bg-[#eeecea] dark:hover:bg-[#1e1e24]
+            className="flex items-center gap-2.5 px-2 py-2.5 w-full rounded-lg text-[13px]
+              text-[#60646c] dark:text-[#b0b4ba]
+              hover:text-[#1c2024] dark:hover:text-white
+              hover:bg-[#f0f0f3] dark:hover:bg-[#1a1a1a]
               transition-colors duration-150"
           >
             {darkMode
@@ -186,23 +197,28 @@ export default function AdminSidebar() {
         </div>
 
         {/* ── PROFILE + LOGOUT ─────────────────────────────── */}
-        <div className="px-3 pb-4 pt-3 border-t border-[#dedad4] dark:border-[#2a2a32] space-y-0.5">
+        {/* border: color-border (#e0e1e6) */}
+        <div className="px-3 pb-4 pt-3 border-t border-[#e0e1e6] dark:border-white/10 space-y-0.5">
           <div className="flex items-center gap-2.5 px-2 py-2">
-            <div className="w-7 h-7 rounded bg-orange-500 flex items-center justify-center flex-shrink-0">
+            {/* Avatar: color-cta (#E8500A) bg — brand identity */}
+            <div className="w-7 h-7 rounded-lg bg-[#E8500A] flex items-center justify-center flex-shrink-0">
               <span className="sb-mono text-[10px] font-semibold text-white leading-none">{initials}</span>
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-[13px] font-medium text-[#1a1917] dark:text-[#f0eee8] truncate leading-none">{fullName}</p>
-              <p className="sb-mono text-[10px] text-[#5c5a54] dark:text-[#9e9b94] leading-none mt-1 capitalize">{roleLabel}</p>
+              {/* color-body (#1c2024) */}
+              <p className="text-[13px] font-medium text-[#1c2024] dark:text-white truncate leading-none">{fullName}</p>
+              {/* color-slate (#60646c) */}
+              <p className="sb-mono text-[10px] text-[#60646c] dark:text-[#b0b4ba] leading-none mt-1 capitalize">{roleLabel}</p>
             </div>
           </div>
 
+          {/* Logout: color-destructive (#eb8e90) hover — semantic destructive token */}
           <button
             onClick={handleLogout}
-            className="flex items-center gap-2.5 px-2 py-2.5 w-full rounded text-[13px]
-              text-[#5c5a54] dark:text-[#9e9b94]
-              hover:text-red-600 dark:hover:text-red-400
-              hover:bg-red-50 dark:hover:bg-red-500/10
+            className="flex items-center gap-2.5 px-2 py-2.5 w-full rounded-lg text-[13px]
+              text-[#60646c] dark:text-[#b0b4ba]
+              hover:text-[#eb8e90] dark:hover:text-[#eb8e90]
+              hover:bg-[#eb8e90]/10
               transition-colors duration-150"
           >
             <LogOut className="w-4 h-4 flex-shrink-0" />

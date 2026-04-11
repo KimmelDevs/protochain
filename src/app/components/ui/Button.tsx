@@ -19,12 +19,12 @@ export default function Button({
     'inline-flex items-center justify-center font-semibold transition-opacity disabled:opacity-50 disabled:cursor-not-allowed';
 
   const variants = {
-    // Primary Pill (Dark) — #000000 bg, white text, pill radius
+    // Primary CTA (Orange) — #E8500A bg, white text, pill radius
     default:
-      'bg-[#000000] text-white hover:opacity-80 shadow-[var(--shadow-1)]',
+      'bg-[#E8500A] text-white hover:opacity-90 shadow-[var(--shadow-1)]',
     // Primary Pill shape (explicit pill variant)
     primary:
-      'bg-[#000000] text-white hover:opacity-80 shadow-[var(--shadow-1)] rounded-[9999px]',
+      'bg-[#E8500A] text-white hover:opacity-90 shadow-[var(--shadow-1)] rounded-[9999px]',
     // Standard White — white bg, border #e0e1e6
     outline:
       'bg-[#ffffff] text-[#1c2024] border border-[#e0e1e6] hover:bg-[#f0f0f3] shadow-[var(--shadow-1)]',
@@ -34,7 +34,7 @@ export default function Button({
     // Danger — destructive semantic color
     danger:
       'bg-[#eb8e90] text-[#1c2024] hover:opacity-80 shadow-[var(--shadow-1)]',
-    // Dark Rounded — #000000 bg, white text, 32px radius
+    // Dark Rounded — kept dark for secondary/dark-surface use only
     'dark-rounded':
       'bg-[#000000] text-white hover:opacity-80 shadow-[var(--shadow-1)] rounded-[32px]',
   };
