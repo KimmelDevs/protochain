@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { supabase } from '@/app/lib/supabase';
+import { decrypt } from '@/app/lib/utils/crypto';
 
 /* ─────────────────────────── types ─────────────────────────────────────── */
 interface Profile {
@@ -123,7 +124,11 @@ export default function ResidentDetailPage({ params }: { params: Promise<{ id: s
           .eq('user_id', id)
           .order('created_at', { ascending: false });
 
-        setRequests(requestsData ?? []);
+        setRequests((requestsData ?? []).map((r: any) => ({
+          ...r,
+          purpose:        decrypt(r.purpose),
+          custom_purpose: decrypt(r.custom_purpose),
+        })));
       } catch {
         setNotFound(true);
       } finally {

@@ -8,6 +8,7 @@ import {
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
+import { decrypt } from '@/app/lib/utils/crypto';
 
 /* ─────────────────────────── types ─────────────────────────────────────── */
 interface Profile {
@@ -74,7 +75,12 @@ export default function PendingRequestsPage() {
           .from('profiles').select('id, firstName, lastName, email').in('id', ids);
 
         const pm = Object.fromEntries((pd ?? []).map((p: Profile) => [p.id, p]));
-        setRequests(reqData.map((r: any) => ({ ...r, profiles: pm[r.user_id] ?? null })));
+        setRequests(reqData.map((r: any) => ({
+          ...r,
+          purpose:        decrypt(r.purpose),
+          custom_purpose: decrypt(r.custom_purpose),
+          profiles: pm[r.user_id] ?? null,
+        })));
       } catch (e) {
         console.error(e);
       } finally {
