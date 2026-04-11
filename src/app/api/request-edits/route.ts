@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { decrypt } from '@/app/lib/utils/crypto';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -42,8 +43,8 @@ export async function POST(req: NextRequest) {
       user_name:   userName  ?? null,
       field_name:  c.field,
       field_label: FIELD_LABELS[c.field] ?? c.field,
-      old_value:   c.oldValue ?? '',
-      new_value:   c.newValue ?? '',
+      old_value:   decrypt(c.oldValue ?? ''),
+      new_value:   decrypt(c.newValue ?? ''),
     }));
 
     const { error } = await supabase.from('request_edit_history').insert(rows);
@@ -69,7 +70,13 @@ export async function GET(req: NextRequest) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-    return NextResponse.json({ data: data ?? [] });
+    const decrypted = (data ?? []).map((row: any) => ({
+      ...row,
+      old_value: decrypt(row.old_value),
+      new_value: decrypt(row.new_value),
+    }));
+
+    return NextResponse.json({ data: decrypted });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

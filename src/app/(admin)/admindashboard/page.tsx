@@ -113,9 +113,11 @@ export default function DashboardPage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { router.push('/login'); return; }
 
-        const { data: profile } = await supabase
-          .from('profiles').select('firstName, lastName').eq('id', user.id).single();
-        if (profile) setAdminName(`${profile.firstName} ${profile.lastName}`);
+        const profileRes = await fetch(`/api/profile?id=${user.id}`);
+        if (profileRes.ok) {
+          const { data: profile } = await profileRes.json();
+          if (profile) setAdminName(`${profile.firstName} ${profile.lastName}`);
+        }
 
         const { data: reqData } = await supabase
           .from('requests')
@@ -125,12 +127,20 @@ export default function DashboardPage() {
         const all = (reqData ?? []) as RequestRow[];
         setAllReqs(all);
 
-        // fetch profiles for ALL unique user_ids (not just top 5)
+        // fetch profiles for ALL unique user_ids via /api/profile (handles decryption)
         const uniqueIds = [...new Set(all.map((r) => r.user_id))];
         if (uniqueIds.length) {
-          const { data: pd } = await supabase
-            .from('profiles').select('id, firstName, lastName').in('id', uniqueIds);
-          setProfileMap(Object.fromEntries((pd ?? []).map((p: any) => [p.id, p])));
+          const profiles = await Promise.all(
+            uniqueIds.map(async (id) => {
+              const res = await fetch(`/api/profile?id=${id}`);
+              if (!res.ok) return null;
+              const { data } = await res.json();
+              return data ? { id, ...data } : null;
+            })
+          );
+          setProfileMap(Object.fromEntries(
+            profiles.filter(Boolean).map((p: any) => [p.id, p])
+          ));
         }
 
         const { count } = await supabase
