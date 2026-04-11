@@ -97,7 +97,7 @@ export async function PATCH(req: NextRequest) {
         .eq('id', id)
         .single();
       if (existing) {
-        oldValues = decryptFields(existing, [...SENSITIVE_FIELDS] as string[]);
+        oldValues = decryptFields(existing, [...SENSITIVE_FIELDS]);
       }
     }
 

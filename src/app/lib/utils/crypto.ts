@@ -38,15 +38,15 @@ export const decrypt = (cipher: string | null | undefined): string => {
  */
 export const encryptFields = <T extends Record<string, any>>(
   data: T,
-  fields: (keyof T)[]
+  fields: string[]
 ): T => {
-  const result = { ...data };
+  const result: Record<string, any> = { ...data };
   for (const field of fields) {
     if (result[field] !== null && result[field] !== undefined) {
-      result[field] = encrypt(String(result[field])) as any;
+      result[field] = encrypt(String(result[field]));
     }
   }
-  return result;
+  return result as T;
 };
 
 /**
@@ -54,13 +54,13 @@ export const encryptFields = <T extends Record<string, any>>(
  */
 export const decryptFields = <T extends Record<string, any>>(
   data: T,
-  fields: (keyof T)[]
+  fields: string[]
 ): T => {
-  const result = { ...data };
+  const result: Record<string, any> = { ...data };
   for (const field of fields) {
     if (result[field] !== null && result[field] !== undefined) {
-      result[field] = decrypt(String(result[field])) as any;
+      result[field] = decrypt(String(result[field]));
     }
   }
-  return result;
+  return result as T;
 };
