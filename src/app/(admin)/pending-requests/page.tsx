@@ -71,10 +71,17 @@ export default function PendingRequestsPage() {
         if (!reqData?.length) { setRequests([]); return; }
 
         const ids = [...new Set(reqData.map((r: any) => r.user_id))];
-        const { data: pd } = await supabase
-          .from('profiles').select('id, firstName, lastName, email').in('id', ids);
-
-        const pm = Object.fromEntries((pd ?? []).map((p: Profile) => [p.id, p]));
+        const profileResults = await Promise.all(
+          ids.map(async (id) => {
+            const res = await fetch(`/api/profile?id=${id}`);
+            if (!res.ok) return null;
+            const { data } = await res.json();
+            return data ? { ...data, id } : null;
+          })
+        );
+        const pm = Object.fromEntries(
+          profileResults.filter(Boolean).map((p: any) => [p.id, p])
+        );
         setRequests(reqData.map((r: any) => ({
           ...r,
           purpose:        decrypt(r.purpose),
