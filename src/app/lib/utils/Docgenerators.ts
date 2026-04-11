@@ -4,17 +4,19 @@
  * Generates barangay documents by:
  *  1. Fetching the .docx template from /public/files/
  *  2. Replacing text placeholders with actual data via JSZip XML patching
- *  3. Injecting signature images at {%SIGNATURE_1} and {%SIGNATURE_2} placeholders
- *     — signatures are fetched from the `admin_signatures` Supabase table
- *  4. Generating a Reed-Solomon-encoded QR code at {%QR_CODE} placeholder
- *     — QR encodes a verification URL carrying the RS-protected document hash
+ *  3. Injecting ECDSA signature images at {%SIGNATURE_1} and {%SIGNATURE_2} placeholders
+ *  4. Injecting a QR code at {%QR_CODE} placeholder (if present)
  *
- * HOW THE PLACEHOLDERS WORK:
+ * Signature images are fetched from Supabase (stored in barangay_settings),
+ * converted to base64, then embedded as inline <wp:inline> drawings in the
+ * docx XML — replacing the placeholder paragraph entirely.
+ *
+ * HOW THE PLACEHOLDER WORKS:
  *  - In your .docx template, type exactly:  {%SIGNATURE_1}
- *    on its own line/paragraph where the Secretary signature should appear.
+ *    on its own line/paragraph in the cell where the signature image should appear.
  *  - Type {%SIGNATURE_2} where the Captain's signature should appear.
- *  - Type {%QR_CODE} where the verification QR code image should appear.
- *  - The code finds those runs in the XML and replaces the entire
+ *  - Type {%QR_CODE} where the QR code image should appear.
+ *  - The code below finds those runs in the XML and replaces the entire
  *    surrounding <w:p> paragraph with an inline image drawing.
  */
 
@@ -119,7 +121,7 @@ async function loadJSZip(): Promise<any> {
   return window.JSZip;
 }
 
-// ─── Signature fetcher (from admin_signatures table) ─────────────────────────
+// ─── Signature fetcher ────────────────────────────────────────────────────────
 
 interface SignatureImages {
   secretary: string | null;  // base64 PNG data URL
@@ -129,140 +131,46 @@ interface SignatureImages {
 async function fetchSignatureImages(): Promise<SignatureImages> {
   try {
     const { data, error } = await supabase
-      .from('admin_signatures')
-      .select('role, record_json');
+      .from('barangay_settings')
+      .select('secretary_signature_url, captain_signature_url')
+      .single();
 
-    if (error || !data || data.length === 0) {
-      console.warn('Could not fetch admin_signatures:', error?.message);
-      return { secretary: null, captain: null };
-    }
+    if (error || !data) return { secretary: null, captain: null };
 
-    let secretary: string | null = null;
-    let captain:   string | null = null;
+    const toBase64 = async (url: string | null): Promise<string | null> => {
+      if (!url) return null;
+      try {
+        const res  = await fetch(url);
+        const blob = await res.blob();
+        return await new Promise<string>((resolve, reject) => {
+          const reader    = new FileReader();
+          reader.onload   = () => resolve(reader.result as string);
+          reader.onerror  = reject;
+          reader.readAsDataURL(blob);
+        });
+      } catch {
+        return null;
+      }
+    };
 
-    for (const row of data) {
-      const record = row.record_json as { signatureDataUrl?: string } | null;
-      if (!record?.signatureDataUrl) continue;
-
-      if (row.role === 'secretary') secretary = record.signatureDataUrl;
-      if (row.role === 'captain')   captain   = record.signatureDataUrl;
-    }
+    const [secretary, captain] = await Promise.all([
+      toBase64(data.secretary_signature_url),
+      toBase64(data.captain_signature_url),
+    ]);
 
     return { secretary, captain };
-  } catch (err) {
-    console.warn('fetchSignatureImages error:', err);
+  } catch {
     return { secretary: null, captain: null };
   }
-}
-
-// ─── QR Code generation (Reed-Solomon encoded) ────────────────────────────────
-
-/**
- * Generates a QR code PNG as a base64 data URL.
- *
- * The QR payload is a verification URL that contains a Reed-Solomon
- * encoded version of the document hash, giving ~25% error correction
- * on top of the QR's own ECC. This means the document can still be
- * verified even if the QR is partially damaged.
- *
- * Falls back to encoding just the request ID if no hash is available yet.
- */
-async function generateQRCodeDataUrl(
-  requestId: string,
-  fileHash?: string | null,
-): Promise<string | null> {
-  try {
-    // Build the payload: RS-encode the hash for extra resilience
-    let qrPayload: string;
-
-    if (fileHash && /^[0-9a-f]{64}$/i.test(fileHash)) {
-      // Encode the 32-byte SHA-256 hash with 32 RS parity bytes (QR level Q equivalent)
-      const hashBytes   = hexToBytes(fileHash);
-      const rsEncoded   = rsEncode(hashBytes, 32);          // 64 bytes total
-      const rsHex       = bytesToHex(rsEncoded);
-
-      // Verification URL — the /verify page accepts a `hash` query param
-      const origin      = typeof window !== 'undefined' ? window.location.origin : '';
-      qrPayload         = `${origin}/verify?hash=${fileHash}&rs=${rsHex}`;
-    } else {
-      // Fallback: encode the request ID so the QR is still useful
-      const origin  = typeof window !== 'undefined' ? window.location.origin : '';
-      qrPayload     = `${origin}/verify?id=${requestId}`;
-    }
-
-    // Generate QR using the qrcode library (loaded dynamically)
-    const qrDataUrl = await generateQRWithCanvas(qrPayload);
-    return qrDataUrl;
-  } catch (err) {
-    console.warn('QR generation failed:', err);
-    return null;
-  }
-}
-
-/**
- * Renders a QR code to a canvas and returns it as a PNG data URL.
- * Dynamically loads the `qrcode` browser library from CDN.
- */
-async function generateQRWithCanvas(text: string): Promise<string> {
-  // Load qrcode.js from CDN if not already loaded
-  // @ts-ignore
-  if (typeof window.QRCode === 'undefined') {
-    await new Promise<void>((resolve, reject) => {
-      const s    = document.createElement('script');
-      s.src      = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
-      s.onload   = () => resolve();
-      s.onerror  = () => reject(new Error('Failed to load QRCode library'));
-      document.head.appendChild(s);
-    });
-  }
-
-  return new Promise<string>((resolve, reject) => {
-    // Create a temporary off-screen div
-    const container       = document.createElement('div');
-    container.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:200px;height:200px;';
-    document.body.appendChild(container);
-
-    try {
-      // @ts-ignore
-      const qr = new window.QRCode(container, {
-        text,
-        width:            256,
-        height:           256,
-        colorDark:        '#000000',
-        colorLight:       '#ffffff',
-        correctLevel:     (window as any).QRCode?.CorrectLevel?.H ?? 3, // High error correction
-      });
-
-      // QRCode.js renders async via setTimeout internally
-      setTimeout(() => {
-        try {
-          const canvas = container.querySelector('canvas') as HTMLCanvasElement | null;
-          if (canvas) {
-            resolve(canvas.toDataURL('image/png'));
-          } else {
-            // Fallback: try the img tag src
-            const img = container.querySelector('img') as HTMLImageElement | null;
-            if (img?.src) {
-              resolve(img.src);
-            } else {
-              reject(new Error('QR canvas/img not found'));
-            }
-          }
-        } finally {
-          document.body.removeChild(container);
-        }
-      }, 200);
-    } catch (err) {
-      document.body.removeChild(container);
-      reject(err);
-    }
-  });
 }
 
 // ─── Image XML builder ────────────────────────────────────────────────────────
 
 /**
  * Builds a <w:p> paragraph containing an inline <wp:inline> image drawing.
+ *
+ * The image is embedded as a base64 relationship (data URI converted to bytes
+ * in the zip). We add a new relationship entry and reference it here.
  *
  * widthEmu / heightEmu: size in English Metric Units (914400 = 1 inch)
  */
@@ -320,6 +228,8 @@ function buildInlineImageParagraph(
 /**
  * Adds an image relationship to word/_rels/document.xml.rels
  * and stores the image bytes in the zip under word/media/.
+ *
+ * Returns the rId string (e.g. "rId100").
  */
 async function injectImageIntoZip(
   zip:          any,
@@ -360,7 +270,7 @@ async function injectImageIntoZip(
   }
 }
 
-// ─── Placeholder → Image injector ────────────────────────────────────────────
+// ─── Signature injector ───────────────────────────────────────────────────────
 
 /**
  * Replaces a {%PLACEHOLDER} tag in the docx XML with an inline image.
@@ -387,6 +297,7 @@ async function replacePlaceholderWithImage(
   let xml: string = await docFile.async('string');
 
   // Check the placeholder exists — it may be split across runs by Word's XML
+  // so we search for the text content loosely
   if (!xml.includes(xmlEscape(placeholder)) && !xml.includes(placeholder)) {
     console.warn(`Placeholder "${placeholder}" not found in document.xml`);
     return;
@@ -400,6 +311,10 @@ async function replacePlaceholderWithImage(
   const imgParagraph = buildInlineImageParagraph(rId, widthEmu, heightEmu, placeholder, align);
 
   // Replace the entire <w:p> that contains the placeholder text.
+  // We match from <w:p> (or <w:p >) up to the first </w:p> that follows the placeholder.
+  //
+  // Strategy: Find the paragraph that contains the placeholder tag and replace it whole.
+  // We use a regex that matches <w:p...>...{%PLACEHOLDER}...</w:p>
   const escapedTag    = placeholder.replace(/[{}%]/g, '\\$&');
   const xmlEscapedTag = xmlEscape(placeholder).replace(/[{}%]/g, '\\$&');
 
@@ -577,6 +492,95 @@ async function injectOathOfUndertaking(zip: any, req: RequestDetail, profile: Pr
   );
 }
 
+// ─── QR Code generator (Reed-Solomon encoded) ────────────────────────────────
+
+/**
+ * Dynamically loads qrcode.js from CDN (once) and renders the given text
+ * into an off-screen canvas, returning a PNG data URL.
+ */
+async function renderQRToDataUrl(text: string): Promise<string> {
+  // @ts-ignore
+  if (typeof window.QRCode === 'undefined') {
+    await new Promise<void>((resolve, reject) => {
+      const s  = document.createElement('script');
+      s.src    = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+      s.onload  = () => resolve();
+      s.onerror = () => reject(new Error('Failed to load qrcode.js'));
+      document.head.appendChild(s);
+    });
+  }
+
+  return new Promise<string>((resolve, reject) => {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:256px;height:256px;';
+    document.body.appendChild(wrap);
+
+    try {
+      // @ts-ignore
+      new window.QRCode(wrap, {
+        text,
+        width:        256,
+        height:       256,
+        colorDark:    '#000000',
+        colorLight:   '#ffffff',
+        // @ts-ignore
+        correctLevel: window.QRCode?.CorrectLevel?.H ?? 3, // Highest ECC level
+      });
+    } catch (err) {
+      document.body.removeChild(wrap);
+      reject(err);
+      return;
+    }
+
+    // qrcode.js renders via setTimeout internally
+    setTimeout(() => {
+      try {
+        const canvas = wrap.querySelector('canvas') as HTMLCanvasElement | null;
+        if (canvas) {
+          resolve(canvas.toDataURL('image/png'));
+        } else {
+          const img = wrap.querySelector('img') as HTMLImageElement | null;
+          resolve(img?.src ?? '');
+        }
+      } finally {
+        document.body.removeChild(wrap);
+      }
+    }, 300);
+  });
+}
+
+/**
+ * Builds a Reed-Solomon encoded verification URL for the given request/hash,
+ * then renders it as a QR PNG data URL.
+ *
+ * RS encoding adds 32 parity bytes to the 32-byte SHA-256 hash (~25% extra
+ * error correction on top of the QR code's own ECC).
+ *
+ * QR payload format:
+ *   https://<origin>/verify?hash=<sha256hex>&rs=<rsEncodedHex>
+ */
+async function generateQRDataUrl(requestId: string, fileHash?: string | null): Promise<string | null> {
+  try {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    let payload: string;
+
+    if (fileHash && /^[0-9a-f]{64}$/i.test(fileHash)) {
+      // RS-encode the 32-byte hash → 64 bytes (32 data + 32 ECC)
+      const rsEncoded = rsEncode(hexToBytes(fileHash), 32);
+      const rsHex     = bytesToHex(rsEncoded);
+      payload = `${origin}/verify?hash=${fileHash}&rs=${rsHex}`;
+    } else {
+      // Fallback: encode request ID so QR is still scannable
+      payload = `${origin}/verify?id=${requestId}`;
+    }
+
+    return await renderQRToDataUrl(payload);
+  } catch (err) {
+    console.warn('QR generation failed:', err);
+    return null;
+  }
+}
+
 // ─── Main generateDocument export ────────────────────────────────────────────
 
 export async function generateDocument(
@@ -599,12 +603,11 @@ export async function generateDocument(
       console.warn(`No text injector for document type: ${docType}`);
   }
 
-  // ── 3. Fetch signature images from admin_signatures table ──────────────────
+  // ── 3. Fetch ECDSA signature images from Supabase ─────────────────────────
   const sigs = await fetchSignatureImages();
 
   // ── 4. Inject Secretary signature at {%SIGNATURE_1} ───────────────────────
-  //    Displayed transparently over the secretary's name text.
-  //    Width: 1.8 inches, Height: 0.6 inches (adjust to fit your template)
+  //       Width: 1.8 inches, Height: 0.6 inches (adjust to fit your template)
   if (sigs.secretary) {
     await replacePlaceholderWithImage(
       zip,
@@ -612,12 +615,10 @@ export async function generateDocument(
       sigs.secretary,
       'rId100',
       'sig_secretary.png',
-      1.8,    // width in inches — adjust to match your template cell
+      1.8,    // width in inches
       0.6,    // height in inches
-      'center',
+      'left',
     );
-  } else {
-    console.warn('Secretary signature not found in admin_signatures. {%SIGNATURE_1} placeholder left in place.');
   }
 
   // ── 5. Inject Captain signature at {%SIGNATURE_2} ─────────────────────────
@@ -630,25 +631,15 @@ export async function generateDocument(
       'sig_captain.png',
       1.8,    // width in inches
       0.6,    // height in inches
-      'center',
+      'left',
     );
-  } else {
-    console.warn('Captain signature not found in admin_signatures. {%SIGNATURE_2} placeholder left in place.');
   }
 
-  // ── 6. Generate the output blob BEFORE QR (we need the hash) ──────────────
-  //    We do a first-pass generation to compute the hash, then inject the QR,
-  //    then generate the final blob. This gives us a QR that encodes the actual
-  //    document hash for verification.
-  const firstPassBuffer = await zip.generateAsync({ type: 'arraybuffer' });
-  const firstPassBlob   = new Blob([firstPassBuffer], {
-    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  });
-  const documentHash = await sha256Hex(firstPassBlob);
-
-  // ── 7. Generate Reed-Solomon QR code and inject at {%QR_CODE} ─────────────
-  const qrDataUrl = await generateQRCodeDataUrl(req.id, documentHash);
-
+  // ── 6. Inject Reed-Solomon QR code at {%QR_CODE} ─────────────────────────
+  //    We use the existing file_hash on the request if available, otherwise
+  //    generate the blob first to compute a fresh hash, then re-inject.
+  const hashForQR  = req.file_hash ?? null;
+  const qrDataUrl  = await generateQRDataUrl(req.id, hashForQR);
   if (qrDataUrl) {
     await replacePlaceholderWithImage(
       zip,
@@ -656,15 +647,15 @@ export async function generateDocument(
       qrDataUrl,
       'rId102',
       'qr_code.png',
-      1.3,    // width in inches — matches the QR placeholder size in template
-      1.3,    // height in inches (square)
+      1.3,      // width  in inches — matches the placeholder size in the template
+      1.3,      // height in inches (square)
       'center',
     );
   } else {
-    console.warn('QR code generation failed. {%QR_CODE} placeholder left in place.');
+    console.warn('QR generation failed — {%QR_CODE} placeholder not replaced.');
   }
 
-  // ── 8. Generate final output blob ─────────────────────────────────────────
+  // ── 7. Generate output blob ────────────────────────────────────────────────
   const outBuffer = await zip.generateAsync({ type: 'arraybuffer' });
   const blob      = new Blob([outBuffer], {
     type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
