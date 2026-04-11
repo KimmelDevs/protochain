@@ -37,7 +37,6 @@ export default function SignInPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
-
     try {
       const result = await login(email, password);
       if (!result.success) {
@@ -56,19 +55,26 @@ export default function SignInPage() {
 
   return (
     <div className="relative min-h-screen flex items-center justify-center px-4 pt-20 pb-8">
+
+      {/* Background */}
       <div className="absolute inset-0 -z-10">
         <Image src="/loginback.jpg" alt="Login background" fill className="object-cover" priority />
         <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       </div>
 
-      <div className="backdrop-blur-md shadow-xl rounded-2xl w-full max-w-md p-8 space-y-6 border border-white/20 bg-white/5">
+      {/* Card — glass surface over photo bg */}
+      <div className="backdrop-blur-md shadow-[0_10px_25px_rgba(0,0,0,0.12),0_4px_10px_rgba(0,0,0,0.08)] rounded-2xl w-full max-w-md p-8 space-y-6 border border-white/20 bg-white/5">
+
+        {/* Header */}
         <div className="text-center">
           <h2 className="text-3xl font-bold text-white">Welcome Back</h2>
-          <p className="text-gray-400 text-sm">Log in to continue to ProtoChain</p>
+          {/* color-silver (#b0b4ba) for subtitle */}
+          <p className="text-[#b0b4ba] text-sm mt-1">Log in to continue to ProtoChain</p>
         </div>
 
+        {/* Error alert — color-destructive (#eb8e90) */}
         {error && (
-          <div role="alert" className="flex items-start gap-2 p-3 bg-red-500/10 border border-red-500/60 rounded-lg text-red-400 text-sm">
+          <div role="alert" className="flex items-start gap-2 p-3 bg-[#eb8e90]/10 border border-[#eb8e90]/60 rounded-lg text-[#eb8e90] text-sm">
             <svg className="w-4 h-4 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
             </svg>
@@ -77,83 +83,77 @@ export default function SignInPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
+
+          {/* Email — focus:ring color-cta (#E8500A) */}
           <div className="relative">
             <input
               type="email" id="email" value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder=" " required
-              className="peer w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="peer w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-[#E8500A]"
             />
-            <label htmlFor="email" className={`absolute left-4 top-2 text-gray-400 text-sm transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:-translate-y-1/2 peer-focus:top-2 peer-focus:text-xs peer-focus:-translate-y-1 ${email ? 'top-2 text-xs -translate-y-1' : ''}`}>
+            <label htmlFor="email" className={`absolute left-4 top-2 text-[#b0b4ba] text-sm transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:-translate-y-1/2 peer-focus:top-2 peer-focus:text-xs peer-focus:-translate-y-1 ${email ? 'top-2 text-xs -translate-y-1' : ''}`}>
               Email
             </label>
           </div>
 
+          {/* Password */}
           <div className="relative">
             <input
               type={showPassword ? 'text' : 'password'} id="password" value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder=" " required
-              className="peer w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="peer w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-[#E8500A]"
             />
-            <label htmlFor="password" className={`absolute left-4 top-2 text-gray-400 text-sm transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:-translate-y-1/2 peer-focus:top-2 peer-focus:text-xs peer-focus:-translate-y-1 ${password ? 'top-2 text-xs -translate-y-1' : ''}`}>
+            <label htmlFor="password" className={`absolute left-4 top-2 text-[#b0b4ba] text-sm transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:-translate-y-1/2 peer-focus:top-2 peer-focus:text-xs peer-focus:-translate-y-1 ${password ? 'top-2 text-xs -translate-y-1' : ''}`}>
               Password
             </label>
-            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400">
+            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#b0b4ba] hover:text-white transition-colors">
               {showPassword ? <EyeIcon className="w-5 h-5" /> : <EyeSlashIcon className="w-5 h-5" />}
             </button>
           </div>
 
+          {/* Remember + Forgot */}
           <div className="flex items-center justify-between text-sm">
-            <label className="flex items-center text-gray-400">
-              <input type="checkbox" className="mr-2 rounded bg-white/5 border-white/10" />
+            <label className="flex items-center text-[#b0b4ba] cursor-pointer">
+              <input type="checkbox" className="mr-2 rounded bg-white/5 border-white/10 accent-[#E8500A]" />
               Remember me
             </label>
-            <Link href="/forgot-password" className="text-primary-500 hover:underline">Forgot password?</Link>
+            {/* color-cta (#E8500A) for links */}
+            <Link href="/forgot-password" className="text-[#E8500A] hover:opacity-80 transition-opacity">
+              Forgot password?
+            </Link>
           </div>
 
+          {/* Submit — variant="default" = color-cta (#E8500A) via updated Button */}
           <Button
             type="submit"
-            variant="orange"
+            variant="default"
             disabled={loading}
-            className="w-full px-6 py-3 rounded-lg font-semibold"
+            className="w-full py-3 rounded-lg font-semibold"
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">
-                <svg
-                  className="animate-spin h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  />
+                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
                 Logging in...
               </span>
-            ) : (
-              'Log In'
-            )}
+            ) : 'Log In'}
           </Button>
         </form>
 
-        <div className="text-center space-y-2">
-          <p className="text-sm text-gray-400">
+        {/* Footer link */}
+        <div className="text-center">
+          <p className="text-sm text-[#b0b4ba]">
             Don&apos;t have an account?{' '}
-            <Link href="/register" className="text-primary-500 hover:underline font-medium">Sign up</Link>
+            <Link href="/register" className="text-[#E8500A] hover:opacity-80 transition-opacity font-medium">
+              Sign up
+            </Link>
           </p>
         </div>
+
       </div>
     </div>
   );
