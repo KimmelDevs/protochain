@@ -7,7 +7,7 @@ import Input from '@/app/components/ui/Input';
 import Button from '@/app/components/ui/Button';
 import Alert from '@/app/components/ui/Alert';
 import { supabase } from '@/app/lib/supabase';
-import { Mail, Calendar, Shield, Camera, Save, Key, Loader2, Check } from 'lucide-react';
+import { Calendar, Shield, Camera, Save, Key, Loader2, Check } from 'lucide-react';
 
 interface ProfileData {
   firstName: string; lastName: string; email: string;
@@ -495,65 +495,6 @@ export default function ProfilePage() {
                           {s.value}
                         </motion.div>
                         <div className="text-sm text-gray-700 dark:text-[#b0b4ba]">{s.label}</div>
-                      </motion.div>
-                    ))}
-                  </motion.div>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            {/* Privacy & Security */}
-            <motion.div {...fadeUp(0.3)}>
-              <Card className="bg-white dark:bg-[#1a1a1a] border border-[#e0e1e6] dark:border-white/10">
-                <CardHeader><CardTitle>Privacy & Security</CardTitle></CardHeader>
-                <CardContent>
-                  <motion.div
-                    variants={staggerContainer}
-                    initial="initial"
-                    animate="animate"
-                    className="space-y-4"
-                  >
-                    {[
-                      {
-                        icon: <Mail className="w-5 h-5 text-[#0d74ce]" />,
-                        title: 'Email Notifications',
-                        desc: 'Receive updates via email',
-                        control: (
-                          <label className="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" defaultChecked className="sr-only peer" />
-                            <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0d74ce]" />
-                          </label>
-                        ),
-                      },
-                      {
-                        icon: <Shield className="w-5 h-5 text-green-500" />,
-                        title: 'Two-Factor Authentication',
-                        desc: 'Add extra security to your account',
-                        control: (
-                          <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
-                            <Button size="sm" variant="outline">Enable</Button>
-                          </motion.div>
-                        ),
-                      },
-                    ].map(item => (
-                      <motion.div
-                        key={item.title}
-                        variants={staggerItem}
-                        className="flex items-center justify-between p-4 bg-[#f0f0f3] dark:bg-white/5 rounded-lg"
-                      >
-                        <div className="flex items-center gap-3">
-                          <motion.div
-                            whileHover={{ rotate: 8, scale: 1.1 }}
-                            transition={{ type: 'spring', stiffness: 400 }}
-                          >
-                            {item.icon}
-                          </motion.div>
-                          <div>
-                            <p className="font-medium text-black dark:text-white">{item.title}</p>
-                            <p className="text-sm text-gray-700 dark:text-[#b0b4ba]">{item.desc}</p>
-                          </div>
-                        </div>
-                        {item.control}
                       </motion.div>
                     ))}
                   </motion.div>
