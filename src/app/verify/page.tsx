@@ -4,13 +4,12 @@ import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ShieldCheck, ShieldX, ShieldAlert, Loader2, Search,
-  Upload, FileText, ExternalLink, Copy, Check,
+  Upload, FileText, ExternalLink, Copy, Check, QrCode,
 } from 'lucide-react';
 import { verifyDocumentOnChain, type VerifyResult } from '@/app/lib/blockchain';
 import Header from '@/app/components/header';
 import Footer from '@/app/components/footer';
 
-/* ─── helpers ───────────────────────────────────────────────────────────── */
 async function computeSha256(file: File): Promise<string> {
   const buf    = await file.arrayBuffer();
   const digest = await crypto.subtle.digest('SHA-256', buf);
@@ -19,18 +18,11 @@ async function computeSha256(file: File): Promise<string> {
     .join('');
 }
 
-/**
- * Formats any document type string regardless of separator style:
- *   "BARANGAY_CLEARANCE"  → "Barangay Clearance"
- *   "barangay-clearance"  → "Barangay Clearance"
- *   "Barangay Clearance"  → "Barangay Clearance"
- */
 const fmtDocType = (s: string) =>
   s.split(/[\s\-_]+/)
    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
    .join(' ');
 
-/* ─── page ──────────────────────────────────────────────────────────────── */
 export default function VerifyPage() {
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -43,7 +35,6 @@ export default function VerifyPage() {
   const [copied,    setCopied]    = useState(false);
   const [activeTab, setActiveTab] = useState<'hash' | 'file'>('file');
 
-  /* ── file drop / pick ─────────────────────────────────────────────────── */
   const handleFile = async (file: File) => {
     setHashing(true); setError(''); setResult(null);
     try {
@@ -66,7 +57,6 @@ export default function VerifyPage() {
     if (f) handleFile(f);
   };
 
-  /* ── verify ───────────────────────────────────────────────────────────── */
   const handleVerify = async () => {
     const h = hash.trim();
     if (!h) { setError('Please enter or upload a document to verify.'); return; }
@@ -86,50 +76,54 @@ export default function VerifyPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  /* ── result state helpers ─────────────────────────────────────────────── */
-  const isAuthentic  = result?.exists && !result?.isRevoked;
-  const isRevoked    = result?.exists && result?.isRevoked;
-  const isNotFound   = result && !result.exists;
-
-  const resultBorderClass = isAuthentic
-    ? 'border-emerald-400 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/20'
-    : isRevoked
-    ? 'border-amber-400 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/20'
-    : 'border-red-400 dark:border-red-700 bg-red-50 dark:bg-red-950/20';
+  const isAuthentic = result?.exists && !result?.isRevoked;
+  const isRevoked   = result?.exists && result?.isRevoked;
+  const isNotFound  = result && !result.exists;
 
   return (
     <>
-      <Header />
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap'); .pg{font-family:'IBM Plex Sans',sans-serif} .mono{font-family:'IBM Plex Mono',monospace}`}</style>
       <input ref={fileRef} type="file" className="hidden" onChange={onFileChange} />
 
-      <div className="pg min-h-screen bg-[#fafaf9] dark:bg-[#16161a] transition-colors duration-200 p-4 lg:p-10 pt-20 lg:pt-24">
-        <div className="max-w-2xl mx-auto">
+      {/* Dark gradient background matching home */}
+      <div className="min-h-screen bg-gradient-to-br from-[#0f0f23] via-[#1a1a2e] to-[#0f0f23]">
+        <Header />
+
+        {/* Decorative particles */}
+        <div className="fixed inset-0 opacity-20 pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-purple-500 rounded-full animate-pulse" />
+          <div className="absolute top-1/3 right-1/3 w-3 h-3 bg-blue-500 rounded-full animate-pulse delay-75" />
+          <div className="absolute bottom-1/4 left-1/3 w-2 h-2 bg-cyan-500 rounded-full animate-pulse delay-150" />
+        </div>
+
+        <div className="relative z-10 max-w-2xl mx-auto px-4 pt-28 pb-20">
 
           {/* HEADER */}
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mb-10 text-center">
-            <div className="w-14 h-14 bg-orange-500/10 flex items-center justify-center mx-auto mb-4">
-              <ShieldCheck className="w-7 h-7 text-orange-500" />
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/20 border border-orange-500/30 mb-5">
+              <ShieldCheck className="w-4 h-4 text-orange-400" />
+              <span className="text-xs font-semibold text-orange-300">Blockchain Verification</span>
             </div>
-            <h1 className="mono text-3xl font-bold text-[#1a1917] dark:text-[#f0eee8] tracking-tight mb-2">
-              VERIFY DOCUMENT
+            <h1 className="text-4xl md:text-5xl font-extrabold mb-4 bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent tracking-tight">
+              Verify Document
             </h1>
-            <p className="text-[13px] text-[#5c5a54] dark:text-[#9e9b94] max-w-md mx-auto leading-relaxed">
+            <p className="text-[15px] text-[#b0b4ba] max-w-md mx-auto leading-relaxed">
               Upload your barangay document or paste its SHA-256 hash to confirm it was officially recorded on the Sepolia blockchain.
             </p>
           </motion.div>
 
           {/* TABS */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
-            className="flex border-b-2 border-[#1a1917] dark:border-[#f0eee8] mb-6">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+            className="flex gap-2 mb-4"
+          >
             {(['file', 'hash'] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => { setActiveTab(tab); setResult(null); setError(''); }}
-                className={`mono text-[11px] font-bold tracking-[0.15em] uppercase px-5 py-2.5 transition-colors ${
+                className={`flex-1 py-2.5 text-[13px] font-semibold rounded-lg transition-all ${
                   activeTab === tab
-                    ? 'bg-[#1a1917] dark:bg-[#f0eee8] text-white dark:text-[#1a1917]'
-                    : 'text-[#5c5a54] dark:text-[#9e9b94] hover:text-[#1a1917] dark:hover:text-[#f0eee8]'
+                    ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white shadow-lg shadow-orange-500/20'
+                    : 'bg-white/5 border border-white/10 text-[#b0b4ba] hover:text-white hover:border-orange-500/50'
                 }`}
               >
                 {tab === 'file' ? '① Upload File' : '② Paste Hash'}
@@ -138,9 +132,10 @@ export default function VerifyPage() {
           </motion.div>
 
           {/* INPUT PANEL */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-            className="bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] p-6 mb-4">
-
+          <motion.div
+            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+            className="bg-white/5 border border-white/10 rounded-xl p-6 mb-4 backdrop-blur-sm"
+          >
             <AnimatePresence mode="wait">
               {activeTab === 'file' ? (
                 <motion.div key="file" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -149,44 +144,43 @@ export default function VerifyPage() {
                     onDrop={onDrop}
                     onDragOver={e => e.preventDefault()}
                     onClick={() => fileRef.current?.click()}
-                    className="border-2 border-dashed border-[#c8c6c0] dark:border-[#2a2a32] hover:border-orange-500 dark:hover:border-orange-400 transition-colors cursor-pointer p-10 text-center mb-4"
+                    className="border-2 border-dashed border-white/20 hover:border-orange-500/60 transition-colors cursor-pointer p-10 text-center mb-4 rounded-lg bg-white/[0.02]"
                   >
                     {hashing ? (
                       <div className="flex flex-col items-center gap-2">
-                        <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
-                        <p className="mono text-[12px] text-[#5c5a54] dark:text-[#9e9b94]">Computing SHA-256…</p>
+                        <Loader2 className="w-6 h-6 animate-spin text-orange-400" />
+                        <p className="text-[12px] text-[#b0b4ba]">Computing SHA-256…</p>
                       </div>
                     ) : fileName ? (
                       <div className="flex flex-col items-center gap-2">
-                        <FileText className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-                        <p className="text-[13px] font-medium text-[#1a1917] dark:text-[#f0eee8]">{fileName}</p>
-                        <p className="mono text-[10px] text-[#7a7870] dark:text-[#7e7b75]">Click to change file</p>
+                        <FileText className="w-6 h-6 text-emerald-400" />
+                        <p className="text-[13px] font-medium text-white">{fileName}</p>
+                        <p className="text-[11px] text-[#b0b4ba]">Click to change file</p>
                       </div>
                     ) : (
                       <div className="flex flex-col items-center gap-2">
-                        <Upload className="w-6 h-6 text-[#7a7870] dark:text-[#7e7b75]" />
-                        <p className="text-[13px] text-[#3d3b36] dark:text-[#c9c6be] font-medium">Drop your document here</p>
-                        <p className="mono text-[11px] text-[#7a7870] dark:text-[#7e7b75]">or click to browse — .docx, .pdf</p>
+                        <Upload className="w-6 h-6 text-[#b0b4ba]" />
+                        <p className="text-[13px] text-white font-medium">Drop your document here</p>
+                        <p className="text-[11px] text-[#b0b4ba]">or click to browse — .docx, .pdf</p>
                       </div>
                     )}
                   </div>
 
-                  {/* Computed hash display */}
                   {hash && (
-                    <div className="border-l-2 border-orange-500 pl-3 py-1 mb-4">
+                    <div className="border-l-2 border-orange-500 pl-3 py-1 mb-4 bg-orange-500/5 rounded-r-lg">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="mono text-[10px] font-bold tracking-[0.1em] uppercase text-orange-600 dark:text-orange-400">Computed SHA-256</span>
-                        <button onClick={copyHash} className="mono text-[10px] text-[#7a7870] dark:text-[#7e7b75] hover:text-orange-600 dark:hover:text-orange-400 flex items-center gap-1">
+                        <span className="text-[10px] font-bold tracking-[0.1em] uppercase text-orange-400">Computed SHA-256</span>
+                        <button onClick={copyHash} className="text-[10px] text-[#b0b4ba] hover:text-orange-400 flex items-center gap-1 transition-colors">
                           {copied ? <><Check className="w-3 h-3" /> Copied</> : <><Copy className="w-3 h-3" /> Copy</>}
                         </button>
                       </div>
-                      <p className="mono text-[10px] text-[#5c5a54] dark:text-[#9e9b94] break-all leading-relaxed">{hash}</p>
+                      <p className="text-[10px] text-[#b0b4ba] break-all leading-relaxed font-mono">{hash}</p>
                     </div>
                   )}
                 </motion.div>
               ) : (
                 <motion.div key="hash" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                  <label className="mono text-[11px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] block mb-2">
+                  <label className="text-[11px] tracking-[0.1em] uppercase text-[#b0b4ba] block mb-2 font-semibold">
                     SHA-256 Hash (64 characters)
                   </label>
                   <textarea
@@ -194,9 +188,9 @@ export default function VerifyPage() {
                     onChange={e => { setHash(e.target.value); setResult(null); }}
                     rows={3}
                     placeholder="Paste your 64-character SHA-256 hash here…"
-                    className="w-full mono text-[12px] bg-[#fafaf9] dark:bg-[#16161a] border border-[#c8c6c0] dark:border-[#2a2a32] p-3 text-[#1a1917] dark:text-[#f0eee8] placeholder-[#7a7870] dark:placeholder-[#7e7b75] focus:outline-none focus:border-orange-500 resize-none mb-1"
+                    className="w-full font-mono text-[12px] bg-white/5 border border-white/20 focus:border-orange-500/60 rounded-lg p-3 text-white placeholder-[#555860] focus:outline-none resize-none mb-1 transition-colors"
                   />
-                  <p className={`mono text-[10px] ${hash.trim().length === 64 ? 'text-emerald-600 dark:text-emerald-400' : 'text-[#7a7870] dark:text-[#7e7b75]'}`}>
+                  <p className={`text-[10px] font-mono ${hash.trim().length === 64 ? 'text-emerald-400' : 'text-[#b0b4ba]'}`}>
                     {hash.trim().length} / 64 characters
                   </p>
                 </motion.div>
@@ -204,13 +198,13 @@ export default function VerifyPage() {
             </AnimatePresence>
 
             {error && (
-              <p className="text-red-500 text-[12px] mb-4 border-l-2 border-red-400 pl-3">{error}</p>
+              <p className="text-red-400 text-[12px] mb-4 border-l-2 border-red-500 pl-3 mt-2">{error}</p>
             )}
 
             <button
               onClick={handleVerify}
               disabled={loading || hashing || !hash.trim()}
-              className="flex items-center justify-center gap-2 w-full bg-orange-600 hover:bg-orange-500 disabled:opacity-40 disabled:cursor-not-allowed text-white mono text-[12px] font-bold tracking-[0.1em] uppercase py-3 transition-colors mt-4"
+              className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 disabled:opacity-40 disabled:cursor-not-allowed text-white text-[13px] font-bold tracking-wide py-3 rounded-lg transition-all transform hover:scale-[1.02] shadow-lg shadow-orange-500/20 mt-4"
             >
               {loading
                 ? <><Loader2 className="w-4 h-4 animate-spin" />Verifying on Blockchain…</>
@@ -226,48 +220,44 @@ export default function VerifyPage() {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className={`border-2 p-6 ${resultBorderClass}`}
+                className={`rounded-xl border-2 p-6 backdrop-blur-sm ${
+                  isAuthentic
+                    ? 'border-emerald-500/50 bg-emerald-500/10'
+                    : isRevoked
+                    ? 'border-amber-500/50 bg-amber-500/10'
+                    : 'border-red-500/50 bg-red-500/10'
+                }`}
               >
-                {/* ── Authentic ── */}
+                {/* Authentic */}
                 {isAuthentic && (
                   <>
                     <div className="flex items-center gap-3 mb-6">
-                      <ShieldCheck className="w-7 h-7 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                        <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                      </div>
                       <div>
-                        <p className="mono text-[14px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">
-                          Authentic Document
-                        </p>
-                        <p className="text-[12px] text-emerald-600/80 dark:text-emerald-400/70 mt-0.5">
-                          This document was officially recorded on the Sepolia blockchain.
-                        </p>
+                        <p className="text-[14px] font-bold text-emerald-400 uppercase tracking-wide">Authentic Document</p>
+                        <p className="text-[12px] text-emerald-400/70 mt-0.5">Officially recorded on the Sepolia blockchain.</p>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-6">
-                      <div>
-                        <p className="mono text-[10px] font-bold tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">Document Type</p>
-                        <p className="text-[13px] font-semibold text-[#1a1917] dark:text-[#f0eee8]">
-                          {result.documentType ? fmtDocType(result.documentType) : '—'}
-                        </p>
+                      {[
+                        { label: 'Document Type', value: result.documentType ? fmtDocType(result.documentType) : '—' },
+                        { label: 'Recorded On', value: result.timestamp ? new Date(result.timestamp * 1000).toLocaleString('en-PH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—' },
+                      ].map(({ label, value }) => (
+                        <div key={label} className="bg-white/5 rounded-lg p-3">
+                          <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#b0b4ba] mb-1">{label}</p>
+                          <p className="text-[13px] font-semibold text-white">{value}</p>
+                        </div>
+                      ))}
+                      <div className="sm:col-span-2 bg-white/5 rounded-lg p-3">
+                        <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#b0b4ba] mb-1">Recorded By (Wallet)</p>
+                        <p className="font-mono text-[11px] text-[#b0b4ba] break-all">{result.recordedBy || '—'}</p>
                       </div>
-                      <div>
-                        <p className="mono text-[10px] font-bold tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">Recorded On</p>
-                        <p className="text-[13px] font-semibold text-[#1a1917] dark:text-[#f0eee8]">
-                          {result.timestamp
-                            ? new Date(result.timestamp * 1000).toLocaleString('en-PH', {
-                                year: 'numeric', month: 'long', day: 'numeric',
-                                hour: '2-digit', minute: '2-digit',
-                              })
-                            : '—'}
-                        </p>
-                      </div>
-                      <div className="sm:col-span-2">
-                        <p className="mono text-[10px] font-bold tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">Recorded By (Wallet)</p>
-                        <p className="mono text-[11px] text-[#3d3b36] dark:text-[#c9c6be] break-all">{result.recordedBy || '—'}</p>
-                      </div>
-                      <div className="sm:col-span-2">
-                        <p className="mono text-[10px] font-bold tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">Document Hash</p>
-                        <p className="mono text-[10px] text-[#3d3b36] dark:text-[#c9c6be] break-all">{hash}</p>
+                      <div className="sm:col-span-2 bg-white/5 rounded-lg p-3">
+                        <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#b0b4ba] mb-1">Document Hash</p>
+                        <p className="font-mono text-[10px] text-[#b0b4ba] break-all">{hash}</p>
                       </div>
                     </div>
 
@@ -275,74 +265,57 @@ export default function VerifyPage() {
                       href={`https://sepolia.etherscan.io/address/${result.recordedBy}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 mono text-[11px] font-bold tracking-[0.1em] uppercase text-emerald-700 dark:text-emerald-400 hover:underline"
+                      className="inline-flex items-center gap-2 text-[11px] font-bold tracking-wide uppercase text-emerald-400 hover:text-emerald-300 transition-colors"
                     >
-                      <ExternalLink className="w-3.5 h-3.5" /> View Recorder on Etherscan
+                      <ExternalLink className="w-3.5 h-3.5" /> View on Etherscan
                     </a>
                   </>
                 )}
 
-                {/* ── Revoked ── */}
+                {/* Revoked */}
                 {isRevoked && (
                   <>
                     <div className="flex items-center gap-3 mb-4">
-                      <ShieldAlert className="w-7 h-7 text-amber-600 dark:text-amber-400 shrink-0" />
+                      <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                        <ShieldAlert className="w-5 h-5 text-amber-400" />
+                      </div>
                       <div>
-                        <p className="mono text-[14px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wide">
-                          Document Revoked
-                        </p>
-                        <p className="text-[12px] text-amber-600/80 dark:text-amber-400/70 mt-0.5">
-                          This document exists on-chain but has been officially revoked and is no longer valid.
-                        </p>
+                        <p className="text-[14px] font-bold text-amber-400 uppercase tracking-wide">Document Revoked</p>
+                        <p className="text-[12px] text-amber-400/70 mt-0.5">This document has been officially revoked and is no longer valid.</p>
                       </div>
                     </div>
-
-                    <div className="mb-4 p-3 bg-amber-100 dark:bg-amber-900/30 border-l-4 border-amber-500">
-                      <p className="mono text-[11px] font-bold text-amber-700 dark:text-amber-400">
-                        ⚠ THIS DOCUMENT HAS BEEN REVOKED — DO NOT ACCEPT AS VALID
-                      </p>
+                    <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                      <p className="text-[11px] font-bold text-amber-400">⚠ DO NOT ACCEPT THIS DOCUMENT AS VALID</p>
                     </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-6">
-                      <div>
-                        <p className="mono text-[10px] font-bold tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">Document Type</p>
-                        <p className="text-[13px] font-semibold text-[#1a1917] dark:text-[#f0eee8]">
-                          {result.documentType ? fmtDocType(result.documentType) : '—'}
-                        </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="bg-white/5 rounded-lg p-3">
+                        <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#b0b4ba] mb-1">Document Type</p>
+                        <p className="text-[13px] font-semibold text-white">{result.documentType ? fmtDocType(result.documentType) : '—'}</p>
                       </div>
-                      <div>
-                        <p className="mono text-[10px] font-bold tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">Originally Recorded</p>
-                        <p className="text-[13px] font-semibold text-[#1a1917] dark:text-[#f0eee8]">
-                          {result.timestamp
-                            ? new Date(result.timestamp * 1000).toLocaleString('en-PH', {
-                                year: 'numeric', month: 'long', day: 'numeric',
-                                hour: '2-digit', minute: '2-digit',
-                              })
-                            : '—'}
+                      <div className="bg-white/5 rounded-lg p-3">
+                        <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#b0b4ba] mb-1">Originally Recorded</p>
+                        <p className="text-[13px] font-semibold text-white">
+                          {result.timestamp ? new Date(result.timestamp * 1000).toLocaleString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' }) : '—'}
                         </p>
-                      </div>
-                      <div className="sm:col-span-2">
-                        <p className="mono text-[10px] font-bold tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">Document Hash</p>
-                        <p className="mono text-[10px] text-[#3d3b36] dark:text-[#c9c6be] break-all">{hash}</p>
                       </div>
                     </div>
                   </>
                 )}
 
-                {/* ── Not Found ── */}
+                {/* Not Found */}
                 {isNotFound && (
                   <div className="flex items-start gap-3">
-                    <ShieldX className="w-7 h-7 text-red-500 shrink-0 mt-0.5" />
+                    <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <ShieldX className="w-5 h-5 text-red-400" />
+                    </div>
                     <div>
-                      <p className="mono text-[14px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wide mb-1">
-                        Not Found on Blockchain
-                      </p>
-                      <p className="text-[13px] text-red-500/80 dark:text-red-400/70 leading-relaxed">
+                      <p className="text-[14px] font-bold text-red-400 uppercase tracking-wide mb-1">Not Found on Blockchain</p>
+                      <p className="text-[13px] text-red-400/70 leading-relaxed">
                         No record exists for this hash. The document may not have been issued by the barangay, or the file may have been tampered with.
                       </p>
-                      <div className="mt-4 border-l-2 border-red-400/40 pl-3">
-                        <p className="mono text-[10px] font-bold tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">Hash Checked</p>
-                        <p className="mono text-[10px] text-[#5c5a54] dark:text-[#9e9b94] break-all">{hash}</p>
+                      <div className="mt-4 bg-white/5 rounded-lg p-3">
+                        <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#b0b4ba] mb-1">Hash Checked</p>
+                        <p className="font-mono text-[10px] text-[#b0b4ba] break-all">{hash}</p>
                       </div>
                     </div>
                   </div>
@@ -356,15 +329,16 @@ export default function VerifyPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="mono text-[10px] text-center text-[#7a7870] dark:text-[#7e7b75] mt-8 leading-relaxed"
+            className="text-[11px] text-center text-[#555860] mt-8 leading-relaxed"
           >
             Verification is done against the Sepolia Ethereum testnet.
             Records are permanent and tamper-proof once on-chain.
           </motion.p>
 
         </div>
+
+        <Footer />
       </div>
-      <Footer />
     </>
   );
 }
