@@ -23,6 +23,11 @@
 import { supabase } from '@/app/lib/supabase';
 import { rsEncode, hexToBytes, bytesToHex } from '@/app/lib/utils/reedsolomon';
 
+// ─── QR placeholder shape name (same in every template) ───────────────────────
+// Every .docx template has the QR sample image with this exact shape name.
+// We find its rId via this name, then overwrite the image bytes in word/media/.
+const QR_SHAPE_NAME = 'Picture 1117202640';
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface RequestDetail {
@@ -524,7 +529,7 @@ async function renderQRToDataUrl(text: string): Promise<string> {
         colorDark:    '#000000',
         colorLight:   '#ffffff',
         // @ts-ignore
-        correctLevel: window.QRCode?.CorrectLevel?.H ?? 3, // Highest ECC level
+        correctLevel: window.QRCode?.CorrectLevel?.H ?? 3,
       });
     } catch (err) {
       document.body.removeChild(wrap);
@@ -532,7 +537,6 @@ async function renderQRToDataUrl(text: string): Promise<string> {
       return;
     }
 
-    // qrcode.js renders via setTimeout internally
     setTimeout(() => {
       try {
         const canvas = wrap.querySelector('canvas') as HTMLCanvasElement | null;
@@ -550,14 +554,12 @@ async function renderQRToDataUrl(text: string): Promise<string> {
 }
 
 /**
- * Builds a Reed-Solomon encoded verification URL for the given request/hash,
- * then renders it as a QR PNG data URL.
+ * Builds a Reed-Solomon encoded verification URL, then renders it as a QR PNG.
  *
  * RS encoding adds 32 parity bytes to the 32-byte SHA-256 hash (~25% extra
- * error correction on top of the QR code's own ECC).
+ * error correction on top of the QR's own built-in ECC).
  *
- * QR payload format:
- *   https://<origin>/verify?hash=<sha256hex>&rs=<rsEncodedHex>
+ * QR payload: https://<origin>/verify?hash=<sha256hex>&rs=<rsEncodedHex>
  */
 async function generateQRDataUrl(requestId: string, fileHash?: string | null): Promise<string | null> {
   try {
@@ -565,12 +567,10 @@ async function generateQRDataUrl(requestId: string, fileHash?: string | null): P
     let payload: string;
 
     if (fileHash && /^[0-9a-f]{64}$/i.test(fileHash)) {
-      // RS-encode the 32-byte hash → 64 bytes (32 data + 32 ECC)
-      const rsEncoded = rsEncode(hexToBytes(fileHash), 32);
+      const rsEncoded = rsEncode(hexToBytes(fileHash), 32); // 32 data + 32 ECC bytes
       const rsHex     = bytesToHex(rsEncoded);
       payload = `${origin}/verify?hash=${fileHash}&rs=${rsHex}`;
     } else {
-      // Fallback: encode request ID so QR is still scannable
       payload = `${origin}/verify?id=${requestId}`;
     }
 
@@ -579,6 +579,58 @@ async function generateQRDataUrl(requestId: string, fileHash?: string | null): P
     console.warn('QR generation failed:', err);
     return null;
   }
+}
+
+/**
+ * Replaces the QR placeholder image in the docx zip.
+ *
+ * Instead of touching the XML structure, we:
+ *  1. Find the shape named QR_SHAPE_NAME in document.xml to get its r:embed rId.
+ *  2. Look up that rId in the rels file to get the media filename (e.g. image2.png).
+ *  3. Overwrite that file in word/media/ with the new QR PNG bytes.
+ *
+ * This is the safest approach — zero XML changes, Word opens the file cleanly.
+ */
+async function injectQRIntoZip(zip: any, qrDataUrl: string): Promise<void> {
+  // ── 1. Find rId from document.xml via shape name ──────────────────────────
+  const docFile = zip.file('word/document.xml');
+  if (!docFile) return;
+  const xml: string = await docFile.async('string');
+
+  // Locate the shape and extract the r:embed rId
+  const shapePos = xml.indexOf(QR_SHAPE_NAME);
+  if (shapePos === -1) {
+    console.warn(`QR placeholder shape "${QR_SHAPE_NAME}" not found in document.xml`);
+    return;
+  }
+
+  // Search forward from the shape name for the nearest r:embed
+  const searchWindow = xml.slice(shapePos, shapePos + 2000);
+  const embedMatch   = searchWindow.match(/r:embed="(rId\d+)"/);
+  if (!embedMatch) {
+    console.warn('Could not find r:embed for QR shape');
+    return;
+  }
+  const rId = embedMatch[1];
+
+  // ── 2. Look up the media filename in the rels file ────────────────────────
+  const relsFile = zip.file('word/_rels/document.xml.rels');
+  if (!relsFile) return;
+  const relsXml: string = await relsFile.async('string');
+
+  const relMatch = relsXml.match(new RegExp(`Id="${rId}"[^>]*Target="media/([^"]+)"`));
+  if (!relMatch) {
+    console.warn(`Could not find media target for ${rId}`);
+    return;
+  }
+  const mediaFileName = relMatch[1]; // e.g. "image2.png"
+
+  // ── 3. Overwrite the image bytes in word/media/ ───────────────────────────
+  const base64 = qrDataUrl.split(',')[1];
+  if (!base64) return;
+
+  zip.file(`word/media/${mediaFileName}`, base64, { base64: true });
+  console.log(`QR injected: replaced word/media/${mediaFileName} (${rId})`);
 }
 
 // ─── Main generateDocument export ────────────────────────────────────────────
@@ -635,24 +687,14 @@ export async function generateDocument(
     );
   }
 
-  // ── 6. Inject Reed-Solomon QR code at {%QR_CODE} ─────────────────────────
-  //    We use the existing file_hash on the request if available, otherwise
-  //    generate the blob first to compute a fresh hash, then re-inject.
-  const hashForQR  = req.file_hash ?? null;
-  const qrDataUrl  = await generateQRDataUrl(req.id, hashForQR);
+  // ── 6. Generate Reed-Solomon QR code and swap the placeholder image ────────
+  //    The QR encodes a verification URL with the RS-protected document hash.
+  //    We locate the placeholder by its shape name and overwrite its image bytes.
+  const qrDataUrl = await generateQRDataUrl(req.id, req.file_hash ?? null);
   if (qrDataUrl) {
-    await replacePlaceholderWithImage(
-      zip,
-      '{%QR_CODE}',
-      qrDataUrl,
-      'rId102',
-      'qr_code.png',
-      1.3,      // width  in inches — matches the placeholder size in the template
-      1.3,      // height in inches (square)
-      'center',
-    );
+    await injectQRIntoZip(zip, qrDataUrl);
   } else {
-    console.warn('QR generation failed — {%QR_CODE} placeholder not replaced.');
+    console.warn('QR generation failed — placeholder image left unchanged.');
   }
 
   // ── 7. Generate output blob ────────────────────────────────────────────────
