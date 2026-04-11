@@ -14,15 +14,17 @@ import {
   Moon,
   Sun,
   ShieldCheck,
+  History,
 } from 'lucide-react';
 
 /* ─────────────────────────────────────────────────────────────
    Navigation items
 ───────────────────────────────────────────────────────────── */
 const NAV_MAIN = [
-  { label: 'Dashboard', href: '/superadmindashboard', icon: LayoutDashboard },
-  { label: 'Users',     href: '/users',               icon: Users           },
-  { label: 'Audit Log', href: '/audit',               icon: ScrollText      },
+  { label: 'Dashboard',      href: '/superadmindashboard', icon: LayoutDashboard },
+  { label: 'Users',          href: '/users',               icon: Users           },
+  { label: 'Audit Log',      href: '/audit',               icon: ScrollText      },
+  { label: 'Recent Changes', href: '/recent-changes',      icon: History         },
 ];
 
 const NAV_SYSTEM = [

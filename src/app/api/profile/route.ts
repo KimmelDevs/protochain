@@ -63,6 +63,15 @@ export async function PATCH(req: NextRequest) {
       ...(body.username    !== undefined && { username:    body.username }),
     };
 
+    // Fetch current values before updating (for change history).
+    const { data: existing } = await supabase
+      .from('profiles')
+      .select('firstName, lastName, email, phone, address, birthday, civilStatus, username')
+      .eq('id', id)
+      .single();
+
+    const existingDecrypted = existing ? decryptFields(existing, [...SENSITIVE_FIELDS]) : {};
+
     // Encrypt only the sensitive fields that are present in the payload.
     const fieldsToEncrypt = SENSITIVE_FIELDS.filter(f => f in payload);
     const encrypted = encryptFields(payload, fieldsToEncrypt);
@@ -78,6 +87,35 @@ export async function PATCH(req: NextRequest) {
 
     // Decrypt and return so the UI can display it immediately.
     const decrypted = decryptFields(data, [...SENSITIVE_FIELDS]);
+
+    // ── Record which fields actually changed ──────────────────────────────
+    const TRACKED_FIELDS = ['firstName', 'lastName', 'email', 'phone', 'address', 'birthday', 'civilStatus', 'username'];
+    const changes: { field: string; oldValue: string; newValue: string }[] = [];
+
+    for (const field of TRACKED_FIELDS) {
+      if (payload[field] === undefined) continue;
+      const oldVal = String((existingDecrypted as any)[field] ?? '');
+      const newVal = String(payload[field] ?? '');
+      if (oldVal !== newVal) {
+        changes.push({ field, oldValue: oldVal, newValue: newVal });
+      }
+    }
+
+    if (changes.length > 0) {
+      // Fire-and-forget — don't block the response on history logging.
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+      fetch(`${baseUrl}/api/profile-history`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId:    id,
+          userEmail: decrypted.email ?? null,
+          userName:  decrypted.username ?? null,
+          changes,
+        }),
+      }).catch(() => { /* non-critical */ });
+    }
+
     return NextResponse.json({ data: decrypted });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
