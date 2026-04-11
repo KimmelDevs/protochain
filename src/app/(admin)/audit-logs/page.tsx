@@ -78,6 +78,13 @@ const ActionBadge = ({ action }: { action: AuditLog['action'] }) => {
   );
 };
 
+/* ─── truncate helper ───────────────────────────────────────────────────── */
+const Truncated = ({ text, className = '' }: { text: string | null; className?: string }) => {
+  if (!text) return <span className="text-[#7a7870] dark:text-[#7e7b75] italic">—</span>;
+  const short = text.length > 40 ? text.slice(0, 40) + '…' : text;
+  return <span className={className} title={text}>{short}</span>;
+};
+
 /* ─── page ──────────────────────────────────────────────────────────────── */
 export default function AuditLogsPage() {
   const router = useRouter();
@@ -153,10 +160,7 @@ export default function AuditLogsPage() {
   /* ── export handler ─────────────────────────────────────────────────────── */
   const handleExport = () => {
     setExporting(true);
-    setTimeout(() => {
-      exportCSV(filtered);
-      setExporting(false);
-    }, 80);
+    setTimeout(() => { exportCSV(filtered); setExporting(false); }, 80);
   };
 
   if (loading) return (
@@ -179,10 +183,7 @@ export default function AuditLogsPage() {
                 <p className="mono text-[11px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] uppercase mb-2">Admin Panel</p>
                 <h1 className="mono text-2xl md:text-3xl font-bold text-[#1a1917] dark:text-[#f0eee8] tracking-tight leading-none">AUDIT LOGS</h1>
               </div>
-              <Link
-                href="/admindashboard"
-                className="mono text-[11px] tracking-[0.1em] uppercase text-orange-600 dark:text-orange-400 hover:text-orange-700 transition-colors"
-              >
+              <Link href="/admindashboard" className="mono text-[11px] tracking-[0.1em] uppercase text-orange-600 dark:text-orange-400 hover:text-orange-700 transition-colors">
                 ← Dashboard
               </Link>
             </div>
@@ -212,10 +213,7 @@ export default function AuditLogsPage() {
                 disabled={exporting || filtered.length === 0}
                 className="ml-6 mb-4 flex items-center gap-2 mono text-[11px] font-bold tracking-[0.1em] uppercase px-4 py-2 border border-orange-600 dark:border-orange-500 text-orange-600 dark:text-orange-400 hover:bg-orange-600 dark:hover:bg-orange-500 hover:text-white dark:hover:text-white transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
               >
-                {exporting
-                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  : <Download className="w-3.5 h-3.5" />
-                }
+                {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
                 Export CSV
                 {filtered.length > 0 && !exporting && (
                   <span className="ml-1 text-[#7a7870] dark:text-[#9e9b94] font-normal">({filtered.length})</span>
@@ -226,27 +224,20 @@ export default function AuditLogsPage() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7a7870] dark:text-[#7e7b75]" />
                 <input
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
+                  value={search} onChange={e => setSearch(e.target.value)}
                   placeholder="Search by admin, resident, doc type…"
                   className="w-full pl-9 pr-3 py-2.5 text-[12px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] placeholder-[#7a7870] dark:placeholder-[#7e7b75] focus:outline-none focus:border-orange-500 dark:focus:border-orange-400 transition-colors mono"
                 />
               </div>
-              <select
-                value={actionFilter}
-                onChange={e => setActionFilter(e.target.value as any)}
-                className="w-full px-3 py-2.5 text-[12px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] focus:outline-none focus:border-orange-500 dark:focus:border-orange-400 transition-colors mono"
-              >
+              <select value={actionFilter} onChange={e => setActionFilter(e.target.value as any)}
+                className="w-full px-3 py-2.5 text-[12px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] focus:outline-none focus:border-orange-500 dark:focus:border-orange-400 transition-colors mono">
                 <option value="all">All Actions</option>
                 <option value="approved">Approved</option>
                 <option value="rejected">Rejected</option>
                 <option value="document_uploaded">Document Uploaded</option>
               </select>
-              <select
-                value={dateFilter}
-                onChange={e => setDateFilter(e.target.value as any)}
-                className="w-full px-3 py-2.5 text-[12px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] focus:outline-none focus:border-orange-500 dark:focus:border-orange-400 transition-colors mono"
-              >
+              <select value={dateFilter} onChange={e => setDateFilter(e.target.value as any)}
+                className="w-full px-3 py-2.5 text-[12px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] focus:outline-none focus:border-orange-500 dark:focus:border-orange-400 transition-colors mono">
                 <option value="all">All Time</option>
                 <option value="today">Today</option>
                 <option value="week">This Week</option>
@@ -293,11 +284,11 @@ export default function AuditLogsPage() {
                     </div>
 
                     {/* admin */}
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-[12px] font-medium text-[#1a1917] dark:text-[#f0eee8] truncate" title={log.performer_name ?? log.performer_email ?? ''}>
                         {log.performer_name ?? <span className="italic text-[#7a7870] dark:text-[#7e7b75]">Unknown</span>}
                       </p>
-                      {log.performer_name && log.performer_email && (
+                      {log.performer_email && (
                         <p className="mono text-[10px] text-[#7a7870] dark:text-[#7e7b75] mt-0.5 truncate" title={log.performer_email}>
                           {log.performer_email}
                         </p>
@@ -305,23 +296,25 @@ export default function AuditLogsPage() {
                     </div>
 
                     {/* action */}
-                    <div>
+                    <div className="min-w-0">
                       <ActionBadge action={log.action} />
                       {log.notes && (
-                        <p className="text-[11px] text-[#5c5a54] dark:text-[#9e9b94] mt-1.5 leading-snug line-clamp-2" title={log.notes}>
+                        <p className="text-[11px] text-[#5c5a54] dark:text-[#9e9b94] mt-1.5 leading-snug line-clamp-1 truncate" title={log.notes}>
                           {log.notes}
                         </p>
                       )}
                     </div>
 
                     {/* document type */}
-                    <div>
-                      <p className="text-[12px] text-[#3d3b36] dark:text-[#c9c6be]">{fmtDocType(log.document_type)}</p>
+                    <div className="min-w-0">
+                      <p className="text-[12px] text-[#3d3b36] dark:text-[#c9c6be] truncate" title={fmtDocType(log.document_type)}>
+                        {fmtDocType(log.document_type)}
+                      </p>
                     </div>
 
                     {/* resident */}
-                    <div>
-                      <p className="text-[12px] text-[#3d3b36] dark:text-[#c9c6be]">
+                    <div className="min-w-0">
+                      <p className="text-[12px] text-[#3d3b36] dark:text-[#c9c6be] truncate" title={log.resident_name ?? ''}>
                         {log.resident_name || <span className="text-[#7a7870] dark:text-[#7e7b75] italic">—</span>}
                       </p>
                     </div>
