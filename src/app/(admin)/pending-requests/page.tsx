@@ -8,7 +8,6 @@ import {
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
-import { decrypt } from '@/app/lib/utils/crypto';
 
 /* ─────────────────────────── types ─────────────────────────────────────── */
 interface Profile {
@@ -61,13 +60,10 @@ export default function PendingRequestsPage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { router.push('/login'); return; }
 
-        const { data: reqData, error } = await supabase
-          .from('requests')
-          .select('*')
-          .eq('status', 'pending')
-          .order('created_at', { ascending: true });
+        const reqRes = await fetch('/api/requests?status=pending');
+        if (!reqRes.ok) throw new Error('Failed to fetch requests');
+        const { data: reqData } = await reqRes.json();
 
-        if (error) throw error;
         if (!reqData?.length) { setRequests([]); return; }
 
         const ids = [...new Set(reqData.map((r: any) => r.user_id))];
@@ -84,8 +80,6 @@ export default function PendingRequestsPage() {
         );
         setRequests(reqData.map((r: any) => ({
           ...r,
-          purpose:        decrypt(r.purpose),
-          custom_purpose: decrypt(r.custom_purpose),
           profiles: pm[r.user_id] ?? null,
         })));
       } catch (e) {
