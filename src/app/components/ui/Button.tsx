@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'default' | 'outline' | 'ghost' | 'danger' | 'primary' | 'dark-rounded';
+  variant?: 'default' | 'outline' | 'ghost' | 'danger' | 'primary' | 'dark-rounded' | 'orange';
   size?: 'sm' | 'md' | 'lg';
   children: React.ReactNode;
   className?: string;
@@ -37,6 +37,9 @@ export default function Button({
     // Dark Rounded — kept dark for secondary/dark-surface use only
     'dark-rounded':
       'bg-[#000000] text-white hover:opacity-80 shadow-[var(--shadow-1)] rounded-[32px]',
+    // Orange — explicit alias for default CTA orange
+    orange:
+      'bg-[#E8500A] text-white hover:opacity-90 shadow-[var(--shadow-1)]',
   };
 
   // Radius: default variant gets pill, others get 8px (design system standard card radius)
@@ -47,6 +50,7 @@ export default function Button({
     ghost: 'rounded-[8px]',
     danger: 'rounded-[8px]',
     'dark-rounded': '', // already set inline above
+    orange: 'rounded-[9999px]',
   };
 
   const sizes = {
