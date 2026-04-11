@@ -207,7 +207,7 @@ export default function VerifyPage() {
             <button
               onClick={handleVerify}
               disabled={loading || hashing || !hash.trim()}
-              className="flex items-center justify-center gap-2 w-full bg-[#000000] hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed text-white mono text-[12px] font-bold tracking-[0.1em] uppercase py-3 transition-colors mt-4"
+              className="flex items-center justify-center gap-2 w-full bg-[#E8500A] hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed text-white mono text-[12px] font-bold tracking-[0.1em] uppercase py-3 transition-colors mt-4"
             >
               {loading
                 ? <><Loader2 className="w-4 h-4 animate-spin" />Verifying on Blockchain…</>

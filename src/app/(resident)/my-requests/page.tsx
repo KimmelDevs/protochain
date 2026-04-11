@@ -194,7 +194,7 @@ export default function MyRequestsPage() {
                   <p className="text-[#60646c] dark:text-[#b0b4ba] text-sm mb-6">You haven't submitted any document requests.</p>
                   <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
                     <Link href="/request-document">
-                      <button className="bg-[#000000] hover:opacity-80 text-white px-8 py-3 rounded-[9999px] font-semibold transition inline-flex items-center gap-2">
+                      <button className="bg-[#E8500A] hover:opacity-90 text-white px-8 py-3 rounded-[9999px] font-semibold transition inline-flex items-center gap-2">
                         <Plus className="w-4 h-4" />Request a Document
                       </button>
                     </Link>

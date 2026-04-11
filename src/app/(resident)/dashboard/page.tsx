@@ -248,7 +248,7 @@ export default function ResidentDashboard() {
                 </p>
                 <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
                   <Link href="/request-document">
-                    <span className="inline-flex items-center gap-2 bg-[#000000] hover:opacity-80 text-white px-5 py-2.5 rounded-[9999px] text-sm font-medium transition-colors">
+                    <span className="inline-flex items-center gap-2 bg-[#E8500A] hover:opacity-90 text-white px-5 py-2.5 rounded-[9999px] text-sm font-medium transition-colors">
                       <Plus className="w-4 h-4" />Request a Document
                     </span>
                   </Link>

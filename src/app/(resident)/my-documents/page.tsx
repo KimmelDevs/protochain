@@ -200,7 +200,7 @@ export default function MyDocumentsPage() {
                   <p className="text-sm text-[#60646c] dark:text-[#b0b4ba] mb-8">Once your request is approved, it will appear here.</p>
                   <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
                     <Link href="/request-document">
-                      <button className="bg-[#000000] hover:opacity-80 text-white px-8 py-3 rounded-[9999px] font-semibold transition">
+                      <button className="bg-[#E8500A] hover:opacity-90 text-white px-8 py-3 rounded-[9999px] font-semibold transition">
                         Request a Document
                       </button>
                     </Link>
@@ -247,7 +247,7 @@ export default function MyDocumentsPage() {
                 <motion.div
                   whileHover={{ scale: 1.08, rotate: 3 }}
                   transition={{ type: 'spring', stiffness: 300 }}
-                  className="w-12 h-12 bg-[#000000] rounded-[9999px] flex items-center justify-center mb-4"
+                  className="w-12 h-12 bg-[#E8500A] rounded-[9999px] flex items-center justify-center mb-4"
                 >
                   <FileText className="w-6 h-6 text-white" />
                 </motion.div>
