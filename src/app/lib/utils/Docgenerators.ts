@@ -133,42 +133,38 @@ interface SignatureImages {
   captain:   string | null;  // base64 PNG data URL
 }
 
-// ── {%SIGNATURE_2} split-run normalization ────────────────────────────────────
-// Word XML sometimes splits a text run across multiple <w:r> elements.
-// In all templates {%SIGNATURE_2} is stored as three separate runs:
-//   <w:t>{%SIGNATURE_</w:t> | <w:t>2</w:t> | <w:t>}</w:t>
-// We normalize it to a single complete run before replacement.
-const SIGNATURE_2_SPLIT =
-  '{%SIGNATURE_</w:t></w:r>' +
-  '<w:r><w:t>2</w:t></w:r>' +
-  '<w:r w:rsidRPr="00B642F6"><w:t>}</w:t></w:r>';
-const SIGNATURE_2_NORMALIZED = '{%SIGNATURE_2}</w:t></w:r>';
-
 async function fetchSignatureImages(): Promise<SignatureImages> {
   try {
-    // Signatures are stored in the admin_signatures table as record_json.signatureDataUrl
     const { data, error } = await supabase
-      .from('admin_signatures')
-      .select('role, record_json');
+      .from('barangay_settings')
+      .select('secretary_signature_url, captain_signature_url')
+      .single();
 
-    if (error || !data || data.length === 0) {
-      console.warn('Could not fetch admin_signatures:', error?.message);
-      return { secretary: null, captain: null };
-    }
+    if (error || !data) return { secretary: null, captain: null };
 
-    let secretary: string | null = null;
-    let captain:   string | null = null;
+    const toBase64 = async (url: string | null): Promise<string | null> => {
+      if (!url) return null;
+      try {
+        const res  = await fetch(url);
+        const blob = await res.blob();
+        return await new Promise<string>((resolve, reject) => {
+          const reader    = new FileReader();
+          reader.onload   = () => resolve(reader.result as string);
+          reader.onerror  = reject;
+          reader.readAsDataURL(blob);
+        });
+      } catch {
+        return null;
+      }
+    };
 
-    for (const row of data) {
-      const record = row.record_json as { signatureDataUrl?: string } | null;
-      if (!record?.signatureDataUrl) continue;
-      if (row.role === 'secretary') secretary = record.signatureDataUrl;
-      if (row.role === 'captain')   captain   = record.signatureDataUrl;
-    }
+    const [secretary, captain] = await Promise.all([
+      toBase64(data.secretary_signature_url),
+      toBase64(data.captain_signature_url),
+    ]);
 
     return { secretary, captain };
-  } catch (err) {
-    console.warn('fetchSignatureImages error:', err);
+  } catch {
     return { secretary: null, captain: null };
   }
 }
@@ -659,17 +655,11 @@ export async function generateDocument(
       console.warn(`No text injector for document type: ${docType}`);
   }
 
-  // ── 3. Fetch signature images from admin_signatures table ─────────────────
+  // ── 3. Fetch ECDSA signature images from Supabase ─────────────────────────
   const sigs = await fetchSignatureImages();
 
-  // ── 3a. Normalize split {%SIGNATURE_2} runs in document.xml ───────────────
-  //  Word XML splits '{%SIGNATURE_2}' across 3 separate <w:r> runs in all templates.
-  //  We merge them into one complete run so replacePlaceholderWithImage can find it.
-  await patchXml(zip, 'word/document.xml', xml =>
-    xml.replaceAll(SIGNATURE_2_SPLIT, SIGNATURE_2_NORMALIZED)
-  );
-
   // ── 4. Inject Secretary signature at {%SIGNATURE_1} ───────────────────────
+  //       Width: 1.8 inches, Height: 0.6 inches (adjust to fit your template)
   if (sigs.secretary) {
     await replacePlaceholderWithImage(
       zip,
@@ -679,7 +669,7 @@ export async function generateDocument(
       'sig_secretary.png',
       1.8,    // width in inches
       0.6,    // height in inches
-      'center',
+      'left',
     );
   }
 
@@ -693,7 +683,7 @@ export async function generateDocument(
       'sig_captain.png',
       1.8,    // width in inches
       0.6,    // height in inches
-      'center',
+      'left',
     );
   }
 
