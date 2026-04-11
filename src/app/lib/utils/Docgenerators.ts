@@ -133,10 +133,45 @@ interface SignatureImages {
   captain:   string | null;  // base64 PNG data URL
 }
 
+/**
+ * Removes the white background from a signature PNG data URL.
+ * Draws the image onto a canvas, then for each pixel that is near-white,
+ * sets its alpha to 0 (transparent). Returns a new PNG data URL.
+ */
+async function removeWhiteBackground(dataUrl: string): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas  = document.createElement('canvas');
+      canvas.width  = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0);
+
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data      = imageData.data;
+
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        // If the pixel is near-white (all channels > 230), make it transparent
+        if (r > 230 && g > 230 && b > 230) {
+          data[i + 3] = 0; // set alpha to 0
+        }
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = () => resolve(dataUrl); // fallback: return original if error
+    img.src = dataUrl;
+  });
+}
 
 async function fetchSignatureImages(): Promise<SignatureImages> {
   try {
-    // Signatures are stored in the admin_signatures table as record_json.signatureDataUrl
+    // Signatures are stored in admin_signatures table as record_json.signatureDataUrl
     const { data, error } = await supabase
       .from('admin_signatures')
       .select('role, record_json');
@@ -155,6 +190,10 @@ async function fetchSignatureImages(): Promise<SignatureImages> {
       if (row.role === 'secretary') secretary = record.signatureDataUrl;
       if (row.role === 'captain')   captain   = record.signatureDataUrl;
     }
+
+    // Remove white backgrounds so signatures appear transparent over document text
+    if (secretary) secretary = await removeWhiteBackground(secretary);
+    if (captain)   captain   = await removeWhiteBackground(captain);
 
     return { secretary, captain };
   } catch (err) {
@@ -575,18 +614,7 @@ async function generateQRDataUrl(requestId: string, fileHash?: string | null): P
   }
 }
 
-/**
- * Injects a signature image into the docx by finding the placeholder shape
- * via its alt text (descr attribute) and overwriting its media file.
- *
- * Both Secretary and Captain placeholders share the same rId/media file in the
- * templates. To handle them independently:
- *  - The FIRST call (e.g. Captain) overwrites the existing shared media file.
- *  - The SECOND call (e.g. Secretary) adds a NEW media file + relationship,
- *    then patches only the Secretary drawing's r:embed to point to it.
- *
- * This keeps the XML structure completely intact — Word opens cleanly.
- */
+
 async function injectSignatureIntoZip(
   zip:          any,
   altText:      string,   // e.g. 'Secretary Signature' or 'Captain Signature'
@@ -597,6 +625,7 @@ async function injectSignatureIntoZip(
   const docFile = zip.file('word/document.xml');
   if (!docFile) return;
   let xml: string = await docFile.async('string');
+  let mutableDataUrl = base64DataUrl; // mutable copy for background removal
 
   // ── 1. Find the drawing element with this alt text ─────────────────────────
   const descrAttr = `descr="${altText}"`;
@@ -628,7 +657,10 @@ async function injectSignatureIntoZip(
   }
   const existingMedia = relMatch[1]; // e.g. 'image1.png'
 
-  const base64 = base64DataUrl.split(',')[1];
+  // ── 4. Remove white background to make signature transparent ─────────────
+  mutableDataUrl = await removeWhiteBackground(mutableDataUrl);
+
+  const base64 = mutableDataUrl.split(',')[1];
   if (!base64) return;
 
   // ── 4. Check if this media file is shared with another signature ───────────
