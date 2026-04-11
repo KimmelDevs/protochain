@@ -751,6 +751,284 @@ async function injectQRIntoZip(zip: any, qrDataUrl: string): Promise<void> {
   console.log(`QR injected: replaced word/media/${mediaFileName} (${rId})`);
 }
 
+// ─── Digital Seal generator ───────────────────────────────────────────────────
+
+/**
+ * Generates a circular Digital Seal PNG on a canvas.
+ *
+ * The seal is mathematically linked to the document via the blockchain tx hash
+ * (or document hash as fallback). Every seal is unique to its document instance.
+ *
+ * Design:
+ *  - Outer ring with double-line border
+ *  - "BARANGAY GUIN-ON" curved along the top arc
+ *  - "DIGITALLY SEALED" curved along the bottom arc
+ *  - Central star/asterisk motif
+ *  - Short hash fingerprint (first 8 chars of tx/doc hash) at center
+ *  - "CALBAYOG CITY · SAMAR" in the middle band
+ */
+async function generateDigitalSealDataUrl(
+  txHash?:  string | null,
+  docHash?: string | null,
+): Promise<string> {
+  const SIZE   = 300;
+  const CX     = SIZE / 2;
+  const CY     = SIZE / 2;
+  const R      = SIZE / 2 - 6;   // outer radius
+  const NAVY   = '#1a237e';
+  const GOLD   = '#b8860b';
+
+  // Use tx hash if available, fall back to doc hash, then a timestamp
+  const hashSource = txHash || docHash || Date.now().toString(16);
+  const fingerprint = hashSource.slice(0, 8).toUpperCase();
+
+  const canvas  = document.createElement('canvas');
+  canvas.width  = SIZE;
+  canvas.height = SIZE;
+  const ctx     = canvas.getContext('2d')!;
+
+  // ── Background: transparent
+  ctx.clearRect(0, 0, SIZE, SIZE);
+
+  // ── Outer double ring ──────────────────────────────────────────────────────
+  // Outer ring
+  ctx.beginPath();
+  ctx.arc(CX, CY, R, 0, Math.PI * 2);
+  ctx.strokeStyle = NAVY;
+  ctx.lineWidth   = 4;
+  ctx.stroke();
+
+  // Inner ring (slightly inset)
+  ctx.beginPath();
+  ctx.arc(CX, CY, R - 8, 0, Math.PI * 2);
+  ctx.strokeStyle = NAVY;
+  ctx.lineWidth   = 1.5;
+  ctx.stroke();
+
+  // ── Outer ring fill (semi-transparent) ────────────────────────────────────
+  ctx.beginPath();
+  ctx.arc(CX, CY, R - 1, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(26, 35, 126, 0.06)';
+  ctx.fill();
+
+  // ── Curved top text: "BARANGAY GUIN-ON" ───────────────────────────────────
+  const topText   = 'BARANGAY GUIN-ON';
+  const topRadius = R - 14;
+  ctx.font      = 'bold 13px Arial, sans-serif';
+  ctx.fillStyle = NAVY;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  const topStartAngle = -Math.PI * 0.78;
+  const topArcSpan    = Math.PI * 1.56;
+  const topCharCount  = topText.length;
+
+  for (let i = 0; i < topCharCount; i++) {
+    const angle = topStartAngle + (topArcSpan / (topCharCount - 1)) * i;
+    ctx.save();
+    ctx.translate(
+      CX + topRadius * Math.cos(angle),
+      CY + topRadius * Math.sin(angle),
+    );
+    ctx.rotate(angle + Math.PI / 2);
+    ctx.fillText(topText[i], 0, 0);
+    ctx.restore();
+  }
+
+  // ── Curved bottom text: "DIGITALLY SEALED" ────────────────────────────────
+  const botText   = 'DIGITALLY SEALED';
+  const botRadius = R - 14;
+  ctx.font      = 'bold 12px Arial, sans-serif';
+  ctx.fillStyle = GOLD;
+
+  const botStartAngle = Math.PI * 0.22;
+  const botArcSpan    = Math.PI * 1.56;
+  const botCharCount  = botText.length;
+
+  for (let i = 0; i < botCharCount; i++) {
+    const angle = botStartAngle + (botArcSpan / (botCharCount - 1)) * i;
+    ctx.save();
+    ctx.translate(
+      CX + botRadius * Math.cos(angle),
+      CY + botRadius * Math.sin(angle),
+    );
+    ctx.rotate(angle - Math.PI / 2);
+    ctx.fillText(botText[i], 0, 0);
+    ctx.restore();
+  }
+
+  // ── Horizontal divider lines ───────────────────────────────────────────────
+  const lineY1 = CY - 28;
+  const lineY2 = CY + 28;
+  const lineX  = R - 22;
+  ctx.strokeStyle = NAVY;
+  ctx.lineWidth   = 1;
+  ctx.beginPath(); ctx.moveTo(CX - lineX, lineY1); ctx.lineTo(CX + lineX, lineY1); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(CX - lineX, lineY2); ctx.lineTo(CX + lineX, lineY2); ctx.stroke();
+
+  // ── Center text: "CALBAYOG CITY · SAMAR" ──────────────────────────────────
+  ctx.font         = 'bold 9.5px Arial, sans-serif';
+  ctx.fillStyle    = NAVY;
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('CALBAYOG CITY · SAMAR', CX, CY);
+
+  // ── Hash fingerprint (small, below center) ────────────────────────────────
+  ctx.font      = '8px Courier New, monospace';
+  ctx.fillStyle = 'rgba(26, 35, 126, 0.65)';
+  ctx.fillText(fingerprint, CX, CY + 17);
+
+  // ── 8-point star at top center ────────────────────────────────────────────
+  ctx.fillStyle = GOLD;
+  const starCX = CX;
+  const starCY = CY - 48;
+  const outerR = 9;
+  const innerR = 4;
+  const points = 8;
+  ctx.beginPath();
+  for (let i = 0; i < points * 2; i++) {
+    const r     = i % 2 === 0 ? outerR : innerR;
+    const angle = (i * Math.PI) / points - Math.PI / 2;
+    if (i === 0) ctx.moveTo(starCX + r * Math.cos(angle), starCY + r * Math.sin(angle));
+    else          ctx.lineTo(starCX + r * Math.cos(angle), starCY + r * Math.sin(angle));
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  // ── Small dots along the inner ring (decorative) ─────────────────────────
+  ctx.fillStyle = NAVY;
+  const dotR = R - 20;
+  for (let i = 0; i < 36; i++) {
+    const a = (i / 36) * Math.PI * 2;
+    // Skip top and bottom where text is
+    if ((a > -0.3 && a < Math.PI + 0.3)) continue;
+    ctx.beginPath();
+    ctx.arc(CX + dotR * Math.cos(a), CY + dotR * Math.sin(a), 1, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  return canvas.toDataURL('image/png');
+}
+
+/**
+ * Replaces the Digital Seal group placeholder in the docx.
+ *
+ * The placeholder is a floating group shape (Group 61) identified by
+ * descr="Digital Seal". We replace the entire <wp:anchor>...</wp:anchor>
+ * element with a new image anchor of the same position and size.
+ *
+ * This is the same safe image-swap strategy used for QR and signatures.
+ */
+async function injectDigitalSealIntoZip(
+  zip:         any,
+  sealDataUrl: string,
+): Promise<void> {
+  const SEAL_ALT_TEXT = 'Digital Seal';
+  const SEAL_RID      = 'rId_seal';
+  const SEAL_FILENAME = 'digital_seal.png';
+
+  const docFile = zip.file('word/document.xml');
+  if (!docFile) return;
+  let xml: string = await docFile.async('string');
+
+  // ── 1. Find the anchor containing the Digital Seal group ─────────────────
+  const descrPos = xml.indexOf(`descr="${SEAL_ALT_TEXT}"`);
+  if (descrPos === -1) {
+    console.warn('Digital Seal placeholder not found — skipping seal injection');
+    return;
+  }
+
+  // Walk backwards to find the opening <wp:anchor
+  const before      = xml.slice(0, descrPos);
+  const anchorStart = before.lastIndexOf('<wp:anchor');
+  if (anchorStart === -1) { console.warn('Could not find wp:anchor for Digital Seal'); return; }
+
+  // Walk forwards to find </wp:anchor>
+  const fromAnchor = xml.slice(anchorStart);
+  const anchorEndRel = fromAnchor.indexOf('</wp:anchor>') + '</wp:anchor>'.length;
+  const anchorEnd  = anchorStart + anchorEndRel;
+
+  const oldAnchor  = xml.slice(anchorStart, anchorEnd);
+
+  // ── 2. Extract position/size from the old anchor ──────────────────────────
+  const cxMatch  = oldAnchor.match(/<wp:extent cx="(\d+)"/);
+  const cyMatch  = oldAnchor.match(/<wp:extent[^>]*cy="(\d+)"/);
+  const posHMatch = oldAnchor.match(/<wp:positionH[^>]*>[\s\S]*?<wp:posOffset>(\d+)<\/wp:posOffset>/);
+  const posVMatch = oldAnchor.match(/<wp:positionV[^>]*>[\s\S]*?<wp:posOffset>(\d+)<\/wp:posOffset>/);
+  const relHMatch = oldAnchor.match(/<wp:positionH relativeFrom="([^"]+)"/);
+  const relVMatch = oldAnchor.match(/<wp:positionV relativeFrom="([^"]+)"/);
+  const relHeightMatch = oldAnchor.match(/relativeHeight="(\d+)"/);
+
+  const cx        = cxMatch?.[1]       ?? '1057910';
+  const cy        = cyMatch?.[1]       ?? '1059180';
+  const posH      = posHMatch?.[1]     ?? '5334000';
+  const posV      = posVMatch?.[1]     ?? '8580120';
+  const relH      = relHMatch?.[1]     ?? 'column';
+  const relV      = relVMatch?.[1]     ?? 'paragraph';
+  const relHeight = relHeightMatch?.[1] ?? '251699200';
+
+  // ── 3. Add seal image to zip and register relationship ────────────────────
+  const base64 = sealDataUrl.split(',')[1];
+  if (!base64) return;
+
+  zip.file(`word/media/${SEAL_FILENAME}`, base64, { base64: true });
+
+  const relsFile = zip.file('word/_rels/document.xml.rels');
+  if (!relsFile) return;
+  let relsXml: string = await relsFile.async('string');
+
+  // Only add the relationship once
+  if (!relsXml.includes(`Id="${SEAL_RID}"`)) {
+    const imageType = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/image';
+    relsXml = relsXml.replace(
+      '</Relationships>',
+      `<Relationship Id="${SEAL_RID}" Type="${imageType}" Target="media/${SEAL_FILENAME}"/>\n</Relationships>`
+    );
+    zip.file('word/_rels/document.xml.rels', relsXml);
+  }
+
+  // ── 4. Build a new floating image anchor at the same position/size ────────
+  const newAnchor = `<wp:anchor distT="0" distB="0" distL="114300" distR="114300" ` +
+    `simplePos="0" relativeHeight="${relHeight}" behindDoc="0" locked="0" ` +
+    `layoutInCell="1" allowOverlap="1" ` +
+    `xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">` +
+    `<wp:simplePos x="0" y="0"/>` +
+    `<wp:positionH relativeFrom="${relH}"><wp:posOffset>${posH}</wp:posOffset></wp:positionH>` +
+    `<wp:positionV relativeFrom="${relV}"><wp:posOffset>${posV}</wp:posOffset></wp:positionV>` +
+    `<wp:extent cx="${cx}" cy="${cy}"/>` +
+    `<wp:effectExtent l="0" t="0" r="0" b="0"/>` +
+    `<wp:wrapNone/>` +
+    `<wp:docPr id="9001" name="Digital Seal" descr="${SEAL_ALT_TEXT}"/>` +
+    `<wp:cNvGraphicFramePr>` +
+      `<a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/>` +
+    `</wp:cNvGraphicFramePr>` +
+    `<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">` +
+      `<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">` +
+        `<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">` +
+          `<pic:nvPicPr>` +
+            `<pic:cNvPr id="9001" name="Digital Seal"/>` +
+            `<pic:cNvPicPr><a:picLocks noChangeAspect="1"/></pic:cNvPicPr>` +
+          `</pic:nvPicPr>` +
+          `<pic:blipFill>` +
+            `<a:blip r:embed="${SEAL_RID}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>` +
+            `<a:stretch><a:fillRect/></a:stretch>` +
+          `</pic:blipFill>` +
+          `<pic:spPr>` +
+            `<a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm>` +
+            `<a:prstGeom prst="ellipse"><a:avLst/></a:prstGeom>` +
+          `</pic:spPr>` +
+        `</pic:pic>` +
+      `</a:graphicData>` +
+    `</a:graphic>` +
+  `</wp:anchor>`;
+
+  // ── 5. Splice the new anchor in place of the old one ─────────────────────
+  xml = xml.slice(0, anchorStart) + newAnchor + xml.slice(anchorEnd);
+  zip.file('word/document.xml', xml);
+
+  console.log(`Digital Seal injected at position H=${posH} V=${posV} (${cx}x${cy} EMU)`);
+}
+
 // ─── Main generateDocument export ────────────────────────────────────────────
 
 export async function generateDocument(
@@ -787,8 +1065,6 @@ export async function generateDocument(
   }
 
   // ── 6. Generate Reed-Solomon QR code and swap the placeholder image ────────
-  //    The QR encodes a verification URL with the RS-protected document hash.
-  //    We locate the placeholder by its shape name and overwrite its image bytes.
   const qrDataUrl = await generateQRDataUrl(req.id, req.file_hash ?? null);
   if (qrDataUrl) {
     await injectQRIntoZip(zip, qrDataUrl);
@@ -796,7 +1072,19 @@ export async function generateDocument(
     console.warn('QR generation failed — placeholder image left unchanged.');
   }
 
-  // ── 7. Generate output blob ────────────────────────────────────────────────
+  // ── 7. Generate and inject Digital Seal (barangay-clearance & business-clearance only) ──
+  //    The seal is mathematically linked to the blockchain tx hash (or doc hash),
+  //    making every seal unique to its document instance.
+  const hasSealPlaceholder = ['barangay-clearance', 'business-clearance'].includes(docType);
+  if (hasSealPlaceholder) {
+    const sealDataUrl = await generateDigitalSealDataUrl(
+      req.chain_tx_hash ?? null,
+      req.file_hash     ?? null,
+    );
+    await injectDigitalSealIntoZip(zip, sealDataUrl);
+  }
+
+  // ── 8. Generate output blob ────────────────────────────────────────────────
   const outBuffer = await zip.generateAsync({ type: 'arraybuffer' });
   const blob      = new Blob([outBuffer], {
     type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
