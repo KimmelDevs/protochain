@@ -7,6 +7,8 @@ import {
   Upload, FileText, ExternalLink, Copy, Check,
 } from 'lucide-react';
 import { verifyDocumentOnChain, type VerifyResult } from '@/app/lib/blockchain';
+import Header from '@/app/components/header';
+import Footer from '@/app/components/footer';
 
 /* ─── helpers ───────────────────────────────────────────────────────────── */
 async function computeSha256(file: File): Promise<string> {
@@ -97,10 +99,11 @@ export default function VerifyPage() {
 
   return (
     <>
+      <Header />
       <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap'); .pg{font-family:'IBM Plex Sans',sans-serif} .mono{font-family:'IBM Plex Mono',monospace}`}</style>
       <input ref={fileRef} type="file" className="hidden" onChange={onFileChange} />
 
-      <div className="pg min-h-screen bg-[#fafaf9] dark:bg-[#16161a] transition-colors duration-200 p-4 lg:p-10">
+      <div className="pg min-h-screen bg-[#fafaf9] dark:bg-[#16161a] transition-colors duration-200 p-4 lg:p-10 pt-20 lg:pt-24">
         <div className="max-w-2xl mx-auto">
 
           {/* HEADER */}
@@ -361,6 +364,7 @@ export default function VerifyPage() {
 
         </div>
       </div>
+      <Footer />
     </>
   );
 }
