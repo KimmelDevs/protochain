@@ -4,19 +4,26 @@ interface CardProps {
   children: React.ReactNode;
   className?: string;
   hover?: boolean;
+  variant?: 'standard' | 'whisper' | 'featured';
 }
 
-export function Card({ children, className = '', hover = false }: CardProps) {
+// Standard Card: white bg, 8px radius, Level 1 shadow
+// Whisper: white bg, 8px radius, subtle shadow
+// Featured: white bg, 16px radius, Level 3 shadow
+export function Card({ children, className = '', hover = false, variant = 'standard' }: CardProps) {
+  const variants = {
+    standard: 'bg-[#ffffff] dark:bg-[#1a1a1a] rounded-[8px] shadow-[var(--shadow-1)]',
+    whisper:  'bg-[#ffffff] dark:bg-[#1a1a1a] rounded-[8px] shadow-[var(--shadow-1)]',
+    featured: 'bg-[#ffffff] dark:bg-[#1a1a1a] rounded-[16px] shadow-[var(--shadow-3)]',
+  };
+
   return (
     <div
       className={`
-        rounded-xl bg-white dark:bg-white/5 border border-gray-300 dark:border-white/10 backdrop-blur-sm
+        border border-[#e0e1e6] dark:border-white/10
         transition-colors duration-300
-        ${
-          hover
-            ? 'hover:border-orange-600/50 hover:shadow-lg hover:shadow-orange-600/20 transition-all duration-300'
-            : ''
-        }
+        ${variants[variant]}
+        ${hover ? 'hover:shadow-[var(--shadow-2)] hover:border-[#0d74ce]/40 transition-all duration-300' : ''}
         ${className}
       `}
     >
@@ -32,7 +39,7 @@ interface CardHeaderProps {
 
 export function CardHeader({ children, className = '' }: CardHeaderProps) {
   return (
-    <div className={`p-6 border-b border-gray-300 dark:border-white/10 transition-colors duration-300 ${className}`}>
+    <div className={`p-6 border-b border-[#e0e1e6] dark:border-white/10 transition-colors duration-300 ${className}`}>
       {children}
     </div>
   );
@@ -45,7 +52,7 @@ interface CardTitleProps {
 
 export function CardTitle({ children, className = '' }: CardTitleProps) {
   return (
-    <h3 className={`text-lg font-semibold text-gray-900 dark:text-white transition-colors duration-300 ${className}`}>
+    <h3 className={`text-lg font-semibold text-[#1c2024] dark:text-white transition-colors duration-300 ${className}`}>
       {children}
     </h3>
   );
@@ -58,7 +65,7 @@ interface CardContentProps {
 
 export function CardContent({ children, className = '' }: CardContentProps) {
   return (
-    <div className={`p-6 text-gray-900 dark:text-white transition-colors duration-300 ${className}`}>
+    <div className={`p-6 text-[#1c2024] dark:text-white transition-colors duration-300 ${className}`}>
       {children}
     </div>
   );
@@ -71,7 +78,7 @@ interface CardFooterProps {
 
 export function CardFooter({ children, className = '' }: CardFooterProps) {
   return (
-    <div className={`p-6 border-t border-gray-300 dark:border-white/10 transition-colors duration-300 ${className}`}>
+    <div className={`p-6 border-t border-[#e0e1e6] dark:border-white/10 transition-colors duration-300 ${className}`}>
       {children}
     </div>
   );

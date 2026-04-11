@@ -36,26 +36,26 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-[#000000]/50 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      {/* Modal */}
+      {/* Modal — Level 3 (Modal) elevation, 16px radius (featured card) */}
       <div
         className={`
-          relative rounded-xl border
-          bg-white dark:bg-[#1a1a2e]
-          border-gray-200 dark:border-white/10
-          shadow-2xl w-full ${sizes[size]} max-h-[90vh] overflow-y-auto
+          relative rounded-[16px] border
+          bg-[#ffffff] dark:bg-[#1a1a1a]
+          border-[#e0e1e6] dark:border-white/10
+          shadow-[var(--shadow-3)] w-full ${sizes[size]} max-h-[90vh] overflow-y-auto
         `}
       >
         {/* Header */}
         {title && (
-          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-white/10">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h3>
+          <div className="flex items-center justify-between p-6 border-b border-[#e0e1e6] dark:border-white/10">
+            <h3 className="text-xl font-bold text-[#1c2024] dark:text-white">{title}</h3>
             <button
               onClick={onClose}
-              className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors"
+              className="text-[#60646c] hover:text-[#1c2024] dark:text-[#b0b4ba] dark:hover:text-white transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -63,7 +63,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
         )}
 
         {/* Content */}
-        <div className="p-6 text-gray-900 dark:text-gray-100">
+        <div className="p-6 text-[#1c2024] dark:text-gray-100">
           {children}
         </div>
       </div>

@@ -7,18 +7,19 @@ interface SkeletonProps {
   height?: string;
 }
 
-export default function Skeleton({ 
-  className = '', 
+export default function Skeleton({
+  className = '',
   variant = 'rectangular',
   width,
-  height 
+  height
 }: SkeletonProps) {
-  const baseStyles = 'animate-pulse bg-white/10';
-  
+  // Uses surface-dark token toned down for skeleton shimmer
+  const baseStyles = 'animate-pulse bg-[#e0e1e6] dark:bg-white/10';
+
   const variants = {
-    text: 'h-4 rounded',
+    text: 'h-4 rounded-[4px]',
     circular: 'rounded-full',
-    rectangular: 'rounded-lg',
+    rectangular: 'rounded-[8px]',
   };
 
   const style = {
@@ -27,17 +28,16 @@ export default function Skeleton({
   };
 
   return (
-    <div 
+    <div
       className={`${baseStyles} ${variants[variant]} ${className}`}
       style={style}
     />
   );
 }
 
-// Pre-built skeleton components for common use cases
 export function SkeletonCard() {
   return (
-    <div className="p-6 rounded-xl bg-white/5 border border-white/10 space-y-4">
+    <div className="p-6 rounded-[8px] bg-[#f0f0f3] dark:bg-[#1a1a1a] border border-[#e0e1e6] dark:border-white/10 space-y-4">
       <Skeleton variant="rectangular" height="20px" width="60%" />
       <Skeleton variant="rectangular" height="40px" />
       <div className="flex gap-2">

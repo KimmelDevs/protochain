@@ -14,8 +14,9 @@ export default function Spinner({ size = 'md', className = '' }: SpinnerProps) {
 
   return (
     <div className={`flex items-center justify-center ${className}`}>
+      {/* border-t uses link cobalt (#0d74ce) — widget accent */}
       <div
-        className={`${sizes[size]} border-4 border-white/20 border-t-purple-500 rounded-full animate-spin`}
+        className={`${sizes[size]} border-4 border-[#e0e1e6]/30 border-t-[#0d74ce] rounded-full animate-spin`}
       />
     </div>
   );

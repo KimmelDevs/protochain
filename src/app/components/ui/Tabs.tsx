@@ -18,19 +18,19 @@ export default function Tabs({ tabs, defaultValue }: TabsProps) {
 
   return (
     <div className="w-full">
-      {/* Tab Headers */}
-      <div className="flex gap-2 border-b border-white/10 mb-6">
+      {/* Tab Headers — border uses #e0e1e6, active uses link cobalt #0d74ce */}
+      <div className="flex gap-2 border-b border-[#e0e1e6] dark:border-white/10 mb-6">
         {tabs.map((tab) => (
           <button
             key={tab.value}
             onClick={() => setActiveTab(tab.value)}
             className={`
-              px-4 py-2 font-medium text-sm transition-all duration-200
-              border-b-2 -mb-px rounded-t-md
+              px-4 py-2 font-medium text-[14px] transition-all duration-200
+              border-b-2 -mb-px rounded-t-[4px]
               ${
                 activeTab === tab.value
-                  ? 'bg-orange-500 text-white border-orange-500 dark:bg-orange-600 dark:border-orange-600'
-                  : 'bg-transparent text-black dark:text-white border-transparent hover:bg-orange-100 dark:hover:bg-orange-700 hover:text-black dark:hover:text-white'
+                  ? 'text-[#0d74ce] border-[#0d74ce] bg-[#0d74ce]/5'
+                  : 'text-[#60646c] border-transparent hover:text-[#1c2024] dark:text-[#b0b4ba] dark:hover:text-white hover:bg-[#f0f0f3] dark:hover:bg-white/5'
               }
             `}
           >

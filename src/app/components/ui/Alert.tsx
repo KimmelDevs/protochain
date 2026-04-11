@@ -9,36 +9,40 @@ interface AlertProps {
   className?: string;
 }
 
-export default function Alert({ 
-  variant = 'info', 
-  title, 
-  children, 
+export default function Alert({
+  variant = 'info',
+  title,
+  children,
   onClose,
-  className = '' 
+  className = ''
 }: AlertProps) {
   const variants = {
+    // info → link cobalt (#0d74ce)
     info: {
-      bg: 'bg-blue-100 dark:bg-blue-500/20',
-      border: 'border-blue-300 dark:border-blue-500/30',
-      text: 'text-blue-700 dark:text-blue-400',
+      bg: 'bg-[#0d74ce]/10',
+      border: 'border-[#0d74ce]/30',
+      text: 'text-[#0d74ce]',
       icon: Info,
     },
+    // success → green (no explicit token, kept semantic)
     success: {
-      bg: 'bg-green-100 dark:bg-green-500/20',
-      border: 'border-green-300 dark:border-green-500/30',
-      text: 'text-green-700 dark:text-green-400',
+      bg: 'bg-green-500/10',
+      border: 'border-green-500/30',
+      text: 'text-green-600 dark:text-green-400',
       icon: CheckCircle,
     },
+    // warning → amber (#ab6400)
     warning: {
-      bg: 'bg-yellow-100 dark:bg-yellow-500/20',
-      border: 'border-yellow-300 dark:border-yellow-500/30',
-      text: 'text-yellow-700 dark:text-yellow-400',
+      bg: 'bg-[#ab6400]/10',
+      border: 'border-[#ab6400]/30',
+      text: 'text-[#ab6400]',
       icon: AlertTriangle,
     },
+    // error → destructive (#eb8e90)
     error: {
-      bg: 'bg-red-100 dark:bg-red-500/20',
-      border: 'border-red-300 dark:border-red-500/30',
-      text: 'text-red-700 dark:text-red-400',
+      bg: 'bg-[#eb8e90]/10',
+      border: 'border-[#eb8e90]/30',
+      text: 'text-[#eb8e90]',
       icon: AlertCircle,
     },
   };
@@ -49,7 +53,7 @@ export default function Alert({
   return (
     <div
       className={`
-        relative p-4 rounded-lg border
+        relative p-4 rounded-[8px] border
         ${config.bg} ${config.border}
         ${className}
       `}
@@ -62,7 +66,7 @@ export default function Alert({
               {title}
             </h5>
           )}
-          <div className="text-sm text-gray-800 dark:text-gray-300">
+          <div className="text-[14px] text-[#1c2024] dark:text-[#b0b4ba]">
             {children}
           </div>
         </div>

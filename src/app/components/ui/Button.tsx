@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'default' | 'outline' | 'ghost' | 'danger' | 'orange' | 'rejection';
+  variant?: 'default' | 'outline' | 'ghost' | 'danger' | 'primary' | 'dark-rounded';
   size?: 'sm' | 'md' | 'lg';
   children: React.ReactNode;
   className?: string;
@@ -14,26 +14,41 @@ export default function Button({
   children,
   ...props
 }: ButtonProps) {
+  // Base: inline-flex, font-semibold, transition, disabled states
   const baseStyles =
-    'inline-flex items-center justify-center rounded-lg font-semibold transition-opacity disabled:opacity-50 disabled:cursor-not-allowed';
+    'inline-flex items-center justify-center font-semibold transition-opacity disabled:opacity-50 disabled:cursor-not-allowed';
 
-  // Button variants
   const variants = {
+    // Primary Pill (Dark) — #000000 bg, white text, pill radius
     default:
-      'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-black dark:text-white shadow-lg hover:shadow-xl',
+      'bg-[#000000] text-white hover:opacity-80 shadow-[var(--shadow-1)]',
+    // Primary Pill shape (explicit pill variant)
+    primary:
+      'bg-[#000000] text-white hover:opacity-80 shadow-[var(--shadow-1)] rounded-[9999px]',
+    // Standard White — white bg, border #e0e1e6
     outline:
-      'border-2 border-orange-500/50 text-black dark:text-white hover:bg-orange-500/10 hover:border-orange-500',
+      'bg-[#ffffff] text-[#1c2024] border border-[#e0e1e6] hover:bg-[#f0f0f3] shadow-[var(--shadow-1)]',
+    // Ghost — no bg, subtle hover
     ghost:
-      'text-black dark:text-white hover:bg-gray-100 dark:hover:bg-white/5 hover:text-black dark:hover:text-white',
+      'bg-transparent text-[#1c2024] dark:text-white hover:bg-[#f0f0f3] dark:hover:bg-white/5',
+    // Danger — destructive semantic color
     danger:
-      'bg-red-500 hover:bg-red-600 text-black dark:text-white shadow-lg',
-    orange:
-      'bg-orange-600 hover:bg-orange-500 text-white shadow-lg hover:opacity-90',
-    rejection:
-      'bg-red-600 hover:bg-red-500 dark:bg-red-700 dark:hover:bg-red-600 text-white shadow-lg',
+      'bg-[#eb8e90] text-[#1c2024] hover:opacity-80 shadow-[var(--shadow-1)]',
+    // Dark Rounded — #000000 bg, white text, 32px radius
+    'dark-rounded':
+      'bg-[#000000] text-white hover:opacity-80 shadow-[var(--shadow-1)] rounded-[32px]',
   };
 
-  // Button sizes
+  // Radius: default variant gets pill, others get 8px (design system standard card radius)
+  const radiusMap: Record<string, string> = {
+    default: 'rounded-[9999px]',
+    primary: '', // already set inline above
+    outline: 'rounded-[8px]',
+    ghost: 'rounded-[8px]',
+    danger: 'rounded-[8px]',
+    'dark-rounded': '', // already set inline above
+  };
+
   const sizes = {
     sm: 'px-8 py-3 text-sm gap-2',
     md: 'px-10 py-3 text-base gap-2',
@@ -43,7 +58,7 @@ export default function Button({
   return (
     <button
       {...props}
-      className={`${baseStyles} ${sizes[size]} ${variants[variant]} ${className}`}
+      className={`${baseStyles} ${radiusMap[variant]} ${sizes[size]} ${variants[variant]} ${className}`}
     >
       {children}
     </button>

@@ -8,7 +8,7 @@ interface TableProps {
 export function Table({ children, className = '' }: TableProps) {
   return (
     <div className="overflow-x-auto">
-      <table className={`w-full border border-gray-300 dark:border-white/10 transition-colors duration-300 ${className}`}>
+      <table className={`w-full border border-[#e0e1e6] dark:border-white/10 transition-colors duration-300 ${className}`}>
         {children}
       </table>
     </div>
@@ -22,7 +22,7 @@ interface TableHeaderProps {
 
 export function TableHeader({ children, className = '' }: TableHeaderProps) {
   return (
-    <thead className={`border-b border-gray-300 dark:border-white/10 transition-colors duration-300 ${className}`}>
+    <thead className={`border-b border-[#e0e1e6] dark:border-white/10 transition-colors duration-300 ${className}`}>
       {children}
     </thead>
   );
@@ -51,8 +51,8 @@ export function TableRow({ children, className = '', hover = true }: TableRowPro
   return (
     <tr
       className={`
-        border-b border-gray-300 dark:border-white/10 transition-colors duration-300
-        ${hover ? 'hover:bg-gray-100 dark:hover:bg-white/5 transition-colors duration-300' : ''}
+        border-b border-[#e0e1e6] dark:border-white/10 transition-colors duration-300
+        ${hover ? 'hover:bg-[#f0f0f3] dark:hover:bg-white/5 transition-colors duration-300' : ''}
         ${className}
       `}
     >
@@ -70,7 +70,7 @@ export function TableHead({ children, className = '' }: TableHeadProps) {
   return (
     <th
       className={`
-        px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-400 uppercase tracking-wider
+        px-6 py-3 text-left text-[12px] font-semibold text-[#60646c] dark:text-[#b0b4ba] uppercase tracking-wider
         transition-colors duration-300
         ${className}
       `}
@@ -88,7 +88,7 @@ interface TableCellProps extends React.TdHTMLAttributes<HTMLTableCellElement> {
 export function TableCell({ children, className = '', ...props }: TableCellProps) {
   return (
     <td
-      className={`px-6 py-4 text-sm text-gray-900 dark:text-gray-300 transition-colors duration-300 ${className}`}
+      className={`px-6 py-4 text-[14px] text-[#1c2024] dark:text-[#b0b4ba] transition-colors duration-300 ${className}`}
       {...props}
     >
       {children}

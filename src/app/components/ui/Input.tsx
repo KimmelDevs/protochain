@@ -10,23 +10,23 @@ export default function Input({ label, error, className = '', ...props }: InputP
   return (
     <div className="w-full">
 
-      {/* Label */}
+      {/* Label — caption size, slate text */}
       {label && (
-        <label className="block text-sm font-medium mb-2 text-gray-900 dark:text-gray-300 transition-colors">
+        <label className="block text-[14px] font-medium mb-2 text-[#60646c] dark:text-[#b0b4ba] transition-colors">
           {label}
         </label>
       )}
 
-      {/* Input */}
+      {/* Input — white bg, #d9d9e0 border, 6px radius (input-border token) */}
       <input
         className={`
-          w-full px-4 py-2 rounded-lg
-          bg-white border border-gray-300 text-gray-900
-          placeholder-gray-500
-          dark:bg-[#1a1a2e] dark:border-white/10 dark:text-white dark:placeholder-gray-400
-          focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500
+          w-full px-4 py-2 rounded-[6px]
+          bg-[#ffffff] border border-[#d9d9e0] text-[#1c2024]
+          placeholder-[#b0b4ba]
+          dark:bg-[#1a1a1a] dark:border-white/10 dark:text-white dark:placeholder-[#60646c]
+          focus:outline-none focus:ring-2 focus:ring-[#0d74ce] focus:border-[#0d74ce]
           transition-all duration-200
-          ${error ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : ''}
+          ${error ? 'border-[#eb8e90] focus:ring-[#eb8e90] focus:border-[#eb8e90]' : ''}
           ${className}
         `}
         {...props}
@@ -34,7 +34,7 @@ export default function Input({ label, error, className = '', ...props }: InputP
 
       {/* Error */}
       {error && (
-        <p className="mt-1 text-sm text-red-500">{error}</p>
+        <p className="mt-1 text-[12px] text-[#eb8e90]">{error}</p>
       )}
 
     </div>

@@ -2,6 +2,71 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Primary */
+  --color-primary: #000000;
+  --color-body: #1c2024;
+
+  /* Secondary & Accent */
+  --color-link: #0d74ce;
+  --color-footer-link: #476cff;
+  --color-widget: #47c2ff;
+  --color-beta: #8145b5;
+
+  /* Surface & Background */
+  --color-bg: #f0f0f3;
+  --color-surface: #ffffff;
+  --color-surface-dark: #1a1a1a;
+  --color-banner-dark: #171717;
+
+  /* Neutrals */
+  --color-slate: #60646c;
+  --color-mid-slate: #555860;
+  --color-silver: #b0b4ba;
+  --color-dark-slate: #363a3f;
+
+  /* Semantic */
+  --color-warning: #ab6400;
+  --color-destructive: #eb8e90;
+  --color-border: #e0e1e6;
+  --color-input-border: #d9d9e0;
+
+  /* Typography */
+  --font-hero: 64px;
+  --font-section: 48px;
+  --font-sub: 20px;
+  --font-body-lg: 18px;
+  --font-body: 16px;
+  --font-caption: 14px;
+  --font-tag: 12px;
+
+  /* Spacing */
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-5: 40px;
+  --space-6: 48px;
+  --space-7: 64px;
+
+  /* Border Radius */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
+  --radius-pill: 9999px;
+
+  /* Elevation */
+  --shadow-0: none;
+  --shadow-1: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-2: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.05);
+  --shadow-3: 0 10px 25px rgba(0,0,0,0.12), 0 4px 10px rgba(0,0,0,0.08);
+  --shadow-4: 0 25px 50px rgba(0,0,0,0.18);
+}
+
 body {
-  @apply bg-dark text-white;
+  background-color: var(--color-banner-dark);
+  color: #ffffff;
 }
