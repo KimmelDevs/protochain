@@ -133,38 +133,71 @@ interface SignatureImages {
   captain:   string | null;  // base64 PNG data URL
 }
 
+/**
+ * Removes the white background from a signature PNG data URL.
+ * Draws the image onto a canvas, then for each pixel that is near-white,
+ * sets its alpha to 0 (transparent). Returns a new PNG data URL.
+ */
+async function removeWhiteBackground(dataUrl: string): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas  = document.createElement('canvas');
+      canvas.width  = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0);
+
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data      = imageData.data;
+
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        // If the pixel is near-white (all channels > 230), make it transparent
+        if (r > 230 && g > 230 && b > 230) {
+          data[i + 3] = 0; // set alpha to 0
+        }
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = () => resolve(dataUrl); // fallback: return original if error
+    img.src = dataUrl;
+  });
+}
+
 async function fetchSignatureImages(): Promise<SignatureImages> {
   try {
+    // Signatures are stored in admin_signatures table as record_json.signatureDataUrl
     const { data, error } = await supabase
-      .from('barangay_settings')
-      .select('secretary_signature_url, captain_signature_url')
-      .single();
+      .from('admin_signatures')
+      .select('role, record_json');
 
-    if (error || !data) return { secretary: null, captain: null };
+    if (error || !data || data.length === 0) {
+      console.warn('Could not fetch admin_signatures:', error?.message);
+      return { secretary: null, captain: null };
+    }
 
-    const toBase64 = async (url: string | null): Promise<string | null> => {
-      if (!url) return null;
-      try {
-        const res  = await fetch(url);
-        const blob = await res.blob();
-        return await new Promise<string>((resolve, reject) => {
-          const reader    = new FileReader();
-          reader.onload   = () => resolve(reader.result as string);
-          reader.onerror  = reject;
-          reader.readAsDataURL(blob);
-        });
-      } catch {
-        return null;
-      }
-    };
+    let secretary: string | null = null;
+    let captain:   string | null = null;
 
-    const [secretary, captain] = await Promise.all([
-      toBase64(data.secretary_signature_url),
-      toBase64(data.captain_signature_url),
-    ]);
+    for (const row of data) {
+      const record = row.record_json as { signatureDataUrl?: string } | null;
+      if (!record?.signatureDataUrl) continue;
+      if (row.role === 'secretary') secretary = record.signatureDataUrl;
+      if (row.role === 'captain')   captain   = record.signatureDataUrl;
+    }
+
+    // Remove white backgrounds so signatures appear transparent over document text
+    if (secretary) secretary = await removeWhiteBackground(secretary);
+    if (captain)   captain   = await removeWhiteBackground(captain);
 
     return { secretary, captain };
-  } catch {
+  } catch (err) {
+    console.warn('fetchSignatureImages error:', err);
     return { secretary: null, captain: null };
   }
 }
@@ -581,6 +614,91 @@ async function generateQRDataUrl(requestId: string, fileHash?: string | null): P
   }
 }
 
+
+async function injectSignatureIntoZip(
+  zip:          any,
+  altText:      string,   // e.g. 'Secretary Signature' or 'Captain Signature'
+  base64DataUrl: string,  // PNG data URL from admin_signatures
+  newFileName:  string,   // e.g. 'sig_secretary.png'
+  newRId:       string,   // e.g. 'rId_sec'
+): Promise<void> {
+  const docFile = zip.file('word/document.xml');
+  if (!docFile) return;
+  let xml: string = await docFile.async('string');
+  let mutableDataUrl = base64DataUrl; // mutable copy for background removal
+
+  // ── 1. Find the drawing element with this alt text ─────────────────────────
+  const descrAttr = `descr="${altText}"`;
+  const descrPos  = xml.indexOf(descrAttr);
+  if (descrPos === -1) {
+    console.warn(`Signature placeholder with alt text "${altText}" not found`);
+    return;
+  }
+
+  // ── 2. Find the r:embed rId in this specific drawing ──────────────────────
+  // Search forward from the descr attribute within a safe window
+  const window2000 = xml.slice(descrPos, descrPos + 1500);
+  const embedMatch = window2000.match(/r:embed="(rId[^"]+)"/);
+  if (!embedMatch) {
+    console.warn(`No r:embed found near "${altText}"`);
+    return;
+  }
+  const existingRId = embedMatch[1];
+
+  // ── 3. Look up existing media filename ────────────────────────────────────
+  const relsFile = zip.file('word/_rels/document.xml.rels');
+  if (!relsFile) return;
+  let relsXml: string = await relsFile.async('string');
+
+  const relMatch = relsXml.match(new RegExp(`Id="${existingRId}"[^>]*Target="media/([^"]+)"`));
+  if (!relMatch) {
+    console.warn(`Could not find media target for ${existingRId}`);
+    return;
+  }
+  const existingMedia = relMatch[1]; // e.g. 'image1.png'
+
+  // ── 4. Remove white background to make signature transparent ─────────────
+  mutableDataUrl = await removeWhiteBackground(mutableDataUrl);
+
+  const base64 = mutableDataUrl.split(',')[1];
+  if (!base64) return;
+
+  // ── 4. Check if this media file is shared with another signature ───────────
+  // Count how many times this rId appears in the document XML
+  const rIdUsageCount = (xml.match(new RegExp(`r:embed="${existingRId}"`, 'g')) ?? []).length;
+
+  if (rIdUsageCount <= 1) {
+    // Only used once — safe to overwrite directly
+    zip.file(`word/media/${existingMedia}`, base64, { base64: true });
+    console.log(`Signature "${altText}" injected: overwrote word/media/${existingMedia}`);
+  } else {
+    // Shared with another signature — add a new media file and new relationship,
+    // then patch only THIS drawing's r:embed to point to the new file.
+    zip.file(`word/media/${newFileName}`, base64, { base64: true });
+
+    // Add new relationship
+    const imageType = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/image';
+    relsXml = relsXml.replace(
+      '</Relationships>',
+      `<Relationship Id="${newRId}" Type="${imageType}" Target="media/${newFileName}"/>\n</Relationships>`
+    );
+    zip.file('word/_rels/document.xml.rels', relsXml);
+
+    // Patch ONLY this drawing's r:embed — replace the first occurrence of
+    // existingRId that appears after the descr attribute position.
+    const beforeDescr = xml.slice(0, descrPos);
+    const fromDescr   = xml.slice(descrPos);
+    const patched     = fromDescr.replace(
+      `r:embed="${existingRId}"`,
+      `r:embed="${newRId}"`
+    );
+    xml = beforeDescr + patched;
+    zip.file('word/document.xml', xml);
+
+    console.log(`Signature "${altText}" injected: added word/media/${newFileName} (${newRId})`);
+  }
+}
+
 /**
  * Replaces the QR placeholder image in the docx zip.
  *
@@ -655,36 +773,17 @@ export async function generateDocument(
       console.warn(`No text injector for document type: ${docType}`);
   }
 
-  // ── 3. Fetch ECDSA signature images from Supabase ─────────────────────────
+  // ── 3. Fetch signature images from admin_signatures table ─────────────────
   const sigs = await fetchSignatureImages();
 
-  // ── 4. Inject Secretary signature at {%SIGNATURE_1} ───────────────────────
-  //       Width: 1.8 inches, Height: 0.6 inches (adjust to fit your template)
+  // ── 4. Inject Secretary signature (alt text: "Secretary Signature") ────────
   if (sigs.secretary) {
-    await replacePlaceholderWithImage(
-      zip,
-      '{%SIGNATURE_1}',
-      sigs.secretary,
-      'rId100',
-      'sig_secretary.png',
-      1.8,    // width in inches
-      0.6,    // height in inches
-      'left',
-    );
+    await injectSignatureIntoZip(zip, 'Secretary Signature', sigs.secretary, 'sig_secretary.png', 'rId_sec');
   }
 
-  // ── 5. Inject Captain signature at {%SIGNATURE_2} ─────────────────────────
+  // ── 5. Inject Captain signature (alt text: "Captain Signature") ────────────
   if (sigs.captain) {
-    await replacePlaceholderWithImage(
-      zip,
-      '{%SIGNATURE_2}',
-      sigs.captain,
-      'rId101',
-      'sig_captain.png',
-      1.8,    // width in inches
-      0.6,    // height in inches
-      'left',
-    );
+    await injectSignatureIntoZip(zip, 'Captain Signature', sigs.captain, 'sig_captain.png', 'rId_cap');
   }
 
   // ── 6. Generate Reed-Solomon QR code and swap the placeholder image ────────
