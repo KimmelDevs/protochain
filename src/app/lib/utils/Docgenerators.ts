@@ -609,43 +609,11 @@ async function injectBarangayClearance(zip: any, req: RequestDetail, profile: Pr
 
   await patchXml(zip, 'word/document.xml', xml => {
 
-    // ── Normalize split placeholders ────────────────────────────────────────
-    // Word splits {placeholder} across runs and inserts <w:proofErr> spell-check
-    // tags around unknown words. We collapse each back into a plain string first.
-    const SPLIT_RID = 'w:rsidR="00E96396"';
-    xml = xml.replace(
-      `<w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r ${SPLIT_RID}><w:t>fullname</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r ${SPLIT_RID}><w:t>}</w:t>`,
-      `<w:t>{fullname}</w:t>`,
-    );
-    xml = xml.replace(
-      `<w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r ${SPLIT_RID}><w:t>this_day</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r ${SPLIT_RID}><w:t>}</w:t>`,
-      `<w:t>{this_day}</w:t>`,
-    );
-    xml = xml.replace(
-      `<w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r ${SPLIT_RID}><w:t>ctc_no</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r ${SPLIT_RID}><w:t>}</w:t>`,
-      `<w:t>{ctc_no}</w:t>`,
-    );
-    xml = xml.replace(
-      `<w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r ${SPLIT_RID}><w:t>ctc_date_issued</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r ${SPLIT_RID}><w:t>}</w:t>`,
-      `<w:t>{ctc_date_issued}</w:t>`,
-    );
-    // ctc_place_issued: the " {" run has xml:space="preserve" — match the full exact pattern
-    xml = xml.replace(
-      `<w:r ${SPLIT_RID}><w:t xml:space="preserve"> {</w:t></w:r><w:proofErr w:type="spellStart"/><w:r ${SPLIT_RID}><w:t>ctc_place_issued</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r ${SPLIT_RID}><w:t>}</w:t></w:r>`,
-      `<w:r ${SPLIT_RID}><w:t xml:space="preserve"> {ctc_place_issued}</w:t></w:r>`,
-    );
-
-    // ── Replace placeholders with real data ─────────────────────────────────
+    // 1. Name header (appears twice for the duplicate layout)
     xml = xml.replace(/APPLICANT NAME PLACEHOLDER/g, xmlEscape(name));
-    xml = xml.replace(/\{fullname\}/g,        xmlEscape(name));
-    xml = xml.replace(/\{this_day\}/g,        xmlEscape(day));
-    xml = xml.replace(/\{month\}/g,           xmlEscape(MONTH));
-    xml = xml.replace(/\{year\}/g,            xmlEscape(year));
-    xml = xml.replace(/\{ctc_no\}/g,           xmlEscape(ctcNo));
-    xml = xml.replace(/\{ctc_date_issued\}/g,  xmlEscape(ctcDate));
-    xml = xml.replace(/ ?\{ctc_place_issued\}/g, xmlEscape(ctcPlace));
 
-    // ── Legacy hardcoded replacements (keep for backward compat) ───────────
+    // 2. Identity block — Run 2 of Para B contains the entire blank identity sentence.
+    //    We replace it with real name, age, sex, civil status, and purok.
     xml = xml.replace(
       /_____________________ of legal age, male\/female, single\/married\/widow\/ widower, Filipino citizen, whose name and signature\/right thumb mark appears below is a BONAFIDE and permanent resident of BRGY\. GUIN-ON, Calbayog City, /g,
       `${xmlEscape(name)}, ${xmlEscape(age)} years old, ${xmlEscape(sex)}, ` +
@@ -653,17 +621,24 @@ async function injectBarangayClearance(zip: any, req: RequestDetail, profile: Pr
       `appears below is a BONAFIDE and permanent resident of ${xmlEscape(purok)}, ` +
       `BRGY. GUIN-ON, Calbayog City, `,
     );
+
+    // 3. Issuance date — Para C has 3 separate runs: "Issued this ___ day of " | "JANUARY," | " 2024 at…"
+    //    Replace each run independently so formatting (bold etc.) is preserved.
     xml = xml.replace(/Issued this ___ day of /g,
       `Issued this ${xmlEscape(day)}${xmlEscape(suffix)} day of `);
     xml = xml.replace(/JANUARY,/g, `${xmlEscape(MONTH)},`);
     xml = xml.replace(/ 2024 at Brgy\. Guin-on, Calbayog City, Samar, Philippines\./g,
       ` ${xmlEscape(year)} at Brgy. Guin-on, Calbayog City, Samar, Philippines.`);
+
+    // 4. "Further certifies…" para — append the purpose clause after "in connected. "
     xml = xml.replace(
       /Further certifies that he\/ she has no derogatory record and has good moral character as per our Barangay record in connected\. /g,
       `Further certifies that he/ she has no derogatory record and has good moral character ` +
       `as per our Barangay record in connected. This clearance is issued upon request for ` +
       `${xmlEscape(purpose)} and for whatever legal purpose it may serve. `,
     );
+
+    // 5. CTC fields — each is a standalone paragraph/run
     xml = xml.replace(/CTC #: __________________ /g,  `CTC #: ${xmlEscape(ctcNo)} `);
     xml = xml.replace(/Date Issued: ______________ /g, `Date Issued: ${xmlEscape(ctcDate)} `);
     xml = xml.replace(/Place Issued: ______________/g, `Place Issued: ${xmlEscape(ctcPlace)}`);
@@ -690,18 +665,49 @@ async function injectBarangayClearance(zip: any, req: RequestDetail, profile: Pr
  */
 async function injectBusinessClearance(zip: any, req: RequestDetail, profile: Profile): Promise<void> {
   const owner    = `${profile.firstName} ${profile.lastName}`.toUpperCase();
-  const business = req.business_name ?? '___________';
-  const location = req.purok         ?? '___________';
+  const business = req.business_name  ?? '___________';
+  const location = req.purok          ?? '___________';
+  const ctcNo    = req.ctc_no         ?? '___________';
+  const ctcDate  = req.ctc_date_issued  ?? '___________';
+  const ctcPlace = req.ctc_place_issued ?? '___________';
   const { day, suffix, MONTH, year } = getCurrentDateParts();
 
   await patchXml(zip, 'word/document.xml', xml => {
 
-    // 1. Name header
-    xml = xml.replace(/APPLICANT NAME PLACEHOLDER/g, xmlEscape(owner));
+    // ── Normalize split placeholders ─────────────────────────────────────────
+    // Word inserts <w:proofErr> spell-check tags and splits each {placeholder}
+    // across 3 separate runs. Collapse them back to a single complete run.
 
-    // 2. Owner — first line run: "…is Grante GREGORIO" → "…is Granted to <FIRSTNAME PART>"
-    //    Second line run: "BALDOMARO GOMEZ, and owner of AGRICULTURAL " → "and owner of <BUSINESS>"
-    //    Because Word wrapped the name across two lines, we reconstruct it cleanly.
+    xml = xml.replace(
+      '<w:r w:rsidR="0005616E" w:rsidRPr="0005616E"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="0005616E" w:rsidRPr="0005616E"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>fullname</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="0005616E" w:rsidRPr="0005616E"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>}</w:t></w:r>',
+      '<w:r w:rsidR="0005616E" w:rsidRPr="0005616E"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>{fullname}</w:t></w:r>',
+    );
+    xml = xml.replace(
+      '<w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>this_day</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>}</w:t></w:r>',
+      '<w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>{this_day}</w:t></w:r>',
+    );
+    xml = xml.replace(
+      '<w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:spacing w:val="-1"/><w:kern w:val="0"/></w:rPr><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:spacing w:val="-1"/><w:kern w:val="0"/></w:rPr><w:t>ctc_date_issued</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:spacing w:val="-1"/><w:kern w:val="0"/></w:rPr><w:t>}</w:t></w:r>',
+      '<w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:spacing w:val="-1"/><w:kern w:val="0"/></w:rPr><w:t>{ctc_date_issued}</w:t></w:r>',
+    );
+    xml = xml.replace(
+      '<w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:w w:val="102"/><w:kern w:val="0"/></w:rPr><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:w w:val="102"/><w:kern w:val="0"/></w:rPr><w:t>ctc_place_issued</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:w w:val="102"/><w:kern w:val="0"/></w:rPr><w:t>}</w:t></w:r>',
+      '<w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:w w:val="102"/><w:kern w:val="0"/></w:rPr><w:t>{ctc_place_issued}</w:t></w:r>',
+    );
+
+    // ── Replace placeholders with real data ──────────────────────────────────
+    xml = xml.replace(/APPLICANT NAME PLACEHOLDER/g,   xmlEscape(owner));
+    xml = xml.replace(/\{fullname\}/g,                 xmlEscape(owner));
+    xml = xml.replace(/\{this_day\}/g,                 xmlEscape(day));
+    xml = xml.replace(/\{month\}/g,                    xmlEscape(MONTH));
+    xml = xml.replace(/\{year\}/g,                     xmlEscape(year));
+    xml = xml.replace(/\{purok\/location\}/g,          xmlEscape(location));
+    xml = xml.replace(/\{ctc_date_issued\}/g,          xmlEscape(ctcDate));
+    xml = xml.replace(/\{ctc_place_issued\}/g,         xmlEscape(ctcPlace));
+    // {ctc_no} not found in template — keep for future use
+    xml = xml.replace(/\{ctc_no\}/g,                   xmlEscape(ctcNo));
+
+    // ── Legacy hardcoded replacements (fallback for old template text) ───────
     xml = xml.replace(
       /BUSINESS CLEARANCE is Grante GREGORIO/g,
       `BUSINESS CLEARANCE is Granted to ${xmlEscape(owner)}`,
@@ -710,12 +716,7 @@ async function injectBusinessClearance(zip: any, req: RequestDetail, profile: Pr
       /BALDOMARO GOMEZ, and owner of AGRICULTURAL /g,
       `and owner of ${xmlEscape(business)} `,
     );
-
-    // 3. Location — " PUROK-1 " is a distinct run between "located  at" and "Brgy"
     xml = xml.replace(/ PUROK-1 /g, ` ${xmlEscape(location)} `);
-
-    // 4. Issuance date — single long run:
-    //    "                      Issued this 04th   day of DECEMBER 2025 at "
     xml = xml.replace(
       /Issued this 04th   day of DECEMBER 2025 at /g,
       `Issued this ${xmlEscape(day)}${xmlEscape(suffix)}   day of ${xmlEscape(MONTH)} ${xmlEscape(year)} at `,
