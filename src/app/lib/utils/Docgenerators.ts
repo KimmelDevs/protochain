@@ -227,43 +227,61 @@ async function generateQRDataUrl(requestId: string): Promise<string | null> {
   }
 }
 
+// ─── Namespace ensurer ────────────────────────────────────────────────────────
+// Drawing namespaces MUST be on the root <w:document> element.
+// Inline xmlns re-declarations cause "Word experienced an error opening the file".
+
+function ensureDrawingNamespaces(xml: string): string {
+  const required: Record<string, string> = {
+    'xmlns:wp':  'http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing',
+    'xmlns:a':   'http://schemas.openxmlformats.org/drawingml/2006/main',
+    'xmlns:pic': 'http://schemas.openxmlformats.org/drawingml/2006/picture',
+    'xmlns:r':   'http://schemas.openxmlformats.org/officeDocument/2006/relationships',
+  };
+  // The root element is <w:document ...>
+  const rootEnd = xml.indexOf('>');
+  if (rootEnd === -1) return xml;
+  let rootTag = xml.slice(0, rootEnd);
+  for (const [prefix, uri] of Object.entries(required)) {
+    if (!rootTag.includes(prefix)) {
+      rootTag += ` ${prefix}="${uri}"`;
+    }
+  }
+  return rootTag + xml.slice(rootEnd);
+}
+
 // ─── Image XML builder ────────────────────────────────────────────────────────
+// Namespaces (wp:, a:, pic:, r:) are declared on <w:document> root by
+// ensureDrawingNamespaces() — NOT inline here, to avoid Word parse errors.
 
 function buildInlineImageParagraph(
   rId:       string,
-  docPrId:   number,   // unique per image to avoid Word validation errors
+  docPrId:   number,
   widthEmu:  number,
   heightEmu: number,
   descr:     string,
   align:     'left' | 'center' | 'right' = 'left',
 ): string {
+  const safeDescr = xmlEscape(descr);
   const jc = align === 'center' ? '<w:jc w:val="center"/>'
            : align === 'right'  ? '<w:jc w:val="right"/>'
            : '';
-  const safeDescr = xmlEscape(descr);
+  const pPr = `<w:pPr>${jc}<w:spacing w:before="0" w:after="0"/></w:pPr>`;
   return (
-    `<w:p>` +
-    `<w:pPr>${jc}<w:spacing w:before="0" w:after="0"/></w:pPr>` +
-    `<w:r><w:drawing>` +
-    `<wp:inline distT="0" distB="0" distL="0" distR="0" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">` +
+    `<w:p>${pPr}<w:r><w:drawing>` +
+    `<wp:inline distT="0" distB="0" distL="0" distR="0">` +
     `<wp:extent cx="${widthEmu}" cy="${heightEmu}"/>` +
     `<wp:effectExtent l="0" t="0" r="0" b="0"/>` +
-    `<wp:docPr id="${docPrId}" name="${safeDescr}" descr="${safeDescr}"/>` +
-    `<wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr>` +
-    `<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">` +
-    `<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">` +
-    `<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">` +
+    `<wp:docPr id="${docPrId}" name="${safeDescr}"/>` +
+    `<wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr>` +
+    `<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">` +
+    `<pic:pic>` +
     `<pic:nvPicPr><pic:cNvPr id="${docPrId}" name="${safeDescr}"/><pic:cNvPicPr/></pic:nvPicPr>` +
-    `<pic:blipFill>` +
-    `<a:blip r:embed="${rId}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>` +
-    `<a:stretch><a:fillRect/></a:stretch>` +
-    `</pic:blipFill>` +
-    `<pic:spPr>` +
-    `<a:xfrm><a:off x="0" y="0"/><a:ext cx="${widthEmu}" cy="${heightEmu}"/></a:xfrm>` +
-    `<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>` +
-    `</pic:spPr>` +
-    `</pic:pic></a:graphicData></a:graphic></wp:inline>` +
-    `</w:drawing></w:r></w:p>`
+    `<pic:blipFill><a:blip r:embed="${rId}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>` +
+    `<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${widthEmu}" cy="${heightEmu}"/></a:xfrm>` +
+    `<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>` +
+    `</pic:pic></a:graphicData></a:graphic>` +
+    `</wp:inline></w:drawing></w:r></w:p>`
   );
 }
 
@@ -330,8 +348,11 @@ async function replacePlaceholderWithImage(
   const docFile = zip.file('word/document.xml');
   if (!docFile) return;
 
-  const xml: string = await docFile.async('string');
+  let xml: string = await docFile.async('string');
   await injectImageIntoZip(zip, base64DataUrl, fileName, rId);
+
+  // Ensure drawing namespaces exist on root <w:document> — required by Word
+  xml = ensureDrawingNamespaces(xml);
 
   await yieldToUI(); // yield before XML walking (can be slow on large docs)
 
