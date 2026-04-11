@@ -420,6 +420,7 @@ async function injectBarangayClearance(zip: any, req: RequestDetail, profile: Pr
     const furtherCert = `Further certifies that he/ she has no derogatory record and has good moral character as per our Barangay record in connected. This clearance is issued upon request for ${xmlEscape(purpose)} and for whatever legal purpose it may serve.`;
 
     return xml
+      .replace(/APPLICANT NAME PLACEHOLDER/g, xmlEscape(name))
       .replace(
         /_____________________ of legal age, male\/female, single\/married\/widow\/ widower, Filipino citizen, whose name and signature\/right thumb mark appears below is a BONAFIDE and permanent resident of BRGY\. GUIN-ON, Calbayog City, /g,
         certifyText
@@ -450,6 +451,7 @@ async function injectBusinessClearance(zip: any, req: RequestDetail, profile: Pr
 
   await patchXml(zip, 'word/document.xml', xml =>
     xml
+      .replace(/APPLICANT NAME PLACEHOLDER/g,    xmlEscape(owner))
       .replace(/Grante GREGORIO BALDOMARO GOMEZ, /g, `Granted to ${xmlEscape(owner)}, `)
       .replace(/GREGORIO BALDOMARO COMEZ/g,           xmlEscape(owner))
       .replace(/of AGRICULTURAL PRODUCTS /g,          `of ${xmlEscape(business)} `)
