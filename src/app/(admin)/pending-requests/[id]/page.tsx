@@ -1,3 +1,4 @@
+import React from 'react';
 'use client';
 
 import { use, useState, useEffect, useRef } from 'react';
@@ -5,7 +6,7 @@ import { motion } from 'framer-motion';
 import {
   CheckCircle, XCircle, User, Mail, Phone,
   MapPin, Loader2, Download, Upload, Wand2,
-  ShieldCheck, AlertTriangle, Clock, Lock,
+  ShieldCheck, AlertTriangle, Clock, Lock, History,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -163,6 +164,66 @@ function buildExtraDetails(req: RequestDetail) {
 }
 
 /* ─── Page ────────────────────────────────────────────────────────────── */
+
+/* ─── Edit History Panel ──────────────────────────────────────────────── */
+interface EditHistoryEntry {
+  id: string;
+  field_label: string;
+  old_value: string;
+  new_value: string;
+  user_name: string | null;
+  user_email: string | null;
+  created_at: string;
+}
+
+function EditHistoryPanel({ requestId }: { requestId: string }) {
+  const [history, setHistory] = React.useState<EditHistoryEntry[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    fetch(`/api/request-edits?requestId=${requestId}`)
+      .then(r => r.json())
+      .then(j => setHistory(j.data ?? []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [requestId]);
+
+  if (loading || history.length === 0) return null;
+
+  return (
+    <div>
+      <SectionLabel label="Resident Edit History" />
+      <div className="space-y-3">
+        {history.map(h => {
+          const who = h.user_name ?? h.user_email ?? 'Resident';
+          return (
+            <div key={h.id} className="flex items-start gap-3">
+              <div className="w-1.5 h-1.5 rounded-full bg-orange-400 mt-1.5 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="mono text-[10px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">
+                  {h.field_label} · <span className="normal-case not-italic">{who}</span>
+                </p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[12px] text-[#7a7870] dark:text-[#7e7b75] line-through">
+                    {h.old_value || '(empty)'}
+                  </span>
+                  <span className="text-[10px] text-[#a09e98]">→</span>
+                  <span className="text-[12px] font-medium text-[#1a1917] dark:text-[#f0eee8]">
+                    {h.new_value || '(empty)'}
+                  </span>
+                </div>
+              </div>
+              <span className="mono text-[10px] text-[#a09e98] dark:text-[#5c5a54] flex-shrink-0">
+                {new Date(h.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function ReviewRequestPage({ params }: { params: Promise<{ id: string }> }) {
   const { id }    = use(params);
   const router    = useRouter();
@@ -431,6 +492,8 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
                   </div>
                 </div>
               )}
+
+              <EditHistoryPanel requestId={request.id} />
 
               {profile && (
                 <div>

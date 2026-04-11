@@ -16,7 +16,14 @@ const SENSITIVE_FIELDS = [
   'notes',
 ] as const;
 
-// ── POST /api/requests ────────────────────────────────────────────────────────
+const RESIDENT_EDITABLE_FIELDS = [
+  'purpose', 'custom_purpose', 'additional_info',
+  'purok', 'ctc_no', 'ctc_date_issued', 'ctc_place_issued',
+  'business_name',
+  'deceased_name', 'deceased_age', 'date_of_death', 'place_of_death', 'relationship_to_deceased',
+  'years_of_residency', 'bcn_no',
+] as const;
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -29,7 +36,6 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// ── GET /api/requests ─────────────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -53,7 +59,6 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// ── PATCH /api/requests ───────────────────────────────────────────────────────
 export async function PATCH(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -62,29 +67,44 @@ export async function PATCH(req: NextRequest) {
 
     const body = await req.json();
 
-    // ── Extract audit identity fields (never written to requests table) ──────
     const adminId    = body.admin_id    ?? null;
     const adminEmail = body.admin_email ?? null;
-    const adminName  = body.admin_name  ?? null;   // ← decrypted real name
+    const adminName  = body.admin_name  ?? null;
 
-    const { admin_id: _a, admin_email: _b, admin_name: _c, ...updatePayload } = body;
+    const residentId    = body.resident_id    ?? null;
+    const residentEmail = body.resident_email ?? null;
+    const residentName  = body.resident_name  ?? null;
 
-    // ── Encrypt sensitive fields ──────────────────────────────────────────────
+    const {
+      admin_id: _a, admin_email: _b, admin_name: _c,
+      resident_id: _d, resident_email: _e, resident_name: _f,
+      ...updatePayload
+    } = body;
+
     const fieldsToEncrypt = SENSITIVE_FIELDS.filter(f => f in updatePayload);
     const payload = fieldsToEncrypt.length > 0
       ? encryptFields(updatePayload, fieldsToEncrypt)
       : updatePayload;
 
-    // Track approved_by / rejected_by on the request row itself
     if (updatePayload.status === 'approved' && adminId) (payload as any).approved_by = adminId;
     if (updatePayload.status === 'rejected' && adminId) (payload as any).rejected_by = adminId;
 
-    // ── Update request row ────────────────────────────────────────────────────
+    let oldValues: Record<string, any> = {};
+    if (residentId) {
+      const { data: existing } = await supabase
+        .from('requests')
+        .select(RESIDENT_EDITABLE_FIELDS.join(', '))
+        .eq('id', id)
+        .single();
+      if (existing) {
+        oldValues = decryptFields(existing, [...SENSITIVE_FIELDS]);
+      }
+    }
+
     const { data, error } = await supabase
       .from('requests').update(payload).eq('id', id).select().single();
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-    // ── Write audit log ───────────────────────────────────────────────────────
     let action: string | null = null;
     let notes:  string | null = null;
 
@@ -105,11 +125,29 @@ export async function PATCH(req: NextRequest) {
         action,
         performed_by:    adminId,
         performer_email: adminEmail,
-        performer_name:  adminName,   // ← stored so the list page can show the real name
+        performer_name:  adminName,
         notes,
       }).then(({ error: auditErr }) => {
         if (auditErr) console.error('[audit] write failed:', auditErr.message);
       });
+    }
+
+    if (residentId) {
+      const changes: { field: string; oldValue: string; newValue: string }[] = [];
+      for (const field of RESIDENT_EDITABLE_FIELDS) {
+        if (!(field in updatePayload)) continue;
+        const oldVal = String(oldValues[field] ?? '');
+        const newVal = String(updatePayload[field] ?? '');
+        if (oldVal !== newVal) changes.push({ field, oldValue: oldVal, newValue: newVal });
+      }
+      if (changes.length > 0) {
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+        fetch(`${baseUrl}/api/request-edits`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ requestId: id, userId: residentId, userEmail: residentEmail, userName: residentName, changes }),
+        }).catch(() => {});
+      }
     }
 
     return NextResponse.json({ data: decryptFields(data, [...SENSITIVE_FIELDS]) });

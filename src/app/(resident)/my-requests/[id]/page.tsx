@@ -8,6 +8,7 @@ import Button from '@/app/components/ui/Button';
 import {
   ArrowLeft, User, MapPin, Phone, Mail,
   CheckCircle, Clock, XCircle, Download, Loader2,
+  Pencil, X, Save, History,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -27,8 +28,17 @@ interface RequestDetail {
 }
 
 interface Profile {
+  id: string;
   firstName: string; lastName: string; email: string;
-  phone: string; address: string;
+  phone: string; address: string; username: string;
+}
+
+interface EditHistory {
+  id: string;
+  field_label: string;
+  old_value: string;
+  new_value: string;
+  created_at: string;
 }
 
 /* ─── Variants ───────────────────────────────────────────────── */
@@ -55,14 +65,257 @@ const staggerItem: Variants = {
   animate: { opacity: 1, y: 0, transition: { duration: 0.32, ease: EASE } },
 };
 
+/* ─── Field configs by doc type ─────────────────────────────── */
+type EditableField = {
+  key: keyof RequestDetail;
+  label: string;
+  type?: 'text' | 'date' | 'textarea';
+};
+
+function getEditableFields(docType: string): EditableField[] {
+  const common: EditableField[] = [
+    { key: 'additional_info', label: 'Additional Info', type: 'textarea' },
+  ];
+  switch (docType) {
+    case 'barangay-clearance':
+      return [
+        { key: 'purok', label: 'Purok / Zone' },
+        { key: 'ctc_no', label: 'CTC Number' },
+        { key: 'ctc_date_issued', label: 'CTC Date Issued', type: 'date' },
+        { key: 'ctc_place_issued', label: 'CTC Place Issued' },
+        ...common,
+      ];
+    case 'business-clearance':
+      return [
+        { key: 'business_name', label: 'Business Name' },
+        { key: 'purok', label: 'Location / Purok' },
+        ...common,
+      ];
+    case 'certification-of-death':
+      return [
+        { key: 'deceased_name', label: 'Deceased Name' },
+        { key: 'deceased_age', label: 'Age at Death' },
+        { key: 'date_of_death', label: 'Date of Death', type: 'date' },
+        { key: 'place_of_death', label: 'Place of Death' },
+        { key: 'relationship_to_deceased', label: 'Relationship' },
+        ...common,
+      ];
+    default:
+      return [
+        { key: 'purok', label: 'Purok / Zone' },
+        { key: 'years_of_residency', label: 'Years of Residency' },
+        ...common,
+      ];
+  }
+}
+
+/* ─── Edit Modal ─────────────────────────────────────────────── */
+function EditModal({
+  request,
+  profile,
+  onClose,
+  onSaved,
+}: {
+  request: RequestDetail;
+  profile: Profile;
+  onClose: () => void;
+  onSaved: (updated: RequestDetail) => void;
+}) {
+  const fields = getEditableFields(request.document_type ?? request.type ?? '');
+  const [form, setForm] = useState<Record<string, string>>(() => {
+    const init: Record<string, string> = {};
+    for (const f of fields) init[f.key] = (request[f.key] as string) ?? '';
+    return init;
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError]   = useState('');
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/requests?id=${request.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...form,
+          resident_id:    profile.id,
+          resident_email: profile.email,
+          resident_name:  profile.username || `${profile.firstName} ${profile.lastName}`,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? 'Save failed');
+      onSaved(json.data);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 12 }}
+        transition={{ duration: 0.25, ease: EASE }}
+        className="w-full max-w-lg bg-white dark:bg-[#1a1a20] rounded-xl border border-[#dedad4] dark:border-[#2a2a32] shadow-2xl overflow-hidden"
+        style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#dedad4] dark:border-[#2a2a32]">
+          <div className="flex items-center gap-2">
+            <Pencil className="w-4 h-4 text-orange-500" />
+            <h2 className="text-[14px] font-semibold text-[#1a1917] dark:text-[#f0eee8]">
+              Edit Request
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1 rounded text-[#a09e98] hover:text-[#3d3b36] dark:hover:text-[#f0eee8] transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Fields */}
+        <div className="px-5 py-4 space-y-4 max-h-[60vh] overflow-y-auto">
+          <p className="text-[12px] text-[#7a7870] dark:text-[#7e7b75]">
+            You can only edit pending requests. Changes are logged and visible to admins.
+          </p>
+          {fields.map(f => (
+            <div key={f.key}>
+              <label className="block text-[11px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1"
+                style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                {f.label}
+              </label>
+              {f.type === 'textarea' ? (
+                <textarea
+                  value={form[f.key] ?? ''}
+                  onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
+                  rows={3}
+                  className="w-full px-3 py-2 text-[13px] bg-white dark:bg-[#16161a]
+                    border border-[#dedad4] dark:border-[#2a2a32] rounded
+                    text-[#1a1917] dark:text-[#f0eee8]
+                    focus:outline-none focus:border-orange-400 dark:focus:border-orange-500
+                    resize-none transition-colors"
+                />
+              ) : (
+                <input
+                  type={f.type ?? 'text'}
+                  value={form[f.key] ?? ''}
+                  onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
+                  className="w-full px-3 py-2 text-[13px] bg-white dark:bg-[#16161a]
+                    border border-[#dedad4] dark:border-[#2a2a32] rounded
+                    text-[#1a1917] dark:text-[#f0eee8]
+                    focus:outline-none focus:border-orange-400 dark:focus:border-orange-500
+                    transition-colors"
+                />
+              )}
+            </div>
+          ))}
+          {error && (
+            <p className="text-[12px] text-red-600 dark:text-red-400">{error}</p>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-[#dedad4] dark:border-[#2a2a32]">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-[13px] rounded border border-[#dedad4] dark:border-[#2a2a32]
+              text-[#7a7870] dark:text-[#7e7b75]
+              hover:bg-[#f0eee8] dark:hover:bg-[#1e1e24]
+              transition-colors duration-150"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center gap-2 px-4 py-2 text-[13px] rounded
+              bg-orange-500 text-white hover:bg-orange-600
+              disabled:opacity-60 disabled:cursor-not-allowed
+              transition-colors duration-150"
+          >
+            {saving
+              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…</>
+              : <><Save className="w-3.5 h-3.5" /> Save Changes</>
+            }
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+/* ─── Edit History Panel ─────────────────────────────────────── */
+function EditHistoryPanel({ requestId }: { requestId: string }) {
+  const [history, setHistory] = useState<EditHistory[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/request-edits?requestId=${requestId}`)
+      .then(r => r.json())
+      .then(j => setHistory(j.data ?? []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [requestId]);
+
+  if (loading) return null;
+  if (history.length === 0) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <History className="w-4 h-4" />
+          Edit History
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {history.map((h, i) => (
+            <div key={h.id} className="flex items-start gap-3 text-sm">
+              <div className="w-1.5 h-1.5 rounded-full bg-orange-400 mt-2 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-[#60646c] dark:text-[#b0b4ba] text-xs uppercase tracking-wide mb-0.5">
+                  {h.field_label}
+                </p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[#1c2024] dark:text-white line-through opacity-60 text-[12px]">
+                    {h.old_value || '(empty)'}
+                  </span>
+                  <span className="text-[10px] text-[#a09e98]">→</span>
+                  <span className="text-[#1c2024] dark:text-white font-medium text-[12px]">
+                    {h.new_value || '(empty)'}
+                  </span>
+                </div>
+              </div>
+              <span className="text-[11px] text-[#a09e98] flex-shrink-0">
+                {new Date(h.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}
+              </span>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ─── Main Page ──────────────────────────────────────────────── */
 export default function RequestDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id }   = use(params);
   const router   = useRouter();
 
-  const [request,  setRequest]  = useState<RequestDetail | null>(null);
-  const [profile,  setProfile]  = useState<Profile | null>(null);
-  const [loading,  setLoading]  = useState(true);
-  const [notFound, setNotFound] = useState(false);
+  const [request,    setRequest]    = useState<RequestDetail | null>(null);
+  const [profile,    setProfile]    = useState<Profile | null>(null);
+  const [loading,    setLoading]    = useState(true);
+  const [notFound,   setNotFound]   = useState(false);
+  const [showEdit,   setShowEdit]   = useState(false);
+  const [savedMsg,   setSavedMsg]   = useState('');
 
   useEffect(() => {
     if (localStorage.getItem('theme') === 'dark') {
@@ -90,11 +343,13 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
           const p = profileJson.data;
           if (p) {
             setProfile({
-              firstName: p.firstName ?? p.first_name ?? '',
-              lastName:  p.lastName  ?? p.last_name  ?? '',
-              email:     p.email     ?? '',
+              id:        user.id,
+              firstName: p.firstName ?? '',
+              lastName:  p.lastName  ?? '',
+              email:     p.email     ?? user.email ?? '',
               phone:     p.phone     ?? '',
               address:   p.address   ?? '',
+              username:  p.username  ?? '',
             });
           }
         }
@@ -109,10 +364,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
-      <motion.div
-        animate={{ rotate: 360 }}
-        transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }}
-      >
+      <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }}>
         <Loader2 className="w-8 h-8 text-[#0d74ce]" />
       </motion.div>
     </div>
@@ -126,17 +378,8 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
     >
       <Card>
         <CardContent className="p-8 text-center">
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.15 }}
-            className="text-[#b0b4ba] mb-4"
-          >
-            Request not found
-          </motion.p>
-          <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-            <Link href="/my-requests"><Button>Back to Requests</Button></Link>
-          </motion.div>
+          <p className="text-[#b0b4ba] mb-4">Request not found</p>
+          <Link href="/my-requests"><Button>Back to Requests</Button></Link>
         </CardContent>
       </Card>
     </motion.div>
@@ -162,76 +405,84 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   }
   if (request.document_type === 'certification-of-death') {
     extraDetails.push(
-      { label: 'Deceased Name',    value: request.deceased_name },
-      { label: 'Age at Death',     value: request.deceased_age },
-      { label: 'Date of Death',    value: request.date_of_death },
-      { label: 'Place of Death',   value: request.place_of_death },
-      { label: 'Relationship',     value: request.relationship_to_deceased },
+      { label: 'Deceased Name', value: request.deceased_name },
+      { label: 'Age at Death',  value: request.deceased_age },
+      { label: 'Date of Death', value: request.date_of_death },
+      { label: 'Place of Death', value: request.place_of_death },
+      { label: 'Relationship',  value: request.relationship_to_deceased },
     );
   }
-  if (request.document_type === 'job-seeker') {
+  if (['job-seeker', 'oath-of-undertaking', 'barangay-residency'].includes(request.document_type ?? '')) {
     extraDetails.push(
-      { label: 'BCN Number',         value: request.bcn_no },
-      { label: 'Purok / Zone',       value: request.purok },
-      { label: 'Years of Residency', value: request.years_of_residency },
-    );
-  }
-  if (request.document_type === 'oath-of-undertaking') {
-    extraDetails.push(
-      { label: 'Purok / Zone',       value: request.purok },
+      { label: 'BCN Number',       value: request.bcn_no },
+      { label: 'Purok / Zone',     value: request.purok },
       { label: 'Years of Residency', value: request.years_of_residency },
     );
   }
 
-  const statusIcon = {
-    approved: <CheckCircle className="w-6 h-6 text-green-500" />,
-    pending:  <Clock       className="w-6 h-6 text-[#ab6400]" />,
-    rejected: <XCircle     className="w-6 h-6 text-[#eb8e90]"    />,
-  }[request.status] ?? <Clock className="w-6 h-6 text-[#b0b4ba]" />;
+  const statusIcon =
+    request.status === 'approved' ? <CheckCircle className="w-6 h-6 text-green-500" /> :
+    request.status === 'rejected' ? <XCircle     className="w-6 h-6 text-red-500"   /> :
+                                    <Clock       className="w-6 h-6 text-amber-500" />;
+  const statusMsg =
+    request.status === 'approved' ? 'Your request has been approved.' :
+    request.status === 'rejected' ? 'Your request was rejected.' :
+                                    'Waiting for admin review.';
 
-  const statusMsg = {
-    pending:  'Your request is being reviewed.',
-    approved: 'Your document is ready.',
-    rejected: 'Your request was not approved.',
-  }[request.status] ?? '';
+  const canEdit = request.status === 'pending' || request.status === 'secretary_approved';
 
   return (
-    <div className="min-h-screen p-4 lg:p-8 bg-gray-50 dark:bg-[#171717] text-[#1c2024] dark:text-white transition-colors duration-300">
-      <div className="max-w-5xl mx-auto">
+    <div className="min-h-screen bg-[#f8f9fa] dark:bg-[#111113] p-4 lg:p-8">
+      <div className="max-w-5xl mx-auto space-y-6">
 
-        {/* Back button */}
-        <motion.div {...fadeUp(0)} className="mb-6">
-          <Link href="/my-requests">
-            <motion.div
-              whileHover={{ x: -4 }}
-              transition={{ type: 'spring', stiffness: 400 }}
-              className="inline-block"
-            >
-              <Button variant="ghost" className="gap-2">
-                <ArrowLeft className="w-4 h-4" />Back to Requests
-              </Button>
-            </motion.div>
+        {/* Back + Header */}
+        <motion.div {...fadeUp(0)}>
+          <Link
+            href="/my-requests"
+            className="inline-flex items-center gap-2 text-sm text-[#60646c] dark:text-[#b0b4ba]
+              hover:text-[#1c2024] dark:hover:text-white transition-colors mb-4"
+          >
+            <ArrowLeft className="w-4 h-4" /> Back to My Requests
           </Link>
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <h1 className="text-2xl font-bold text-[#1c2024] dark:text-white">
+                {request.type ?? request.document_type}
+              </h1>
+              <p className="text-[#60646c] dark:text-[#b0b4ba] font-mono text-sm">
+                ID: {request.id.toUpperCase()}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant={request.status as any}>{request.status}</Badge>
+              {canEdit && profile && (
+                <button
+                  onClick={() => setShowEdit(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded border
+                    border-orange-300 dark:border-orange-700
+                    text-orange-600 dark:text-orange-400
+                    bg-orange-50 dark:bg-orange-950/30
+                    hover:bg-orange-100 dark:hover:bg-orange-950/50
+                    text-[12px] font-medium transition-colors duration-150"
+                >
+                  <Pencil className="w-3.5 h-3.5" /> Edit Request
+                </button>
+              )}
+            </div>
+          </div>
         </motion.div>
 
-        {/* Title row */}
-        <motion.div {...fadeUp(0.08)} className="mb-6">
-          <div className="flex items-center justify-between mb-2">
-            <h1 className="text-3xl font-bold text-[#1c2024] dark:text-white">
-              {request.type ?? request.document_type}
-            </h1>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.7 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ type: 'spring', stiffness: 300, delay: 0.2 }}
-            >
-              <Badge variant={request.status as any}>{request.status}</Badge>
-            </motion.div>
-          </div>
-          <p className="text-[#60646c] dark:text-[#b0b4ba] font-mono text-sm">
-            ID: {request.id.toUpperCase()}
-          </p>
-        </motion.div>
+        {/* Saved message */}
+        {savedMsg && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="px-4 py-3 rounded border border-green-300 dark:border-green-700
+              bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400 text-[13px]"
+          >
+            {savedMsg}
+          </motion.div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
@@ -295,6 +546,11 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
               </motion.div>
             )}
 
+            {/* Edit history */}
+            <motion.div variants={staggerItem}>
+              <EditHistoryPanel requestId={request.id} />
+            </motion.div>
+
             {/* Profile */}
             {profile && (
               <motion.div variants={staggerItem}>
@@ -338,18 +594,17 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                     transition={{ delay: 0.28, duration: 0.3 }}
                     className="flex items-center gap-3 p-3 bg-[#f0f0f3] dark:bg-white/5 rounded-lg"
                   >
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ type: 'spring', stiffness: 400, delay: 0.35 }}
-                    >
-                      {statusIcon}
-                    </motion.div>
+                    {statusIcon}
                     <div>
                       <p className="text-[#1c2024] dark:text-white font-medium capitalize">{request.status}</p>
                       <p className="text-[#60646c] dark:text-[#b0b4ba] text-xs">{statusMsg}</p>
                     </div>
                   </motion.div>
+                  {canEdit && (
+                    <p className="text-[11px] text-[#a09e98] mt-3 text-center">
+                      You can still edit this request while it's pending.
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>
@@ -361,20 +616,10 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                   <CardHeader><CardTitle>Your Document</CardTitle></CardHeader>
                   <CardContent>
                     <a href={request.file_url} target="_blank" rel="noopener noreferrer" download>
-                      <motion.div
-                        whileHover={{ scale: 1.02, y: -1 }}
-                        whileTap={{ scale: 0.97 }}
-                      >
-                        <Button variant="default" className="w-full gap-2">
-                          <motion.div
-                            animate={{ y: [0, -2, 0] }}
-                            transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
-                          >
-                            <Download className="w-4 h-4" />
-                          </motion.div>
-                          Download Document
-                        </Button>
-                      </motion.div>
+                      <Button variant="default" className="w-full gap-2">
+                        <Download className="w-4 h-4" />
+                        Download Document
+                      </Button>
                     </a>
                   </CardContent>
                 </Card>
@@ -395,6 +640,21 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
           </div>
         </div>
       </div>
+
+      {/* Edit Modal */}
+      {showEdit && profile && (
+        <EditModal
+          request={request}
+          profile={profile}
+          onClose={() => setShowEdit(false)}
+          onSaved={(updated) => {
+            setRequest(updated);
+            setShowEdit(false);
+            setSavedMsg('Changes saved successfully.');
+            setTimeout(() => setSavedMsg(''), 4000);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -411,13 +671,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 function IconRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="flex items-start gap-3">
-      <motion.div
-        whileHover={{ scale: 1.2, rotate: 6 }}
-        transition={{ type: 'spring', stiffness: 400 }}
-        className="mt-0.5 shrink-0"
-      >
-        {icon}
-      </motion.div>
+      <div className="mt-0.5 shrink-0">{icon}</div>
       <div>
         <p className="text-sm text-[#60646c] dark:text-[#b0b4ba]">{label}</p>
         <p className="text-[#1c2024] dark:text-white">{value}</p>
