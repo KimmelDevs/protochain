@@ -629,12 +629,11 @@ async function injectBarangayClearance(zip: any, req: RequestDetail, profile: Pr
       `<w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r ${SPLIT_RID}><w:t>ctc_date_issued</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r ${SPLIT_RID}><w:t>}</w:t>`,
       `<w:t>{ctc_date_issued}</w:t>`,
     );
-    // ctc_place_issued has " {" (space+brace) in the preceding run
+    // ctc_place_issued: the " {" run has xml:space="preserve" — match the full exact pattern
     xml = xml.replace(
-      `<w:t>ctc_place_issued</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r ${SPLIT_RID}><w:t>}</w:t>`,
-      `<w:t>ctc_place_issued}</w:t>`,
+      `<w:r ${SPLIT_RID}><w:t xml:space="preserve"> {</w:t></w:r><w:proofErr w:type="spellStart"/><w:r ${SPLIT_RID}><w:t>ctc_place_issued</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r ${SPLIT_RID}><w:t>}</w:t></w:r>`,
+      `<w:r ${SPLIT_RID}><w:t xml:space="preserve"> {ctc_place_issued}</w:t></w:r>`,
     );
-    xml = xml.replace(/ \{ctc_place_issued\}/g, '{ctc_place_issued}');
 
     // ── Replace placeholders with real data ─────────────────────────────────
     xml = xml.replace(/APPLICANT NAME PLACEHOLDER/g, xmlEscape(name));
@@ -642,9 +641,9 @@ async function injectBarangayClearance(zip: any, req: RequestDetail, profile: Pr
     xml = xml.replace(/\{this_day\}/g,        xmlEscape(day));
     xml = xml.replace(/\{month\}/g,           xmlEscape(MONTH));
     xml = xml.replace(/\{year\}/g,            xmlEscape(year));
-    xml = xml.replace(/\{ctc_no\}/g,          xmlEscape(ctcNo));
-    xml = xml.replace(/\{ctc_date_issued\}/g, xmlEscape(ctcDate));
-    xml = xml.replace(/\{ctc_place_issued\}/g,xmlEscape(ctcPlace));
+    xml = xml.replace(/\{ctc_no\}/g,           xmlEscape(ctcNo));
+    xml = xml.replace(/\{ctc_date_issued\}/g,  xmlEscape(ctcDate));
+    xml = xml.replace(/ ?\{ctc_place_issued\}/g, xmlEscape(ctcPlace));
 
     // ── Legacy hardcoded replacements (keep for backward compat) ───────────
     xml = xml.replace(
