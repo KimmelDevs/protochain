@@ -9,7 +9,6 @@ import {
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
-import { decrypt } from '@/app/lib/utils/crypto';
 
 interface RequestRow {
   id: string;
@@ -94,13 +93,11 @@ export default function ResidentDashboard() {
           .single();
         if (profile) setFirstName(profile.firstName ?? '');
 
-        const { data: reqData } = await supabase
-          .from('requests')
-          .select('id, type, document_type, status, created_at, notes, purpose, custom_purpose')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-
-        setRequests((reqData ?? []).map((r: any) => ({ ...r, notes: decrypt(r.notes) })));
+        const res = await fetch(`/api/requests?user_id=${user.id}`);
+        if (res.ok) {
+          const json = await res.json();
+          setRequests(json.data ?? []);
+        }
       } catch (err) {
         console.error(err);
       } finally {
