@@ -6,6 +6,7 @@ import { Search, Eye, FileText, User, XCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
+import { decrypt } from '@/app/lib/utils/crypto';
 
 /* ─────────────────────────── types ─────────────────────────────────────── */
 interface Profile {
@@ -77,7 +78,7 @@ export default function RejectedRequestsPage() {
 
       const profileMap = Object.fromEntries((profilesData ?? []).map((p: Profile) => [p.id, p]));
 
-      setRequests(reqData.map((r: any) => ({ ...r, profiles: profileMap[r.user_id] ?? null })));
+      setRequests(reqData.map((r: any) => ({ ...r, notes: decrypt(r.notes), profiles: profileMap[r.user_id] ?? null })));
       setLoading(false);
     })();
   }, [router]);

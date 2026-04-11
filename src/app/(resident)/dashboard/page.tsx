@@ -9,6 +9,7 @@ import {
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
+import { decrypt } from '@/app/lib/utils/crypto';
 
 interface RequestRow {
   id: string;
@@ -99,7 +100,7 @@ export default function ResidentDashboard() {
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
 
-        setRequests(reqData ?? []);
+        setRequests((reqData ?? []).map((r: any) => ({ ...r, notes: decrypt(r.notes) })));
       } catch (err) {
         console.error(err);
       } finally {
