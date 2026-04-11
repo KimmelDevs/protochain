@@ -86,12 +86,11 @@ export default function ResidentDashboard() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { router.push('/login'); return; }
 
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('firstName')
-          .eq('id', user.id)
-          .single();
-        if (profile) setFirstName(profile.firstName ?? '');
+        const profileRes = await fetch(`/api/profile?id=${user.id}`);
+        if (profileRes.ok) {
+          const { data: profile } = await profileRes.json();
+          if (profile) setFirstName(profile.firstName ?? '');
+        }
 
         const res = await fetch(`/api/requests?user_id=${user.id}`);
         if (res.ok) {
