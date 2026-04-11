@@ -113,7 +113,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
         animate={{ rotate: 360 }}
         transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }}
       >
-        <Loader2 className="w-8 h-8 text-orange-500" />
+        <Loader2 className="w-8 h-8 text-[#0d74ce]" />
       </motion.div>
     </div>
   );
@@ -130,7 +130,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.15 }}
-            className="text-gray-400 mb-4"
+            className="text-[#b0b4ba] mb-4"
           >
             Request not found
           </motion.p>
@@ -184,10 +184,10 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   }
 
   const statusIcon = {
-    approved: <CheckCircle className="w-6 h-6 text-green-400" />,
-    pending:  <Clock       className="w-6 h-6 text-yellow-400" />,
-    rejected: <XCircle     className="w-6 h-6 text-red-400"    />,
-  }[request.status] ?? <Clock className="w-6 h-6 text-gray-400" />;
+    approved: <CheckCircle className="w-6 h-6 text-green-500" />,
+    pending:  <Clock       className="w-6 h-6 text-[#ab6400]" />,
+    rejected: <XCircle     className="w-6 h-6 text-[#eb8e90]"    />,
+  }[request.status] ?? <Clock className="w-6 h-6 text-[#b0b4ba]" />;
 
   const statusMsg = {
     pending:  'Your request is being reviewed.',
@@ -196,7 +196,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   }[request.status] ?? '';
 
   return (
-    <div className="min-h-screen p-4 lg:p-8 bg-gray-50 dark:bg-[#0f0f23] text-gray-900 dark:text-white transition-colors duration-300">
+    <div className="min-h-screen p-4 lg:p-8 bg-gray-50 dark:bg-[#171717] text-[#1c2024] dark:text-white transition-colors duration-300">
       <div className="max-w-5xl mx-auto">
 
         {/* Back button */}
@@ -217,7 +217,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
         {/* Title row */}
         <motion.div {...fadeUp(0.08)} className="mb-6">
           <div className="flex items-center justify-between mb-2">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-3xl font-bold text-[#1c2024] dark:text-white">
               {request.type ?? request.document_type}
             </h1>
             <motion.div
@@ -228,7 +228,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
               <Badge variant={request.status as any}>{request.status}</Badge>
             </motion.div>
           </div>
-          <p className="text-gray-500 dark:text-gray-400 font-mono text-sm">
+          <p className="text-[#60646c] dark:text-[#b0b4ba] font-mono text-sm">
             ID: {request.id.toUpperCase()}
           </p>
         </motion.div>
@@ -308,10 +308,10 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                       className="space-y-3"
                     >
                       {[
-                        { icon: <User   className="w-5 h-5 text-gray-500 dark:text-gray-400" />, label: 'Name',    value: `${profile.firstName} ${profile.lastName}` },
-                        { icon: <Mail   className="w-5 h-5 text-gray-500 dark:text-gray-400" />, label: 'Email',   value: profile.email   },
-                        { icon: <Phone  className="w-5 h-5 text-gray-500 dark:text-gray-400" />, label: 'Phone',   value: profile.phone   },
-                        { icon: <MapPin className="w-5 h-5 text-gray-500 dark:text-gray-400" />, label: 'Address', value: profile.address },
+                        { icon: <User   className="w-5 h-5 text-[#60646c] dark:text-[#b0b4ba]" />, label: 'Name',    value: `${profile.firstName} ${profile.lastName}` },
+                        { icon: <Mail   className="w-5 h-5 text-[#60646c] dark:text-[#b0b4ba]" />, label: 'Email',   value: profile.email   },
+                        { icon: <Phone  className="w-5 h-5 text-[#60646c] dark:text-[#b0b4ba]" />, label: 'Phone',   value: profile.phone   },
+                        { icon: <MapPin className="w-5 h-5 text-[#60646c] dark:text-[#b0b4ba]" />, label: 'Address', value: profile.address },
                       ].map(row => (
                         <motion.div key={row.label} variants={staggerItem}>
                           <IconRow icon={row.icon} label={row.label} value={row.value} />
@@ -336,7 +336,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                     initial={{ opacity: 0, scale: 0.92 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.28, duration: 0.3 }}
-                    className="flex items-center gap-3 p-3 bg-gray-100 dark:bg-white/5 rounded-lg"
+                    className="flex items-center gap-3 p-3 bg-[#f0f0f3] dark:bg-white/5 rounded-lg"
                   >
                     <motion.div
                       initial={{ scale: 0 }}
@@ -346,8 +346,8 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                       {statusIcon}
                     </motion.div>
                     <div>
-                      <p className="text-gray-900 dark:text-white font-medium capitalize">{request.status}</p>
-                      <p className="text-gray-500 dark:text-gray-400 text-xs">{statusMsg}</p>
+                      <p className="text-[#1c2024] dark:text-white font-medium capitalize">{request.status}</p>
+                      <p className="text-[#60646c] dark:text-[#b0b4ba] text-xs">{statusMsg}</p>
                     </div>
                   </motion.div>
                 </CardContent>
@@ -365,7 +365,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                         whileHover={{ scale: 1.02, y: -1 }}
                         whileTap={{ scale: 0.97 }}
                       >
-                        <Button variant="orange" className="w-full gap-2">
+                        <Button variant="default" className="w-full gap-2">
                           <motion.div
                             animate={{ y: [0, -2, 0] }}
                             transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
@@ -385,7 +385,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
               <motion.div {...slideInRight(0.26)}>
                 <Card>
                   <CardContent className="p-4">
-                    <p className="text-gray-500 dark:text-gray-400 text-sm text-center">
+                    <p className="text-[#60646c] dark:text-[#b0b4ba] text-sm text-center">
                       Your request is approved. Please visit the barangay office to claim your document.
                     </p>
                   </CardContent>
@@ -402,8 +402,8 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{label}</p>
-      <p className="text-gray-900 dark:text-white font-medium">{value}</p>
+      <p className="text-sm text-[#60646c] dark:text-[#b0b4ba] mb-1">{label}</p>
+      <p className="text-[#1c2024] dark:text-white font-medium">{value}</p>
     </div>
   );
 }
@@ -419,8 +419,8 @@ function IconRow({ icon, label, value }: { icon: React.ReactNode; label: string;
         {icon}
       </motion.div>
       <div>
-        <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
-        <p className="text-gray-900 dark:text-white">{value}</p>
+        <p className="text-sm text-[#60646c] dark:text-[#b0b4ba]">{label}</p>
+        <p className="text-[#1c2024] dark:text-white">{value}</p>
       </div>
     </div>
   );

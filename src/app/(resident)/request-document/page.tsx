@@ -11,7 +11,7 @@ const documentTypes = [
     title: 'Barangay Clearance',
     description: 'General-purpose clearance for employment, business, travel, and other transactions.',
     icon: FileText,
-    color: 'from-green-700 to-green-800',
+    color: 'from-[#10A37F] to-[#10A37F]',
     processingTime: '1-2 days',
     purposes: ['Employment', 'Business', 'Travel', 'Loan Application', 'Others'],
   },
@@ -20,7 +20,7 @@ const documentTypes = [
     title: 'Business Clearance',
     description: 'Required for business permit applications within the barangay.',
     icon: Briefcase,
-    color: 'from-blue-700 to-blue-800',
+    color: 'from-[#0d74ce] to-[#476cff]',
     processingTime: '2-3 days',
     purposes: ['New Business', 'Business Renewal', 'Business Expansion'],
   },
@@ -29,7 +29,7 @@ const documentTypes = [
     title: 'Certification of Death',
     description: 'Official barangay certification for the death of a resident.',
     icon: ScrollText,
-    color: 'from-purple-700 to-purple-800',
+    color: 'from-[#8145b5] to-[#8145b5]',
     processingTime: '1 day',
     purposes: ['Legal Purpose', 'Insurance', 'Government Transaction', 'Others'],
   },
@@ -47,7 +47,7 @@ const documentTypes = [
     title: 'Oath of Undertaking',
     description: 'Oath of undertaking for first-time job seekers under RA 11261.',
     icon: FileText,
-    color: 'from-teal-700 to-teal-800',
+    color: 'from-[#47c2ff] to-[#0d74ce]',
     processingTime: '1 day',
     purposes: ['Job Application'],
   },
@@ -55,7 +55,7 @@ const documentTypes = [
 
 export default function RequestDocumentPage() {
   return (
-    <div className="min-h-screen p-4 lg:p-8 bg-gray-50 dark:bg-[#0f0f23] transition-colors duration-300">
+    <div className="min-h-screen p-4 lg:p-8 bg-gray-50 dark:bg-[#171717] transition-colors duration-300">
       <div className="max-w-5xl mx-auto">
 
         {/* Header */}
@@ -64,10 +64,10 @@ export default function RequestDocumentPage() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">
+          <h1 className="text-3xl md:text-4xl font-bold text-[#1c2024] dark:text-white mb-2">
             Request a Document
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-[#60646c] dark:text-[#b0b4ba]">
             Choose the type of document you want to request
           </p>
         </motion.div>
@@ -94,29 +94,29 @@ export default function RequestDocumentPage() {
                       </div>
 
                       {/* Title */}
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                      <h3 className="text-lg font-bold text-[#1c2024] dark:text-white mb-2">
                         {doc.title}
                       </h3>
 
                       {/* Description */}
-                      <p className="text-gray-600 dark:text-gray-400 text-sm mb-4 line-clamp-2">
+                      <p className="text-[#60646c] dark:text-[#b0b4ba] text-sm mb-4 line-clamp-2">
                         {doc.description}
                       </p>
 
                       {/* Processing */}
                       <div className="flex items-center gap-2 mb-4 text-sm">
                         <Clock className="w-4 h-4 text-gray-500" />
-                        <span className="text-gray-500 dark:text-gray-400">
+                        <span className="text-[#60646c] dark:text-[#b0b4ba]">
                           Processing: {doc.processingTime}
                         </span>
                       </div>
 
                       {/* Footer */}
-                      <div className="flex items-center justify-between pt-4 border-t border-gray-300 dark:border-white/10">
-                        <span className="text-sm font-medium text-blue-500 dark:text-blue-400">
+                      <div className="flex items-center justify-between pt-4 border-t border-[#e0e1e6] dark:border-white/10">
+                        <span className="text-sm font-medium text-[#0d74ce]">
                           Apply Now
                         </span>
-                        <ArrowRight className="w-5 h-5 text-blue-500 dark:text-blue-400" />
+                        <ArrowRight className="w-5 h-5 text-[#0d74ce]" />
                       </div>
 
                     </CardContent>

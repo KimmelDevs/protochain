@@ -134,7 +134,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
         animate={{ rotate: 360 }}
         transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }}
       >
-        <Loader2 className="w-8 h-8 text-orange-500" />
+        <Loader2 className="w-8 h-8 text-[#0d74ce]" />
       </motion.div>
     </div>
   );
@@ -152,7 +152,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
         >
           <FileText className="w-16 h-16 text-gray-600 mx-auto mb-4" />
         </motion.div>
-        <p className="text-gray-400 mb-4">Document not found</p>
+        <p className="text-[#b0b4ba] mb-4">Document not found</p>
         <Link href="/my-documents">
           <Button>Back to Documents</Button>
         </Link>
@@ -202,7 +202,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
   }
 
   return (
-    <div className="min-h-screen p-4 lg:p-8 bg-gray-50 dark:bg-[#0f0f23] text-gray-900 dark:text-white transition-colors duration-300">
+    <div className="min-h-screen p-4 lg:p-8 bg-gray-50 dark:bg-[#171717] text-[#1c2024] dark:text-white transition-colors duration-300">
       <div className="max-w-5xl mx-auto">
 
         {/* Back button */}
@@ -223,7 +223,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
         {/* Title row */}
         <motion.div {...fadeUp(0.08)} className="mb-6">
           <div className="flex items-center justify-between mb-2">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-3xl font-bold text-[#1c2024] dark:text-white">
               {doc.type ?? doc.document_type}
             </h1>
             <motion.div
@@ -234,7 +234,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
               <Badge variant="approved">approved</Badge>
             </motion.div>
           </div>
-          <p className="text-gray-500 dark:text-gray-400 font-mono text-sm">
+          <p className="text-[#60646c] dark:text-[#b0b4ba] font-mono text-sm">
             ID: {doc.id.toUpperCase()}
           </p>
         </motion.div>
@@ -265,14 +265,14 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                     <motion.div variants={staggerItem}><DetailRow label="Status"         value="Approved" /></motion.div>
                     {doc.additional_info && (
                       <motion.div variants={staggerItem} className="col-span-2">
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Additional Information</p>
-                        <p className="text-gray-900 dark:text-white bg-gray-100 dark:bg-white/5 p-3 rounded-lg">{doc.additional_info}</p>
+                        <p className="text-sm text-[#60646c] dark:text-[#b0b4ba] mb-2">Additional Information</p>
+                        <p className="text-[#1c2024] dark:text-white bg-[#f0f0f3] dark:bg-white/5 p-3 rounded-lg">{doc.additional_info}</p>
                       </motion.div>
                     )}
                     {doc.notes && (
                       <motion.div variants={staggerItem} className="col-span-2">
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Notes from Barangay</p>
-                        <p className="text-gray-900 dark:text-white bg-gray-100 dark:bg-white/5 p-3 rounded-lg">{doc.notes}</p>
+                        <p className="text-sm text-[#60646c] dark:text-[#b0b4ba] mb-2">Notes from Barangay</p>
+                        <p className="text-[#1c2024] dark:text-white bg-[#f0f0f3] dark:bg-white/5 p-3 rounded-lg">{doc.notes}</p>
                       </motion.div>
                     )}
                   </motion.div>
@@ -317,14 +317,14 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                     >
                       <motion.div variants={staggerItem}>
                         <IconRow
-                          icon={<User className="w-4 h-4 text-gray-500 dark:text-gray-400" />}
+                          icon={<User className="w-4 h-4 text-[#60646c] dark:text-[#b0b4ba]" />}
                           label="Full Name"
                           value={`${profile.firstName} ${profile.lastName}`}
                         />
                       </motion.div>
                       <motion.div variants={staggerItem}>
                         <IconRow
-                          icon={<MapPin className="w-4 h-4 text-gray-500 dark:text-gray-400" />}
+                          icon={<MapPin className="w-4 h-4 text-[#60646c] dark:text-[#b0b4ba]" />}
                           label="Address"
                           value={profile.address || '—'}
                         />
@@ -332,7 +332,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                       {profile.birthday && (
                         <motion.div variants={staggerItem}>
                           <IconRow
-                            icon={<Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400" />}
+                            icon={<Calendar className="w-4 h-4 text-[#60646c] dark:text-[#b0b4ba]" />}
                             label="Birthday"
                             value={new Date(profile.birthday).toLocaleDateString()}
                           />
@@ -366,7 +366,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                       animate={{ rotate: [0, -8, 8, 0] }}
                       transition={{ delay: 0.6, duration: 0.5 }}
                     >
-                      <FileText className="w-5 h-5 text-green-400" />
+                      <FileText className="w-5 h-5 text-green-500" />
                     </motion.div>
                     Document File
                   </CardTitle>
@@ -378,7 +378,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                         initial={{ opacity: 0, x: -8 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.3 }}
-                        className="flex items-center gap-2 text-green-400 text-sm"
+                        className="flex items-center gap-2 text-green-500 text-sm"
                       >
                         <motion.div
                           initial={{ scale: 0 }}
@@ -398,7 +398,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.4 }}
                         >
-                          <Button variant="orange" className="w-full gap-2 mt-2">
+                          <Button variant="default" className="w-full gap-2 mt-2">
                             <motion.div
                               animate={{ y: [0, -2, 0] }}
                               transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
@@ -415,7 +415,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: 0.3 }}
-                      className="text-sm text-gray-500 dark:text-gray-400 text-center py-2"
+                      className="text-sm text-[#60646c] dark:text-[#b0b4ba] text-center py-2"
                     >
                       The barangay hasn't uploaded your document file yet. Please check back later.
                     </motion.p>
@@ -433,7 +433,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ type: 'spring', stiffness: 300, delay: 0.35 }}
-                    className="flex items-center gap-2 text-green-400"
+                    className="flex items-center gap-2 text-green-500"
                   >
                     <CheckCircle className="w-5 h-5" />
                     <span className="font-medium">Approved</span>
@@ -458,8 +458,8 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{label}</p>
-      <p className="text-gray-900 dark:text-white font-medium">{value}</p>
+      <p className="text-sm text-[#60646c] dark:text-[#b0b4ba] mb-1">{label}</p>
+      <p className="text-[#1c2024] dark:text-white font-medium">{value}</p>
     </div>
   );
 }
@@ -475,8 +475,8 @@ function IconRow({ icon, label, value }: { icon: React.ReactNode; label: string;
         {icon}
       </motion.div>
       <div>
-        <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
-        <p className="text-gray-900 dark:text-white text-sm">{value}</p>
+        <p className="text-xs text-[#60646c] dark:text-[#b0b4ba]">{label}</p>
+        <p className="text-[#1c2024] dark:text-white text-sm">{value}</p>
       </div>
     </div>
   );

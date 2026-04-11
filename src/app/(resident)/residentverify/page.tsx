@@ -105,8 +105,8 @@ export default function VerifyPage() {
 
           {/* HEADER */}
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mb-10 text-center">
-            <div className="w-14 h-14 bg-orange-500/10 flex items-center justify-center mx-auto mb-4">
-              <ShieldCheck className="w-7 h-7 text-orange-500" />
+            <div className="w-14 h-14 bg-[#0d74ce]/10 flex items-center justify-center mx-auto mb-4">
+              <ShieldCheck className="w-7 h-7 text-[#0d74ce]" />
             </div>
             <h1 className="mono text-3xl font-bold text-[#1a1917] dark:text-[#f0eee8] tracking-tight mb-2">
               VERIFY DOCUMENT
@@ -146,11 +146,11 @@ export default function VerifyPage() {
                     onDrop={onDrop}
                     onDragOver={e => e.preventDefault()}
                     onClick={() => fileRef.current?.click()}
-                    className="border-2 border-dashed border-[#c8c6c0] dark:border-[#2a2a32] hover:border-orange-500 dark:hover:border-orange-400 transition-colors cursor-pointer p-10 text-center mb-4"
+                    className="border-2 border-dashed border-[#c8c6c0] dark:border-[#2a2a32] hover:border-[#0d74ce] transition-colors cursor-pointer p-10 text-center mb-4"
                   >
                     {hashing ? (
                       <div className="flex flex-col items-center gap-2">
-                        <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
+                        <Loader2 className="w-6 h-6 animate-spin text-[#0d74ce]" />
                         <p className="mono text-[12px] text-[#5c5a54] dark:text-[#9e9b94]">Computing SHA-256…</p>
                       </div>
                     ) : fileName ? (
@@ -170,9 +170,9 @@ export default function VerifyPage() {
 
                   {/* Computed hash display */}
                   {hash && (
-                    <div className="border-l-2 border-orange-500 pl-3 py-1 mb-4">
+                    <div className="border-l-2 border-[#0d74ce] pl-3 py-1 mb-4">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="mono text-[10px] font-bold tracking-[0.1em] uppercase text-orange-600 dark:text-orange-400">Computed SHA-256</span>
+                        <span className="mono text-[10px] font-bold tracking-[0.1em] uppercase text-[#0d74ce]">Computed SHA-256</span>
                         <button onClick={copyHash} className="mono text-[10px] text-[#7a7870] dark:text-[#7e7b75] hover:text-orange-600 dark:hover:text-orange-400 flex items-center gap-1">
                           {copied ? <><Check className="w-3 h-3" /> Copied</> : <><Copy className="w-3 h-3" /> Copy</>}
                         </button>
@@ -191,7 +191,7 @@ export default function VerifyPage() {
                     onChange={e => { setHash(e.target.value); setResult(null); }}
                     rows={3}
                     placeholder="Paste your 64-character SHA-256 hash here…"
-                    className="w-full mono text-[12px] bg-[#fafaf9] dark:bg-[#16161a] border border-[#c8c6c0] dark:border-[#2a2a32] p-3 text-[#1a1917] dark:text-[#f0eee8] placeholder-[#7a7870] dark:placeholder-[#7e7b75] focus:outline-none focus:border-orange-500 resize-none mb-1"
+                    className="w-full mono text-[12px] bg-[#fafaf9] dark:bg-[#16161a] border border-[#c8c6c0] dark:border-[#2a2a32] p-3 text-[#1a1917] dark:text-[#f0eee8] placeholder-[#7a7870] dark:placeholder-[#7e7b75] focus:outline-none focus:border-[#0d74ce] resize-none mb-1"
                   />
                   <p className={`mono text-[10px] ${hash.trim().length === 64 ? 'text-emerald-600 dark:text-emerald-400' : 'text-[#7a7870] dark:text-[#7e7b75]'}`}>
                     {hash.trim().length} / 64 characters
@@ -207,7 +207,7 @@ export default function VerifyPage() {
             <button
               onClick={handleVerify}
               disabled={loading || hashing || !hash.trim()}
-              className="flex items-center justify-center gap-2 w-full bg-orange-600 hover:bg-orange-500 disabled:opacity-40 disabled:cursor-not-allowed text-white mono text-[12px] font-bold tracking-[0.1em] uppercase py-3 transition-colors mt-4"
+              className="flex items-center justify-center gap-2 w-full bg-[#000000] hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed text-white mono text-[12px] font-bold tracking-[0.1em] uppercase py-3 transition-colors mt-4"
             >
               {loading
                 ? <><Loader2 className="w-4 h-4 animate-spin" />Verifying on Blockchain…</>
@@ -331,10 +331,10 @@ export default function VerifyPage() {
                   <div className="flex items-start gap-3">
                     <ShieldX className="w-7 h-7 text-red-500 shrink-0 mt-0.5" />
                     <div>
-                      <p className="mono text-[14px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wide mb-1">
+                      <p className="mono text-[14px] font-bold text-red-600 dark:text-[#eb8e90] uppercase tracking-wide mb-1">
                         Not Found on Blockchain
                       </p>
-                      <p className="text-[13px] text-red-500/80 dark:text-red-400/70 leading-relaxed">
+                      <p className="text-[13px] text-red-500/80 dark:text-[#eb8e90]/70 leading-relaxed">
                         No record exists for this hash. The document may not have been issued by the barangay, or the file may have been tampered with.
                       </p>
                       <div className="mt-4 border-l-2 border-red-400/40 pl-3">

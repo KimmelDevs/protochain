@@ -83,24 +83,24 @@ export default function MyDocumentsPage() {
     doc.purpose === 'others' && doc.custom_purpose ? doc.custom_purpose : doc.purpose;
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f0f23] transition-colors duration-300">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#171717] transition-colors duration-300">
       <motion.div
         animate={{ rotate: 360 }}
         transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }}
       >
-        <Loader2 className="w-8 h-8 text-orange-500" />
+        <Loader2 className="w-8 h-8 text-[#0d74ce]" />
       </motion.div>
     </div>
   );
 
   return (
-    <div className="min-h-screen p-4 lg:p-8 bg-gray-50 dark:bg-[#0f0f23] transition-colors duration-300">
+    <div className="min-h-screen p-4 lg:p-8 bg-gray-50 dark:bg-[#171717] transition-colors duration-300">
       <div className="max-w-7xl mx-auto">
 
         {/* Header */}
         <motion.div {...fadeUp(0)} className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">My Documents</h1>
-          <p className="text-gray-500 dark:text-gray-400">View and download your approved barangay documents</p>
+          <h1 className="text-3xl md:text-4xl font-bold text-[#1c2024] dark:text-white mb-2">My Documents</h1>
+          <p className="text-[#60646c] dark:text-[#b0b4ba]">View and download your approved barangay documents</p>
         </motion.div>
 
         {/* Stats */}
@@ -111,15 +111,15 @@ export default function MyDocumentsPage() {
           className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"
         >
           {[
-            { label: 'Total Documents', value: documents.length,                         icon: <CheckCircle className="w-8 h-8 text-green-400" /> },
-            { label: 'With File',       value: documents.filter(d => d.file_url).length, icon: <FileText    className="w-8 h-8 text-blue-400"  /> },
-            { label: 'Document Types',  value: new Set(documents.map(d => d.type)).size, icon: <FileText    className="w-8 h-8 text-purple-400" /> },
+            { label: 'Total Documents', value: documents.length,                         icon: <CheckCircle className="w-8 h-8 text-green-500" /> },
+            { label: 'With File',       value: documents.filter(d => d.file_url).length, icon: <FileText    className="w-8 h-8 text-[#0d74ce]"  /> },
+            { label: 'Document Types',  value: new Set(documents.map(d => d.type)).size, icon: <FileText    className="w-8 h-8 text-[#8145b5]" /> },
           ].map(s => (
             <motion.div
               key={s.label}
               variants={cardVariants}
               whileHover={{ y: -3, transition: { duration: 0.2 } }}
-              className="bg-white/5 dark:bg-white/10 border border-gray-300 dark:border-white/10 rounded-xl p-4 transition-colors duration-300 cursor-default"
+              className="bg-white/5 dark:bg-white/10 border border-[#e0e1e6] dark:border-white/10 rounded-xl p-4 transition-colors duration-300 cursor-default"
             >
               <div className="flex items-center justify-between">
                 <div>
@@ -127,11 +127,11 @@ export default function MyDocumentsPage() {
                     initial={{ opacity: 0, scale: 0.5 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ type: 'spring', stiffness: 300, delay: 0.2 }}
-                    className="text-2xl font-bold text-gray-900 dark:text-white"
+                    className="text-2xl font-bold text-[#1c2024] dark:text-white"
                   >
                     {s.value}
                   </motion.div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">{s.label}</div>
+                  <div className="text-sm text-[#60646c] dark:text-[#b0b4ba]">{s.label}</div>
                 </div>
                 <motion.div
                   whileHover={{ rotate: 8, scale: 1.1 }}
@@ -150,16 +150,16 @@ export default function MyDocumentsPage() {
             <motion.div
               {...fadeUp(0.2)}
               exit={{ opacity: 0, y: -10 }}
-              className="bg-white/5 dark:bg-white/10 border border-gray-300 dark:border-white/10 rounded-xl p-6 mb-6 transition-colors duration-300"
+              className="bg-white/5 dark:bg-white/10 border border-[#e0e1e6] dark:border-white/10 rounded-xl p-6 mb-6 transition-colors duration-300"
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#b0b4ba] dark:text-gray-500 w-5 h-5" />
                   <Input
                     placeholder="Search documents..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 text-gray-900 dark:text-white transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(249,115,22,0.15)]"
+                    className="pl-10 text-[#1c2024] dark:text-white transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(249,115,22,0.15)]"
                   />
                 </div>
                 <Select
@@ -187,20 +187,20 @@ export default function MyDocumentsPage() {
                 exit={{ opacity: 0, scale: 0.95 }}
                 className="col-span-full"
               >
-                <div className="bg-white/5 dark:bg-white/10 border border-gray-300 dark:border-white/10 rounded-xl p-12 text-center transition-colors duration-300">
+                <div className="bg-white/5 dark:bg-white/10 border border-[#e0e1e6] dark:border-white/10 rounded-xl p-12 text-center transition-colors duration-300">
                   <motion.div
                     animate={{ y: [0, -8, 0] }}
                     transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
                     className="w-20 h-20 bg-white/5 dark:bg-white/10 rounded-full flex items-center justify-center mx-auto mb-6"
                   >
-                    <FileText className="w-10 h-10 text-gray-500 dark:text-gray-400" />
+                    <FileText className="w-10 h-10 text-[#60646c] dark:text-[#b0b4ba]" />
                   </motion.div>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No Documents Yet</h3>
-                  <p className="text-gray-500 dark:text-gray-400 mb-2">You don't have any approved documents yet.</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">Once your request is approved, it will appear here.</p>
+                  <h3 className="text-xl font-bold text-[#1c2024] dark:text-white mb-2">No Documents Yet</h3>
+                  <p className="text-[#60646c] dark:text-[#b0b4ba] mb-2">You don't have any approved documents yet.</p>
+                  <p className="text-sm text-[#60646c] dark:text-[#b0b4ba] mb-8">Once your request is approved, it will appear here.</p>
                   <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
                     <Link href="/request-document">
-                      <button className="bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 rounded-lg font-semibold transition-colors">
+                      <button className="bg-[#000000] hover:opacity-80 text-white px-8 py-3 rounded-[9999px] font-semibold transition">
                         Request a Document
                       </button>
                     </Link>
@@ -216,19 +216,19 @@ export default function MyDocumentsPage() {
                 exit={{ opacity: 0, scale: 0.95 }}
                 className="col-span-full"
               >
-                <div className="bg-white/5 dark:bg-white/10 border border-gray-300 dark:border-white/10 rounded-xl p-12 text-center transition-colors duration-300">
+                <div className="bg-white/5 dark:bg-white/10 border border-[#e0e1e6] dark:border-white/10 rounded-xl p-12 text-center transition-colors duration-300">
                   <motion.div
                     animate={{ rotate: [0, -10, 10, -10, 0] }}
                     transition={{ delay: 0.3, duration: 0.5 }}
                   >
-                    <Search className="w-10 h-10 text-gray-500 dark:text-gray-400 mx-auto mb-4" />
+                    <Search className="w-10 h-10 text-[#60646c] dark:text-[#b0b4ba] mx-auto mb-4" />
                   </motion.div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Results Found</h3>
+                  <h3 className="text-lg font-semibold text-[#1c2024] dark:text-white mb-2">No Results Found</h3>
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.97 }}
                     onClick={() => { setSearchQuery(''); setTypeFilter('all'); }}
-                    className="text-blue-500 dark:text-blue-400 text-sm hover:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                    className="text-[#0d74ce] text-sm hover:text-[#0d74ce] dark:hover:text-blue-300 transition-colors"
                   >
                     Clear filters
                   </motion.button>
@@ -242,27 +242,27 @@ export default function MyDocumentsPage() {
                 variants={cardVariants}
                 layout
                 whileHover={{ y: -4, transition: { duration: 0.2 } }}
-                className="bg-white/5 dark:bg-white/10 border border-gray-300 dark:border-white/10 rounded-xl p-6 hover:border-blue-500/30 transition-colors duration-300 group"
+                className="bg-white/5 dark:bg-white/10 border border-[#e0e1e6] dark:border-white/10 rounded-xl p-6 hover:border-[#0d74ce]/30 transition-colors duration-300 group"
               >
                 <motion.div
                   whileHover={{ scale: 1.08, rotate: 3 }}
                   transition={{ type: 'spring', stiffness: 300 }}
-                  className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-4"
+                  className="w-12 h-12 bg-[#000000] rounded-[9999px] flex items-center justify-center mb-4"
                 >
                   <FileText className="w-6 h-6 text-white" />
                 </motion.div>
 
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3 group-hover:text-blue-400 transition-colors duration-200">
+                <h3 className="text-lg font-bold text-[#1c2024] dark:text-white mb-3 group-hover:text-[#0d74ce] transition-colors duration-200">
                   {doc.type ?? doc.document_type}
                 </h3>
 
                 <div className="space-y-2 mb-4">
-                  <p className="text-xs font-mono text-gray-500 dark:text-gray-400">{doc.id.slice(0, 8).toUpperCase()}</p>
-                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <p className="text-xs font-mono text-[#60646c] dark:text-[#b0b4ba]">{doc.id.slice(0, 8).toUpperCase()}</p>
+                  <div className="flex items-center gap-2 text-sm text-[#b0b4ba]">
                     <Calendar className="w-4 h-4 shrink-0" />
                     <span>Approved: {new Date(doc.created_at).toLocaleDateString()}</span>
                   </div>
-                  <p className="text-sm text-gray-400 capitalize">Purpose: {displayPurpose(doc)}</p>
+                  <p className="text-sm text-[#b0b4ba] capitalize">Purpose: {displayPurpose(doc)}</p>
                 </div>
 
                 <motion.div
@@ -279,7 +279,7 @@ export default function MyDocumentsPage() {
                 <div className="flex gap-2">
                   <Link href={`/my-documents/${doc.id}`} className="flex-1">
                     <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
-                      <Button variant="orange" size="sm" className="w-full gap-2">
+                      <Button variant="default" size="sm" className="w-full gap-2">
                         <Eye className="w-4 h-4" />View
                       </Button>
                     </motion.div>
@@ -288,7 +288,7 @@ export default function MyDocumentsPage() {
                   {doc.file_url && (
                     <a href={doc.file_url} target="_blank" rel="noopener noreferrer" download>
                       <motion.div whileHover={{ scale: 1.08, y: -1 }} whileTap={{ scale: 0.94 }}>
-                        <Button variant="orange" size="sm" className="px-3">
+                        <Button variant="default" size="sm" className="px-3">
                           <Download className="w-4 h-4" />
                         </Button>
                       </motion.div>

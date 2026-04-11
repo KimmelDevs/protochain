@@ -66,10 +66,10 @@ function FloatInput({ label, value, onChange, type = 'text', required = false }:
     <div className="relative">
       <input type={type} value={value} onChange={(e) => onChange(e.target.value)}
         placeholder=" " required={required}
-        className={`peer w-full px-4 pt-6 pb-2 rounded-lg bg-white dark:bg-[#1c1c34] border border-gray-300 dark:border-white/20 text-black dark:text-white
-          focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500`}
+        className={`peer w-full px-4 pt-6 pb-2 rounded-lg bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-white/10 text-black dark:text-white
+          focus:outline-none focus:ring-2 focus:ring-[#0d74ce] focus:border-[#0d74ce]`}
       />
-      <label className={`absolute left-4 text-gray-500 dark:text-gray-400 text-sm transition-all pointer-events-none
+      <label className={`absolute left-4 text-[#60646c] dark:text-[#b0b4ba] text-sm transition-all pointer-events-none
         ${value ? 'top-2 text-xs' : 'top-1/2 -translate-y-1/2'}
         peer-focus:top-2 peer-focus:text-xs peer-focus:translate-y-0`}>
         {label}{required ? ' *' : ''}
@@ -111,13 +111,13 @@ function FloatDateInput({ label, value, onChange, required = false }: {
         onBlur={() => setFocused(false)}
         placeholder=" "
         required={required}
-        className="peer w-full px-4 pt-6 pb-2 rounded-lg bg-white dark:bg-[#1c1c34] border border-gray-300 dark:border-white/20 text-black dark:text-white
-          focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500
+        className="peer w-full px-4 pt-6 pb-2 rounded-lg bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-white/10 text-black dark:text-white
+          focus:outline-none focus:ring-2 focus:ring-[#0d74ce] focus:border-[#0d74ce]
           [&::-webkit-calendar-picker-indicator]:opacity-60 dark:[&::-webkit-calendar-picker-indicator]:invert
           [&::-webkit-calendar-picker-indicator]:cursor-pointer"
       />
       <label
-        className={`absolute left-4 text-gray-500 dark:text-gray-400 transition-all duration-150 pointer-events-none
+        className={`absolute left-4 text-[#60646c] dark:text-[#b0b4ba] transition-all duration-150 pointer-events-none
           ${isFloated ? 'top-2 text-xs' : 'top-1/2 -translate-y-1/2 text-sm'}`}
       >
         {label}{required ? ' *' : ''}
@@ -219,11 +219,11 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
   };
 
   if (!config) return (
-    <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center bg-gray-50 dark:bg-[#0f0f23]">
-      <Card className="bg-white dark:bg-[#1c1c34] border border-gray-300 dark:border-white/20">
+    <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center bg-gray-50 dark:bg-[#171717]">
+      <Card className="bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-white/10">
         <CardContent className="p-8 text-center">
           <p className="text-lg font-semibold text-black dark:text-white mb-2">Not Found</p>
-          <p className="text-gray-500 dark:text-gray-400 mb-6">This document type does not exist.</p>
+          <p className="text-[#60646c] dark:text-[#b0b4ba] mb-6">This document type does not exist.</p>
           <Link href="/request-document"><Button>Back to Document Types</Button></Link>
         </CardContent>
       </Card>
@@ -231,13 +231,13 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
   );
 
   if (submitted) return (
-    <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center bg-gray-50 dark:bg-[#0f0f23]">
+    <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center bg-gray-50 dark:bg-[#171717]">
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
-        <Card className="bg-white dark:bg-[#1c1c34] border border-gray-300 dark:border-white/20">
+        <Card className="bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-white/10">
           <CardContent className="p-10 text-center max-w-md">
-            <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
+            <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-black dark:text-white mb-2">Request Submitted!</h2>
-            <p className="text-gray-500 dark:text-gray-400 mb-6">
+            <p className="text-[#60646c] dark:text-[#b0b4ba] mb-6">
               Your <span className="text-black dark:text-white font-medium">{config.title}</span> request has been received.
               You'll be notified once it's ready.
             </p>
@@ -252,13 +252,13 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
   );
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f0f23]">
-      <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#171717]">
+      <Loader2 className="w-8 h-8 text-[#0d74ce] animate-spin" />
     </div>
   );
 
   return (
-    <div className="min-h-screen p-4 lg:p-8 bg-gray-50 dark:bg-[#0f0f23]">
+    <div className="min-h-screen p-4 lg:p-8 bg-gray-50 dark:bg-[#171717]">
       <div className="max-w-2xl mx-auto">
         <Link href="/request-document">
           <Button variant="ghost" className="mb-6 gap-2 text-black dark:text-white"><ArrowLeft className="w-4 h-4" />Back</Button>
@@ -266,7 +266,7 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
           <h1 className="text-3xl font-bold text-black dark:text-white mb-2">{config.title}</h1>
-          <p className="text-gray-700 dark:text-gray-400">{config.description}</p>
+          <p className="text-gray-700 dark:text-[#b0b4ba]">{config.description}</p>
         </motion.div>
 
         {error && (
@@ -276,12 +276,12 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <Card className="bg-white dark:bg-[#1c1c34] border border-gray-300 dark:border-white/20">
+          <Card className="bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-white/10">
             <CardHeader><CardTitle className="text-black dark:text-white">Your Information</CardTitle></CardHeader>
             <CardContent>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+              <p className="text-xs text-[#60646c] dark:text-[#b0b4ba] mb-4">
                 Pulled from your profile. If anything is wrong,{' '}
-                <Link href="/profile" className="text-blue-500 dark:text-blue-400 hover:underline">update your profile</Link> first.
+                <Link href="/profile" className="text-[#0d74ce] hover:underline">update your profile</Link> first.
               </p>
               <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
                 <InfoRow label="Name" value={`${profile?.firstName ?? ''} ${profile?.lastName ?? ''}`.trim()} />
@@ -294,7 +294,7 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
           </Card>
 
           {type === 'barangay-clearance' && (
-            <Card className="bg-white dark:bg-[#1c1c34] border border-gray-300 dark:border-white/20">
+            <Card className="bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-white/10">
               <CardHeader><CardTitle className="text-black dark:text-white">Additional Details</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <FloatInput label="Purok / Zone" value={purok} onChange={setPurok} required />
@@ -307,7 +307,7 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
           )}
 
           {type === 'business-clearance' && (
-            <Card className="bg-white dark:bg-[#1c1c34] border border-gray-300 dark:border-white/20">
+            <Card className="bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-white/10">
               <CardHeader><CardTitle className="text-black dark:text-white">Business Details</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <FloatInput label="Business Name" value={businessName} onChange={setBusinessName} required />
@@ -317,7 +317,7 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
           )}
 
           {type === 'certification-of-death' && (
-            <Card className="bg-white dark:bg-[#1c1c34] border border-gray-300 dark:border-white/20">
+            <Card className="bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-white/10">
               <CardHeader><CardTitle className="text-black dark:text-white">Deceased Person's Information</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <FloatInput label="Full Name of Deceased" value={deceasedName} onChange={setDeceasedName} required />
@@ -331,7 +331,7 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
           )}
 
           {type === 'job-seeker' && (
-            <Card className="bg-white dark:bg-[#1c1c34] border border-gray-300 dark:border-white/20">
+            <Card className="bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-white/10">
               <CardHeader><CardTitle className="text-black dark:text-white">Additional Details</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <FloatInput label="BCN Number" value={bcnNo} onChange={setBcnNo} required />
@@ -342,7 +342,7 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
           )}
 
           {type === 'oath-of-undertaking' && (
-            <Card className="bg-white dark:bg-[#1c1c34] border border-gray-300 dark:border-white/20">
+            <Card className="bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-white/10">
               <CardHeader><CardTitle className="text-black dark:text-white">Additional Details</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <FloatInput label="Purok / Zone" value={purok} onChange={setPurok} required />
@@ -351,7 +351,7 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
             </Card>
           )}
 
-          <Card className="bg-white dark:bg-[#1c1c34] border border-gray-300 dark:border-white/20">
+          <Card className="bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-white/10">
             <CardHeader><CardTitle className="text-black dark:text-white">Request Details</CardTitle></CardHeader>
             <CardContent className="space-y-5">
               <Select label="Purpose *" name="purpose" value={purpose}
@@ -364,7 +364,7 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
               <TextArea label="Additional Information (Optional)" name="additionalInfo"
                 value={additionalInfo} onChange={(e) => setAdditionalInfo(e.target.value)}
                 rows={3} placeholder="Any extra details that may help process your request..."
-                className="bg-white dark:bg-[#1c1c34] text-black dark:text-white border border-gray-300 dark:border-white/20"
+                className="bg-white dark:bg-[#1a1a1a] text-black dark:text-white border border-gray-300 dark:border-white/10"
               />
               <div className="flex gap-3 pt-2">
                 <Link href="/request-document" className="flex-1">
@@ -391,8 +391,8 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-gray-500 dark:text-gray-400 text-xs mb-0.5">{label}</p>
-      <p className="text-black dark:text-white">{value || <span className="text-gray-400 dark:text-gray-500 italic text-xs">Not set</span>}</p>
+      <p className="text-[#60646c] dark:text-[#b0b4ba] text-xs mb-0.5">{label}</p>
+      <p className="text-black dark:text-white">{value || <span className="text-[#b0b4ba] dark:text-gray-500 italic text-xs">Not set</span>}</p>
     </div>
   );
 }
