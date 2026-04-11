@@ -1,30 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { encryptFields, decryptFields } from '@/app/lib/utils/crypto';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const SENSITIVE = ['purpose', 'custom_purpose', 'additional_info', 'old_value', 'new_value'] as const;
-
 const FIELD_LABELS: Record<string, string> = {
-  purpose:          'Purpose',
-  custom_purpose:   'Custom purpose',
-  additional_info:  'Additional info',
-  purok:            'Purok / Zone',
-  ctc_no:           'CTC number',
-  ctc_date_issued:  'CTC date issued',
-  ctc_place_issued: 'CTC place issued',
-  business_name:    'Business name',
-  deceased_name:    'Deceased name',
-  deceased_age:     'Age at death',
-  date_of_death:    'Date of death',
-  place_of_death:   'Place of death',
+  purpose:                  'Purpose',
+  custom_purpose:           'Custom purpose',
+  additional_info:          'Additional info',
+  purok:                    'Purok / Zone',
+  ctc_no:                   'CTC number',
+  ctc_date_issued:          'CTC date issued',
+  ctc_place_issued:         'CTC place issued',
+  business_name:            'Business name',
+  deceased_name:            'Deceased name',
+  deceased_age:             'Age at death',
+  date_of_death:            'Date of death',
+  place_of_death:           'Place of death',
   relationship_to_deceased: 'Relationship',
-  years_of_residency: 'Years of residency',
-  bcn_no:           'BCN number',
+  years_of_residency:       'Years of residency',
+  bcn_no:                   'BCN number',
 };
 
 // ── POST /api/request-edits ───────────────────────────────────────────────────
@@ -38,19 +35,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const rows = changes.map((c: { field: string; oldValue: string; newValue: string }) => {
-      const row = {
-        request_id: requestId,
-        user_id:    userId,
-        user_email: userEmail ?? null,
-        user_name:  userName  ?? null,
-        field_name:  c.field,
-        field_label: FIELD_LABELS[c.field] ?? c.field,
-        old_value:   c.oldValue ?? '',
-        new_value:   c.newValue ?? '',
-      };
-      return encryptFields(row, ['old_value', 'new_value']);
-    });
+    const rows = changes.map((c: { field: string; oldValue: string; newValue: string }) => ({
+      request_id:  requestId,
+      user_id:     userId,
+      user_email:  userEmail ?? null,
+      user_name:   userName  ?? null,
+      field_name:  c.field,
+      field_label: FIELD_LABELS[c.field] ?? c.field,
+      old_value:   c.oldValue ?? '',
+      new_value:   c.newValue ?? '',
+    }));
 
     const { error } = await supabase.from('request_edit_history').insert(rows);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
@@ -75,8 +69,7 @@ export async function GET(req: NextRequest) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-    const decrypted = (data ?? []).map(row => decryptFields(row, ['old_value', 'new_value']));
-    return NextResponse.json({ data: decrypted });
+    return NextResponse.json({ data: data ?? [] });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

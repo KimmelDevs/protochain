@@ -1,4 +1,3 @@
-import React from 'react';
 'use client';
 
 import { use, useState, useEffect, useRef } from 'react';
@@ -177,10 +176,10 @@ interface EditHistoryEntry {
 }
 
 function EditHistoryPanel({ requestId }: { requestId: string }) {
-  const [history, setHistory] = React.useState<EditHistoryEntry[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const [history, setHistory] = useState<EditHistoryEntry[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  React.useEffect(() => {
+  useEffect(() => {
     fetch(`/api/request-edits?requestId=${requestId}`)
       .then(r => r.json())
       .then(j => setHistory(j.data ?? []))
