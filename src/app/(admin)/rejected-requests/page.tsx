@@ -2,11 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Eye, FileText, User, XCircle, Loader2 } from 'lucide-react';
+import { Search, Eye, FileText, User } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
-import { decrypt } from '@/app/lib/utils/crypto';
 
 /* ─────────────────────────── types ─────────────────────────────────────── */
 interface Profile {
@@ -32,7 +31,7 @@ interface Request {
 const fmtDocType = (s: string | null) =>
   (s ?? '—').split(/[\s_-]/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
 
-const isToday   = (d: string) => new Date(d).toDateString() === new Date().toDateString();
+const isToday = (d: string) => new Date(d).toDateString() === new Date().toDateString();
 const isThisWeek = (d: string) => {
   const now = new Date(), start = new Date(now);
   start.setDate(now.getDate() - now.getDay()); start.setHours(0, 0, 0, 0);
@@ -53,44 +52,56 @@ const SectionLabel = ({ label }: { label: string }) => (
 /* ─────────────────────────── page ──────────────────────────────────────── */
 export default function RejectedRequestsPage() {
   const router = useRouter();
-  const [requests,    setRequests]    = useState<Request[]>([]);
-  const [loading,     setLoading]     = useState(true);
-  const [search,      setSearch]      = useState('');
-  const [typeFilter,  setTypeFilter]  = useState('all');
-  const [dateFilter,  setDateFilter]  = useState<'all' | 'today' | 'week' | 'month'>('all');
+  const [requests,   setRequests]   = useState<Request[]>([]);
+  const [loading,    setLoading]    = useState(true);
+  const [search,     setSearch]     = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
 
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/login'); return; }
 
-      const { data: reqData, error } = await supabase
-        .from('requests')
-        .select('*')
-        .eq('status', 'rejected')
-        .order('created_at', { ascending: false });
+      // Fetch via API — decryption (notes, purpose, etc.) is handled server-side
+      const res = await fetch('/api/requests?status=rejected');
+      if (!res.ok) { setLoading(false); return; }
+      const json = await res.json();
+      const reqData: any[] = json.data ?? [];
+      if (!reqData.length) { setLoading(false); return; }
 
-      if (error || !reqData?.length) { setLoading(false); return; }
+      // Fetch profiles for all unique user_ids
+      const userIds = [...new Set(reqData.map(r => r.user_id as string))];
+      const profileMap: Record<string, Profile> = {};
+      await Promise.all(
+        userIds.map(async uid => {
+          const pr = await fetch(`/api/profile?id=${uid}`);
+          if (pr.ok) {
+            const pj = await pr.json();
+            const p = pj.data;
+            if (p) profileMap[uid] = {
+              id:        p.id,
+              firstName: p.firstName ?? p.first_name  ?? '',
+              lastName:  p.lastName  ?? p.last_name   ?? '',
+              email:     p.email     ?? '',
+            };
+          }
+        })
+      );
 
-      const userIds = [...new Set(reqData.map((r: any) => r.user_id))];
-      const { data: profilesData } = await supabase
-        .from('profiles').select('id, firstName, lastName, email').in('id', userIds);
-
-      const profileMap = Object.fromEntries((profilesData ?? []).map((p: Profile) => [p.id, p]));
-
-      setRequests(reqData.map((r: any) => ({ ...r, notes: decrypt(r.notes), profiles: profileMap[r.user_id] ?? null })));
+      setRequests(reqData.map(r => ({ ...r, profiles: profileMap[r.user_id] ?? null })));
       setLoading(false);
     })();
   }, [router]);
 
-  /* ── filtering ──────────────────────────────────────────────────────────── */
+  /* ── filtering ───────────────────────────────────────────────────────── */
   const filtered = requests.filter(r => {
     const name = r.profiles ? `${r.profiles.firstName} ${r.profiles.lastName}` : '';
     const q    = search.toLowerCase();
     const matchSearch =
-      (r.id   ?? '').toLowerCase().includes(q) ||
-      (name   ?? '').toLowerCase().includes(q) ||
-      (r.type ?? '').toLowerCase().includes(q) ||
+      (r.id            ?? '').toLowerCase().includes(q) ||
+      (name            ?? '').toLowerCase().includes(q) ||
+      (r.type          ?? '').toLowerCase().includes(q) ||
       (r.document_type ?? '').toLowerCase().includes(q);
     const matchType = typeFilter === 'all' || (r.type ?? r.document_type) === typeFilter;
     const matchDate =
@@ -103,7 +114,7 @@ export default function RejectedRequestsPage() {
 
   const uniqueTypes = [...new Set(requests.map(r => r.type ?? r.document_type).filter(Boolean))];
 
-  /* ── loading ────────────────────────────────────────────────────────────── */
+  /* ── loading ─────────────────────────────────────────────────────────── */
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-[#fafaf9] dark:bg-[#16161a]">
       <span className="mono text-[12px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] uppercase animate-pulse">Loading…</span>
@@ -141,10 +152,10 @@ export default function RejectedRequestsPage() {
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}
             className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-6 mb-12">
             {[
-              { label: 'Total Rejected',   value: requests.length,                                     cls: 'text-[#1a1917] dark:text-[#f0eee8]',       border: 'border-[#1a1917] dark:border-[#f0eee8]' },
-              { label: 'This Week',        value: requests.filter(r => isThisWeek(r.created_at)).length,  cls: 'text-red-600 dark:text-red-400',            border: 'border-red-500' },
-              { label: 'This Month',       value: requests.filter(r => isThisMonth(r.created_at)).length, cls: 'text-orange-600 dark:text-orange-400',      border: 'border-orange-500' },
-              { label: 'Document Types',   value: uniqueTypes.length,                                   cls: 'text-[#5c5a54] dark:text-[#9e9b94]',       border: 'border-[#c8c6c0] dark:border-[#2a2a32]' },
+              { label: 'Total Rejected', value: requests.length,                                      cls: 'text-[#1a1917] dark:text-[#f0eee8]',  border: 'border-[#1a1917] dark:border-[#f0eee8]' },
+              { label: 'This Week',      value: requests.filter(r => isThisWeek(r.created_at)).length,  cls: 'text-red-600 dark:text-red-400',       border: 'border-red-500' },
+              { label: 'This Month',     value: requests.filter(r => isThisMonth(r.created_at)).length, cls: 'text-orange-600 dark:text-orange-400', border: 'border-orange-500' },
+              { label: 'Document Types', value: uniqueTypes.length,                                   cls: 'text-[#5c5a54] dark:text-[#9e9b94]',  border: 'border-[#c8c6c0] dark:border-[#2a2a32]' },
             ].map(s => (
               <div key={s.label} className={`border-t-2 ${s.border} pt-3 pb-4`}>
                 <p className="mono text-[11px] tracking-[0.15em] uppercase text-[#5c5a54] dark:text-[#9e9b94] mb-2">{s.label}</p>
@@ -249,7 +260,7 @@ export default function RejectedRequestsPage() {
                         </div>
                       </div>
 
-                      {/* Reason */}
+                      {/* Reason — now decrypted via API */}
                       <div className="flex items-center">
                         {req.notes ? (
                           <p className="text-[12px] text-[#5c5a54] dark:text-[#9e9b94] line-clamp-2 leading-snug border-l-2 border-red-300 dark:border-red-800 pl-2">
