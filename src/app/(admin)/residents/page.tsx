@@ -82,9 +82,9 @@ export default function ResidentsPage() {
   const filtered = residents.filter(r => {
     const q = search.toLowerCase();
     return (
-      `${r.firstName} ${r.lastName}`.toLowerCase().includes(q) ||
+      `${r.firstName ?? ''} ${r.lastName ?? ''}`.toLowerCase().includes(q) ||
       (r.email ?? '').toLowerCase().includes(q) ||
-      r.id.toLowerCase().includes(q)
+      (r.id    ?? '').toLowerCase().includes(q)
     );
   });
 

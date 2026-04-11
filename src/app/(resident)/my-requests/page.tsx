@@ -75,7 +75,7 @@ export default function MyRequestsPage() {
 
   const filtered = requests.filter((r) => {
     const q = searchQuery.toLowerCase();
-    const matchesSearch = r.id.toLowerCase().includes(q) || (r.type ?? '').toLowerCase().includes(q);
+    const matchesSearch = (r.id ?? '').toLowerCase().includes(q) || (r.type ?? '').toLowerCase().includes(q);
     const matchesStatus = statusFilter === 'all' || r.status === statusFilter;
     return matchesSearch && matchesStatus;
   });

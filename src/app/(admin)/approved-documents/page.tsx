@@ -106,8 +106,8 @@ export default function ApprovedDocumentsPage() {
     const name = r.profiles ? `${r.profiles.firstName} ${r.profiles.lastName}` : '';
     const q = search.toLowerCase();
     const matchSearch =
-      r.id.toLowerCase().includes(q) ||
-      name.toLowerCase().includes(q) ||
+      (r.id   ?? '').toLowerCase().includes(q) ||
+      (name   ?? '').toLowerCase().includes(q) ||
       (r.type ?? '').toLowerCase().includes(q);
     const matchType = typeFilter === 'all' || r.type === typeFilter;
     const ref = r.processed_at ?? r.created_at;

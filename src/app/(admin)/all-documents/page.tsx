@@ -60,10 +60,11 @@ export default function AllDocumentsPage() {
   const [typeFilter, setTypeFilter] = useState('all');
 
   const filteredDocuments = allDocuments.filter((doc) => {
-    const matchesSearch = 
-      doc.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.residentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.type.toLowerCase().includes(searchQuery.toLowerCase());
+    const q = searchQuery.toLowerCase();
+    const matchesSearch =
+      (doc.id           ?? '').toLowerCase().includes(q) ||
+      (doc.residentName ?? '').toLowerCase().includes(q) ||
+      (doc.type         ?? '').toLowerCase().includes(q);
     const matchesStatus = statusFilter === 'all' || doc.status === statusFilter;
     const matchesType = typeFilter === 'all' || doc.type === typeFilter;
     return matchesSearch && matchesStatus && matchesType;

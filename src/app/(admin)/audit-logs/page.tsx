@@ -142,7 +142,7 @@ export default function AuditLogsPage() {
       (l.performer_email ?? '').toLowerCase().includes(q) ||
       (l.resident_name   ?? '').toLowerCase().includes(q) ||
       (l.document_type   ?? '').toLowerCase().includes(q) ||
-      l.request_id.toLowerCase().includes(q);
+      (l.request_id ?? '').toLowerCase().includes(q);
     const matchAction = actionFilter === 'all' || l.action === actionFilter;
     const matchDate   = dateFilter === 'all' ? true : dateFilter === 'today' ? isToday(l.created_at) : dateFilter === 'week' ? isWeek(l.created_at) : isMonth(l.created_at);
     return matchSearch && matchAction && matchDate;

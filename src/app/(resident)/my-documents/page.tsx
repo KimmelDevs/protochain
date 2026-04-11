@@ -71,7 +71,7 @@ export default function MyDocumentsPage() {
   const filtered = documents.filter((doc) => {
     const q = searchQuery.toLowerCase();
     const matchesSearch =
-      doc.id.toLowerCase().includes(q) ||
+      (doc.id   ?? '').toLowerCase().includes(q) ||
       (doc.type ?? '').toLowerCase().includes(q);
     const matchesType = typeFilter === 'all' || doc.type === typeFilter;
     return matchesSearch && matchesType;
