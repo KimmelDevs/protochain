@@ -27,8 +27,8 @@ export default function Header() {
   return (
     <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
       scrolled
-        ? "bg-[#0f0f23]/95 backdrop-blur-lg border-b border-white/10 shadow-lg shadow-black/20"
-        : "bg-transparent"
+        ? "bg-[#0f0f23]/98 backdrop-blur-lg border-b border-white/10 shadow-lg shadow-black/20"
+        : "bg-[#0f0f23]/80 backdrop-blur-md"
     }`}>
       <div className="container mx-auto flex items-center justify-between h-16 px-4">
         <Link href="/" className="flex items-center gap-2.5">
@@ -50,7 +50,7 @@ export default function Header() {
         {/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-1">
           {navLinks.map((link) => {
-            const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href.split("#")[0]));
+            const isActive = pathname === link.href.split("#")[0] && !link.href.includes("#");
             return (
               <Link
                 key={link.href}
