@@ -285,6 +285,63 @@ function buildInlineImageParagraph(
   );
 }
 
+// ─── Replace existing image in template ──────────────────────────────────────
+// The QR placeholder is already an image in the .docx template.
+// We find the first image relationship (the QR placeholder) and overwrite
+// its file in word/media/ with the newly generated QR PNG.
+
+async function replaceExistingImage(
+  zip:           any,
+  base64DataUrl: string,
+  newFileName:   string,
+): Promise<void> {
+  const base64 = base64DataUrl.includes(',')
+    ? base64DataUrl.split(',')[1]
+    : base64DataUrl;
+  if (!base64) return;
+
+  // Read relationships to find the first image target
+  const relsFile = zip.file('word/_rels/document.xml.rels');
+  if (!relsFile) return;
+  const relsXml: string = await relsFile.async('string');
+
+  // Find all image relationships
+  const imageType = 'relationships/image';
+  const relRegex  = /Id="([^"]+)"[^>]*Type="[^"]*relationships\/image"[^>]*Target="([^"]+)"/g;
+  const matches: Array<{ id: string; target: string }> = [];
+  let m: RegExpExecArray | null;
+  while ((m = relRegex.exec(relsXml)) !== null) {
+    matches.push({ id: m[1], target: m[2] });
+  }
+
+  if (matches.length === 0) {
+    console.warn('[Docgenerators] No image relationships found in template — cannot replace QR image');
+    return;
+  }
+
+  // The QR image is typically the LAST image in the document (bottom of page)
+  // Use the last relationship entry as the QR placeholder
+  const qrRel = matches[matches.length - 1];
+  const oldTarget = qrRel.target; // e.g. "media/image1.png" or "media/image2.jpeg"
+  const oldPath   = `word/${oldTarget}`;
+
+  console.log(`[Docgenerators] Replacing QR image: ${oldPath} (rId: ${qrRel.id})`);
+
+  // Overwrite the image file with the new QR PNG bytes
+  zip.file(oldPath, base64, { base64: true });
+
+  // Ensure PNG content type is registered
+  const ctFile = zip.file('[Content_Types].xml');
+  if (ctFile) {
+    let ctXml: string = await ctFile.async('string');
+    if (!ctXml.includes('Extension="png"')) {
+      ctXml = ctXml.replace('</Types>', `<Default Extension="png" ContentType="image/png"/>
+</Types>`);
+      zip.file('[Content_Types].xml', ctXml);
+    }
+  }
+}
+
 // ─── Relationship + media injector ───────────────────────────────────────────
 
 async function injectImageIntoZip(
@@ -362,7 +419,16 @@ async function replacePlaceholderWithImage(
   const result       = replaceParagraphContaining(xml, placeholder, imgParagraph);
 
   if (result === xml) {
-    console.warn(`[Docgenerators] Placeholder "${placeholder}" not found in document.xml — add it to your .docx template.`);
+    // Last-resort fallback: the placeholder might be a contiguous string in the raw XML
+    // (e.g. pasted in rather than typed, or saved by a different editor).
+    // Try a simple string replace on the whole XML.
+    const fallback = xml.replace(placeholder, imgParagraph);
+    if (fallback !== xml) {
+      console.log(`[Docgenerators] Replaced "${placeholder}" via fallback ✓`);
+      zip.file('word/document.xml', fallback);
+      return;
+    }
+    console.warn(`[Docgenerators] Placeholder "${placeholder}" not found — check your .docx template.`);
   } else {
     console.log(`[Docgenerators] Replaced "${placeholder}" ✓`);
   }
@@ -371,9 +437,33 @@ async function replacePlaceholderWithImage(
 }
 
 /**
+ * Normalises plain text extracted from a docx paragraph for placeholder matching.
+ *
+ * Word can split a typed string like {%SIGNATURE_1} across multiple <w:r> runs
+ * AND may XML-encode special chars (% → &#x25; or &#37;, { → &#x7B;, etc.).
+ * After stripping tags we also decode entities and collapse whitespace so the
+ * comparison always works regardless of how Word serialised the text.
+ */
+function normalisePlainText(raw: string): string {
+  return raw
+    // Decode common XML/HTML entities Word uses
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/&#([0-9]+);/g,        (_, dec) => String.fromCharCode(parseInt(dec, 10)))
+    .replace(/&amp;/g,  '&')
+    .replace(/&lt;/g,   '<')
+    .replace(/&gt;/g,   '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    // Collapse all whitespace (tabs, newlines, non-breaking spaces) into nothing
+    // so "{%SIGNATURE_ 1}" or "{%SIGN ATURE_1}" still matches
+    .replace(/\s+/g, '');
+}
+
+/**
  * Walks the XML string paragraph-by-paragraph.
- * Strips all XML tags from each <w:p> block to get plain text.
- * If plain text contains searchText → replaces entire paragraph with replacement.
+ * Strips all XML tags from each <w:p> block, normalises the plain text,
+ * then checks if it contains searchText (also normalised).
+ * If it does → replaces the entire <w:p>…</w:p> block with replacement.
  */
 function replaceParagraphContaining(
   xml:         string,
@@ -383,6 +473,9 @@ function replaceParagraphContaining(
   const OPEN  = '<w:p>';
   const OPEN2 = '<w:p ';
   const CLOSE = '</w:p>';
+
+  // Normalise the search text the same way we normalise paragraph text
+  const normSearch = normalisePlainText(searchText);
 
   let result = '';
   let i      = 0;
@@ -418,18 +511,18 @@ function replaceParagraphContaining(
 
       if (nextCloseAt <= nextOpenAt) {
         depth--;
-        cursor = nextCloseAt + CLOSE.length; // advance PAST </w:p>
+        cursor = nextCloseAt + CLOSE.length;
       } else {
         depth++;
         cursor = nextOpenAt + (xml[nextOpenAt + 4] === ' ' ? OPEN2.length : OPEN.length);
       }
     }
 
-    // cursor now points to the character AFTER </w:p>
     const pBlock    = xml.slice(pStart, cursor);
     const plainText = pBlock.replace(/<[^>]+>/g, ''); // strip all XML tags
+    const normText  = normalisePlainText(plainText);   // decode entities + collapse spaces
 
-    result += plainText.includes(searchText) ? replacement : pBlock;
+    result += normText.includes(normSearch) ? replacement : pBlock;
     i = cursor;
   }
 
@@ -633,16 +726,13 @@ export async function generateDocument(
     console.warn('[Docgenerators] Captain signature missing — go to Admin > Settings > Signatures');
   }
 
-  // 6. Inject {%QR_CODE} — Reed-Solomon encoded QR of the request ID hash
+  // 6. Generate QR and replace the existing QR image in the template.
+  //    The template already has a QR image placeholder — we find its relationship
+  //    ID in document.xml.rels and overwrite the image file in word/media/.
   const qrDataUrl = await generateQRDataUrl(req.id);
   await yieldToUI();
   if (qrDataUrl) {
-    await replacePlaceholderWithImage(
-      zip, '{%QR_CODE}', qrDataUrl,
-      'rId102', 'qr_code.png',
-      103,   // unique docPr id
-      1.0, 1.0, 'center',
-    );
+    await replaceExistingImage(zip, qrDataUrl, 'qr_code_replaced.png');
   } else {
     console.warn('[Docgenerators] QR generation failed');
   }
