@@ -76,22 +76,16 @@ export async function verifyDocumentOnChain(hexHash: string): Promise<VerifyResu
   const documentType = String(r[3]  ?? r.documentType ?? '');
   const isRevoked    = false; // contract does not implement revocation
 
-  // Fetch the payload_snapshot from Supabase so the verify page can display
+  // Fetch the payload_snapshot via API route so verify page can display
   // every field that was locked into this hash at issuance time.
   let payloadSnapshot: string | undefined;
   try {
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    );
-    // payload_hash is what we record on-chain; look it up in requests table
-    const { data } = await supabase
-      .from('requests')
-      .select('payload_snapshot')
-      .eq('payload_hash', hexHash)
-      .maybeSingle();
-    if (data?.payload_snapshot) payloadSnapshot = data.payload_snapshot;
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const res = await fetch(`${origin}/api/payload-snapshot?hash=${hexHash}`);
+    if (res.ok) {
+      const json = await res.json();
+      if (json.payload_snapshot) payloadSnapshot = json.payload_snapshot;
+    }
   } catch {
     // Non-fatal — snapshot display is best-effort
   }
