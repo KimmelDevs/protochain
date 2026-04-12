@@ -264,24 +264,38 @@ export default function VerifyPage() {
                           <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-emerald-400 mb-2">
                             🔒 Locked Fields (hashed into this record)
                           </p>
-                          <div className="grid grid-cols-1 gap-1">
-                            {result.payloadSnapshot.split('|').map((field, i) => {
-                              const [key, ...rest] = field.split('=');
-                              const val = rest.join('=');
-                              return (
-                                <div key={i} className="flex gap-2 text-[10px] font-mono">
-                                  {val !== undefined ? (
-                                    <>
-                                      <span className="text-emerald-400/60 shrink-0 w-32 truncate">{key}</span>
-                                      <span className="text-[#b0b4ba]">{val || <em className="opacity-40">empty</em>}</span>
-                                    </>
-                                  ) : (
-                                    <span className="text-[#b0b4ba] col-span-2">{key}</span>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
+                          {(() => {
+                            const parts = result.payloadSnapshot!.split('|');
+                            // Format: doctype|fullname|purpose|key=val|...|issued_at
+                            const labeled: { label: string; value: string }[] = [];
+                            const docType  = parts[0] ?? '';
+                            const fullName = parts[1] ?? '';
+                            const purpose  = parts[2] ?? '';
+                            if (docType)  labeled.push({ label: 'Document Type', value: docType });
+                            if (fullName) labeled.push({ label: 'Full Name',     value: fullName });
+                            if (purpose)  labeled.push({ label: 'Purpose',       value: purpose });
+                            // Middle segments are key=value pairs
+                            for (let i = 3; i < parts.length - 1; i++) {
+                              const eqIdx = parts[i].indexOf('=');
+                              if (eqIdx === -1) continue;
+                              const k = parts[i].slice(0, eqIdx);
+                              const v = parts[i].slice(eqIdx + 1);
+                              if (v) labeled.push({ label: k.replace(/_/g, ' '), value: v });
+                            }
+                            // Last segment is issued_at timestamp
+                            const issuedAt = parts[parts.length - 1] ?? '';
+                            if (issuedAt && parts.length > 1) labeled.push({ label: 'Issued At', value: new Date(issuedAt).toLocaleString('en-PH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) });
+                            return (
+                              <div className="grid grid-cols-1 gap-1.5">
+                                {labeled.map(({ label, value }, i) => (
+                                  <div key={i} className="flex gap-2 text-[10px] font-mono">
+                                    <span className="text-emerald-400/70 shrink-0 w-36 truncate capitalize">{label}</span>
+                                    <span className="text-[#b0b4ba]">{value}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          })()}
                           <p className="text-[9px] text-emerald-400/50 mt-2">
                             Any change to the above fields would produce a different hash and fail verification.
                           </p>
