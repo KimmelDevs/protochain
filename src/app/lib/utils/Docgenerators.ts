@@ -609,11 +609,43 @@ async function injectBarangayClearance(zip: any, req: RequestDetail, profile: Pr
 
   await patchXml(zip, 'word/document.xml', xml => {
 
-    // 1. Name header (appears twice for the duplicate layout)
-    xml = xml.replace(/APPLICANT NAME PLACEHOLDER/g, xmlEscape(name));
+    // ── Normalize split placeholders ──────────────────────────────────────────
+    // Word splits {placeholder} across 3 runs with <w:proofErr> spell-check tags.
+    // All BRGY runs share rsidR="00E96396". Collapse each to a single complete run.
+    const R = 'w:rsidR="00E96396"';
+    xml = xml.replace(
+      `<w:r ${R}><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r ${R}><w:t>fullname</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r ${R}><w:t>}</w:t></w:r>`,
+      `<w:r ${R}><w:t>{fullname}</w:t></w:r>`,
+    );
+    xml = xml.replace(
+      `<w:r ${R}><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r ${R}><w:t>this_day</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r ${R}><w:t>}</w:t></w:r>`,
+      `<w:r ${R}><w:t>{this_day}</w:t></w:r>`,
+    );
+    xml = xml.replace(
+      `<w:r ${R}><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r ${R}><w:t>ctc_no</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r ${R}><w:t>}</w:t></w:r>`,
+      `<w:r ${R}><w:t>{ctc_no}</w:t></w:r>`,
+    );
+    xml = xml.replace(
+      `<w:r ${R}><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r ${R}><w:t>ctc_date_issued</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r ${R}><w:t>}</w:t></w:r>`,
+      `<w:r ${R}><w:t>{ctc_date_issued}</w:t></w:r>`,
+    );
+    // ctc_place_issued: opening run has xml:space="preserve" and a leading space " {"
+    xml = xml.replace(
+      `<w:r ${R}><w:t xml:space="preserve"> {</w:t></w:r><w:proofErr w:type="spellStart"/><w:r ${R}><w:t>ctc_place_issued</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r ${R}><w:t>}</w:t></w:r>`,
+      `<w:r ${R}><w:t xml:space="preserve"> {ctc_place_issued}</w:t></w:r>`,
+    );
 
-    // 2. Identity block — Run 2 of Para B contains the entire blank identity sentence.
-    //    We replace it with real name, age, sex, civil status, and purok.
+    // ── Replace placeholders with real values ─────────────────────────────────
+    xml = xml.replace(/APPLICANT NAME PLACEHOLDER/g,  xmlEscape(name));
+    xml = xml.replace(/\{fullname\}/g,                xmlEscape(name));
+    xml = xml.replace(/\{this_day\}/g,                xmlEscape(day));
+    xml = xml.replace(/\{month\}/g,                   xmlEscape(MONTH));
+    xml = xml.replace(/\{year\}/g,                    xmlEscape(year));
+    xml = xml.replace(/\{ctc_no\}/g,                  xmlEscape(ctcNo));
+    xml = xml.replace(/\{ctc_date_issued\}/g,         xmlEscape(ctcDate));
+    xml = xml.replace(/ ?\{ctc_place_issued\}/g,      xmlEscape(ctcPlace));
+
+    // ── Legacy hardcoded replacements (fallback for old template text) ────────
     xml = xml.replace(
       /_____________________ of legal age, male\/female, single\/married\/widow\/ widower, Filipino citizen, whose name and signature\/right thumb mark appears below is a BONAFIDE and permanent resident of BRGY\. GUIN-ON, Calbayog City, /g,
       `${xmlEscape(name)}, ${xmlEscape(age)} years old, ${xmlEscape(sex)}, ` +
@@ -621,24 +653,17 @@ async function injectBarangayClearance(zip: any, req: RequestDetail, profile: Pr
       `appears below is a BONAFIDE and permanent resident of ${xmlEscape(purok)}, ` +
       `BRGY. GUIN-ON, Calbayog City, `,
     );
-
-    // 3. Issuance date — Para C has 3 separate runs: "Issued this ___ day of " | "JANUARY," | " 2024 at…"
-    //    Replace each run independently so formatting (bold etc.) is preserved.
     xml = xml.replace(/Issued this ___ day of /g,
       `Issued this ${xmlEscape(day)}${xmlEscape(suffix)} day of `);
     xml = xml.replace(/JANUARY,/g, `${xmlEscape(MONTH)},`);
     xml = xml.replace(/ 2024 at Brgy\. Guin-on, Calbayog City, Samar, Philippines\./g,
       ` ${xmlEscape(year)} at Brgy. Guin-on, Calbayog City, Samar, Philippines.`);
-
-    // 4. "Further certifies…" para — append the purpose clause after "in connected. "
     xml = xml.replace(
       /Further certifies that he\/ she has no derogatory record and has good moral character as per our Barangay record in connected\. /g,
       `Further certifies that he/ she has no derogatory record and has good moral character ` +
       `as per our Barangay record in connected. This clearance is issued upon request for ` +
       `${xmlEscape(purpose)} and for whatever legal purpose it may serve. `,
     );
-
-    // 5. CTC fields — each is a standalone paragraph/run
     xml = xml.replace(/CTC #: __________________ /g,  `CTC #: ${xmlEscape(ctcNo)} `);
     xml = xml.replace(/Date Issued: ______________ /g, `Date Issued: ${xmlEscape(ctcDate)} `);
     xml = xml.replace(/Place Issued: ______________/g, `Place Issued: ${xmlEscape(ctcPlace)}`);
@@ -758,10 +783,6 @@ async function injectBusinessClearance(zip: any, req: RequestDetail, profile: Pr
 async function injectCertificationOfDeath(zip: any, req: RequestDetail, profile: Profile): Promise<void> {
   const requestor    = `${profile.firstName} ${profile.lastName}`.toUpperCase();
   const deceasedFull = (req.deceased_name ?? '___________').toUpperCase().trim();
-  // Split deceased name for the two-run structure: "FIRSTNAME/MIDDLE " | "LASTNAME ,"
-  const dParts       = deceasedFull.split(/\s+/);
-  const dFirst       = dParts.length > 1 ? dParts.slice(0, -1).join(' ') : deceasedFull;
-  const dLast        = dParts.length > 1 ? dParts[dParts.length - 1] : '';
   const deceasedAge  = req.deceased_age            ?? '___';
   const dateOfDeath  = req.date_of_death           ?? '___________';
   const placeRaw     = (req.place_of_death         ?? '___________').toUpperCase();
@@ -770,45 +791,51 @@ async function injectCertificationOfDeath(zip: any, req: RequestDetail, profile:
 
   await patchXml(zip, 'word/document.xml', xml => {
 
-    // ── Body para: Deceased identity ──────────────────────────────────────────
-    // Run "ERNESTO " → first/middle name(s) of deceased
-    xml = xml.replace(/ERNESTO /g, `${xmlEscape(dFirst)} `);
-    // Run "VALENZUELA ," → last name of deceased
+    // ── Normalize split placeholders ──────────────────────────────────────────
+    // {deceased_name} is split across 5 runs by Word (word-breaks on underscores).
+    // Collapse all 5 runs into one clean run preserving the Arial bold underline formatting.
+    xml = xml.replace(
+      '<w:r w:rsidR="00F450AD"><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:u w:val="single"/></w:rPr><w:t>{d</w:t></w:r>' +
+      '<w:r w:rsidR="00F450AD" w:rsidRPr="00F450AD"><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:u w:val="single"/></w:rPr><w:t>eceased</w:t></w:r>' +
+      '<w:r w:rsidR="00F450AD"><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:u w:val="single"/></w:rPr><w:t>_n</w:t></w:r>' +
+      '<w:r w:rsidR="00F450AD" w:rsidRPr="00F450AD"><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:u w:val="single"/></w:rPr><w:t>ame</w:t></w:r>' +
+      '<w:r w:rsidR="00F450AD"><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:u w:val="single"/></w:rPr><w:t>}</w:t></w:r>',
+      '<w:r w:rsidR="00F450AD"><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:u w:val="single"/></w:rPr><w:t>{deceased_name}</w:t></w:r>',
+    );
+
+    // ── Replace placeholders with real values ─────────────────────────────────
+    xml = xml.replace(/\{deceased_name\}/g, xmlEscape(deceasedFull));
+    xml = xml.replace(/\{age_at_death\}/g,  xmlEscape(deceasedAge));
+    xml = xml.replace(/\{place_of_death\}/g,xmlEscape(placeRaw));
+    xml = xml.replace(/\{fullname\}/g,      xmlEscape(requestor));
+    xml = xml.replace(/\{this_day\}/g,      xmlEscape(day));
+    xml = xml.replace(/\{month\}/g,         xmlEscape(MONTH));
+    xml = xml.replace(/\{year\}/g,          xmlEscape(year));
+
+    // ── Legacy hardcoded replacements (fallback) ──────────────────────────────
+    // Split deceased name for old two-run structure: "FIRSTNAME/MIDDLE " | "LASTNAME ,"
+    const dParts = deceasedFull.split(/\s+/);
+    const dFirst = dParts.length > 1 ? dParts.slice(0, -1).join(' ') : deceasedFull;
+    const dLast  = dParts.length > 1 ? dParts[dParts.length - 1] : '';
+    xml = xml.replace(/ERNESTO /g,    `${xmlEscape(dFirst)} `);
     xml = xml.replace(/VALENZUELA ,/g, `${xmlEscape(dLast)} ,`);
-    // Run " 72 " → deceased age
-    xml = xml.replace(/ 72 /g, ` ${xmlEscape(deceasedAge)} `);
-    // Run ". The said aforementioned name died on MAY 8 2025" → date of death
+    xml = xml.replace(/ 72 /g,        ` ${xmlEscape(deceasedAge)} `);
     xml = xml.replace(
       /\. The said aforementioned name died on MAY 8 2025/g,
       `. The said aforementioned name died on ${xmlEscape(dateOfDeath)}`,
     );
-    // Runs for place of death span 3 runs: "PUROK 5 BRGY. GUIN- " | "ON  CALBAYOG" | " CITY."
-    // Inject the real place in the first run and clear the continuation runs.
     xml = xml.replace(/PUROK 5 BRGY\. GUIN- /g, `${xmlEscape(placeRaw)} `);
     xml = xml.replace(/ON  CALBAYOG/g,           ``);
     xml = xml.replace(/ CITY\./g,                `.`);
-
-    // ── Requestor para ────────────────────────────────────────────────────────
-    // Run " ISAGANI ROJAS CANETE" → requestor (filer)
-    xml = xml.replace(/ ISAGANI ROJAS CANETE/g, ` ${xmlEscape(requestor)}`);
-    // Run " (son)" → relationship to deceased
-    xml = xml.replace(/ \(son\) /g, ` (${xmlEscape(relationship)}) `);
-    // Fix "certificatiom" typo in template
-    xml = xml.replace(/certificatiom/g, 'certification');
-
-    // ── Date para ─────────────────────────────────────────────────────────────
-    // Runs: "Given this " | "14" | "th" | " day of " | "MAY," | " 2025 " | "at the office…"
-    // Day number run immediately follows "Given this "
-    xml = xml.replace(/Given this 14/g, `Given this ${xmlEscape(day)}`);
-    // Ordinal suffix run — "th" sits right after the day number run
-    // Use a context-aware replace to avoid hitting unrelated 'th' text
+    xml = xml.replace(/ ISAGANI ROJAS CANETE/g,  ` ${xmlEscape(requestor)}`);
+    xml = xml.replace(/ \(son\) /g,              ` (${xmlEscape(relationship)}) `);
+    xml = xml.replace(/certificatiom/g,          'certification');
+    xml = xml.replace(/Given this 14/g,          `Given this ${xmlEscape(day)}`);
     xml = xml.replace(
       /(Given this \d+<\/w:t><\/w:r>[\s\S]{0,200}<w:r[\s\S]{0,100}><w:t[^>]*>)th(<\/w:t>)/,
       `$1${xmlEscape(suffix)}$2`,
     );
-    // Month run
     xml = xml.replace(/(<w:t[^>]*>)MAY,(<\/w:t>)/g, `$1${xmlEscape(MONTH)},$2`);
-    // Year run " 2025 "
     xml = xml.replace(/ 2025 at the office of Sangguniang/g,
       ` ${xmlEscape(year)} at the office of Sangguniang`);
 
@@ -839,6 +866,7 @@ async function injectCertificationOfDeath(zip: any, req: RequestDetail, profile:
 async function injectJobSeekerCert(zip: any, req: RequestDetail, profile: Profile): Promise<void> {
   const firstName = profile.firstName.toUpperCase();
   const lastName  = profile.lastName.toUpperCase();
+  const fullName  = `${firstName} ${lastName}`;
   const purok     = req.purok              ?? '___';
   const years     = req.years_of_residency ?? '___';
   const bcnNo     = req.bcn_no             ?? '___';
@@ -848,38 +876,39 @@ async function injectJobSeekerCert(zip: any, req: RequestDetail, profile: Profil
 
   await patchXml(zip, 'word/document.xml', xml => {
 
-    // 1. BCN No. — run " BCN NO.: 09"
-    xml = xml.replace(/ BCN NO\.: 09/g, ` BCN NO.: ${xmlEscape(bcnNo)}`);
+    // ── Normalize split placeholders ──────────────────────────────────────────
+    // {purok/location} is split across 3 runs with rsidR="0073151E"
+    xml = xml.replace(
+      '<w:r w:rsidR="0073151E"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>{</w:t></w:r>' +
+      '<w:r w:rsidR="0073151E" w:rsidRPr="0073151E"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>purok/location</w:t></w:r>' +
+      '<w:r w:rsidR="0073151E"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>}</w:t></w:r>',
+      '<w:r w:rsidR="0073151E" w:rsidRPr="0073151E"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>{purok/location}</w:t></w:r>',
+    );
 
-    // 2. Applicant name — split across two runs in the body paragraph:
-    //    Run A: "Ms.MAIKA"  (title prefix + first name, no space before last name)
-    //    Run B: " DELA CRUZ MERILLES a resident of Purok 4, Barangay Guin-on, Calbayog City,
-    //            Samar, for 5 years/month, …"
+    // ── Replace placeholders with real values ─────────────────────────────────
+    xml = xml.replace(/\{fullname\}/g,        xmlEscape(fullName));
+    xml = xml.replace(/\{purok\/location\}/g, xmlEscape(purok));
+    xml = xml.replace(/\{this_day\}/g,        xmlEscape(day));
+    xml = xml.replace(/\{month\}/g,           xmlEscape(MONTH));
+    xml = xml.replace(/\{year\}/g,            xmlEscape(year));
+
+    // ── Legacy hardcoded replacements (fallback) ──────────────────────────────
+    xml = xml.replace(/ BCN NO\.: 09/g, ` BCN NO.: ${xmlEscape(bcnNo)}`);
     xml = xml.replace(/Ms\.MAIKA/g, `Mr/Ms.${xmlEscape(firstName)}`);
     xml = xml.replace(
       / DELA CRUZ MERILLES a resident of Purok 4, Barangay Guin-on, Calbayog City, Samar, for 5 years\/month,/g,
       ` ${xmlEscape(lastName)} a resident of ${xmlEscape(purok)}, Barangay Guin-on, ` +
       `Calbayog City, Samar, for ${xmlEscape(years)} years/month,`,
     );
-    // Fallback: if name was merged into one run
     xml = xml.replace(/MAIKA DELA CRUZ MERILLES/g, `${xmlEscape(firstName)} ${xmlEscape(lastName)}`);
-
-    // 3. Date para — runs: "           Signed this 06" | "TH" | "   day of OCTOBER 2025, …"
-    //    Day: "Signed this 06" → replace "06" at end of the run
     xml = xml.replace(/Signed this 06/g, `Signed this ${xmlEscape(day)}`);
-    //    Ordinal suffix run: content is literally "TH"
-    //    Replace only the run that follows the day run (avoid OCTOBER, MONTH etc.)
     xml = xml.replace(
       /(<w:t[^>]*>)TH(<\/w:t><\/w:r>[\s\S]{0,100}day of OCTOBER)/g,
       `$1${xmlEscape(SUFFIX)}$2`,
     );
-    //    Month + year in the same run: "   day of OCTOBER 2025,"
     xml = xml.replace(/day of OCTOBER 2025,/g, `day of ${xmlEscape(MONTH)} ${xmlEscape(year)},`);
-
-    // 4. Footer date lines — "OCTOBER 06, " (run) | "2025" (run) | " OCTOBER 06, 2025" (run)
-    xml = xml.replace(/OCTOBER 06, /g,   `${xmlEscape(MONTH)} ${xmlEscape(dayPadded)}, `);
-    xml = xml.replace(/OCTOBER 06, 2025/g, xmlEscape(footerDate));  // merged variant
-    // "2025" year run — replace only when surrounded by date context already patched above
+    xml = xml.replace(/OCTOBER 06, /g,         `${xmlEscape(MONTH)} ${xmlEscape(dayPadded)}, `);
+    xml = xml.replace(/OCTOBER 06, 2025/g,     xmlEscape(footerDate));
     xml = xml.replace(
       /(<w:t[^>]*>)2025(<\/w:t><\/w:r>[\s\S]{0,60}(?:BRGY\. SECRETARY|one \(1\) year))/g,
       `$1${xmlEscape(year)}$2`,
@@ -916,9 +945,6 @@ async function injectOathOfUndertaking(zip: any, req: RequestDetail, profile: Pr
   const firstName = profile.firstName.toUpperCase();
   const lastName  = profile.lastName.toUpperCase();
   const fullName  = `${firstName} ${lastName}`;
-  // Split name for the two-run intro structure:
-  // Run A holds everything except the last word → "I, <ALL BUT LAST> "
-  // Run B holds the last word + " ," → "<LAST> ,"
   const nameParts  = fullName.trim().split(/\s+/);
   const nameFirst  = nameParts.length > 1 ? nameParts.slice(0, -1).join(' ') : fullName;
   const nameLast   = nameParts.length > 1 ? nameParts[nameParts.length - 1]  : '';
@@ -926,39 +952,52 @@ async function injectOathOfUndertaking(zip: any, req: RequestDetail, profile: Pr
   const age    = profile.age            ?? '___';
   const purok  = req.purok              ?? '___';
   const years  = req.years_of_residency ?? '___';
-  const { day, suffix, SUFFIX, MONTH, year } = getCurrentDateParts();
+  const { day, suffix, MONTH, year } = getCurrentDateParts();
 
   await patchXml(zip, 'word/document.xml', xml => {
 
-    // 1. Intro — Run A: "I, EGBERT KIA DELA "
+    // ── Normalize split placeholders ──────────────────────────────────────────
+    // {fullname} — rsidR="00CC4651", bold, sz=24
+    xml = xml.replace(
+      '<w:r w:rsidR="00CC4651"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>{</w:t></w:r>' +
+      '<w:proofErr w:type="spellStart"/>' +
+      '<w:r w:rsidR="00CC4651"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>fullname</w:t></w:r>' +
+      '<w:proofErr w:type="spellEnd"/>' +
+      '<w:r w:rsidR="00CC4651"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>}</w:t></w:r>',
+      '<w:r w:rsidR="00CC4651"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>{fullname}</w:t></w:r>',
+    );
+    // {this_day} — rsidR="00CC4651", no bold, sz=24
+    xml = xml.replace(
+      '<w:r w:rsidR="00CC4651"><w:rPr><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>{</w:t></w:r>' +
+      '<w:proofErr w:type="spellStart"/>' +
+      '<w:r w:rsidR="00CC4651"><w:rPr><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>this_day</w:t></w:r>' +
+      '<w:proofErr w:type="spellEnd"/>' +
+      '<w:r w:rsidR="00CC4651"><w:rPr><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>}</w:t></w:r>',
+      '<w:r w:rsidR="00CC4651"><w:rPr><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>{this_day}</w:t></w:r>',
+    );
+
+    // ── Replace placeholders with real values ─────────────────────────────────
+    xml = xml.replace(/\{fullname\}/g,  xmlEscape(fullName));
+    xml = xml.replace(/\{age\}/g,       xmlEscape(age));
+    xml = xml.replace(/\{this_day\}/g,  xmlEscape(day));
+    xml = xml.replace(/\{month\}/g,     xmlEscape(MONTH));
+    xml = xml.replace(/\{year\}/g,      xmlEscape(year));
+
+    // ── Legacy hardcoded replacements (fallback) ──────────────────────────────
     xml = xml.replace(/I, EGBERT KIA DELA /g, `I, ${xmlEscape(nameFirst)} `);
-    // Run B: "CRUZ ,"
-    xml = xml.replace(/CRUZ ,/g, `${xmlEscape(nameLast)} ,`);
-
-    // 2. Age — Run: "  23 " (two leading spaces, one trailing space)
-    xml = xml.replace(/  23 /g, `  ${xmlEscape(age)} `);
-
-    // 3. Purok + residency years — same long run:
-    //    " a resident of Purok 2, Brgy. Guin-on, Calbayog City, Samar for 5 years, availing…"
+    xml = xml.replace(/CRUZ ,/g,               `${xmlEscape(nameLast)} ,`);
+    xml = xml.replace(/  23 /g,                `  ${xmlEscape(age)} `);
     xml = xml.replace(
       / a resident of Purok 2, Brgy\. Guin-on, Calbayog City, Samar for 5 years,/g,
       ` a resident of ${xmlEscape(purok)}, Brgy. Guin-on, Calbayog City, Samar for ${xmlEscape(years)} years,`,
     );
-
-    // 4. Signatory line — "EGBERT KIA DELA CRUZ" (no comma, single run)
     xml = xml.replace(/EGBERT KIA DELA CRUZ(?![, ])/g, xmlEscape(fullName));
-
-    // 5. Date line runs:
-    //    "Signed, this 2" → day appended to this run
-    xml = xml.replace(/Signed, this 2(?=<\/w:t>)/g, `Signed, this ${xmlEscape(day)}`);
-    //    "nd" ordinal suffix run (follows day run within ~200 chars, before "  day")
+    xml = xml.replace(/Signed, this 2(?=<\/w:t>)/g,    `Signed, this ${xmlEscape(day)}`);
     xml = xml.replace(
       /(<w:t[^>]*>)nd(<\/w:t><\/w:r>[\s\S]{0,200}  day)/g,
       `$1${xmlEscape(suffix)}$2`,
     );
-    //    "of  SEPTEMBER" month run
     xml = xml.replace(/of  SEPTEMBER/g, `of  ${xmlEscape(MONTH)}`);
-    //    "  2024, in Barangay Guin-on, Calbayog City, Samar." year run
     xml = xml.replace(
       /  2024, in Barangay Guin-on, Calbayog City, Samar\./g,
       `  ${xmlEscape(year)}, in Barangay Guin-on, Calbayog City, Samar.`,
