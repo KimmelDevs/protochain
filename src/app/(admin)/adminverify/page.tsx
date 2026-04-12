@@ -263,9 +263,48 @@ export default function VerifyPage() {
                         <p className="mono text-[11px] text-[#3d3b36] dark:text-[#c9c6be] break-all">{result.recordedBy || '—'}</p>
                       </div>
                       <div className="sm:col-span-2">
-                        <p className="mono text-[10px] font-bold tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">Document Hash</p>
+                        <p className="mono text-[10px] font-bold tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">Payload Hash (on-chain)</p>
                         <p className="mono text-[10px] text-[#3d3b36] dark:text-[#c9c6be] break-all">{hash}</p>
                       </div>
+                      {result.payloadSnapshot && (
+                        <div className="sm:col-span-2 border border-emerald-400/30 dark:border-emerald-600/30 bg-emerald-50/60 dark:bg-emerald-950/20 p-3">
+                          <p className="mono text-[10px] font-bold tracking-[0.15em] uppercase text-emerald-700 dark:text-emerald-400 mb-2">
+                            🔒 Locked Fields (hashed into this record)
+                          </p>
+                          {(() => {
+                            const parts = result.payloadSnapshot!.split('|');
+                            const labeled: { label: string; value: string }[] = [];
+                            const docType  = parts[0] ?? '';
+                            const fullName = parts[1] ?? '';
+                            const purpose  = parts[2] ?? '';
+                            if (docType)  labeled.push({ label: 'Document Type', value: docType });
+                            if (fullName) labeled.push({ label: 'Full Name',     value: fullName });
+                            if (purpose)  labeled.push({ label: 'Purpose',       value: purpose });
+                            for (let i = 3; i < parts.length - 1; i++) {
+                              const eqIdx = parts[i].indexOf('=');
+                              if (eqIdx === -1) continue;
+                              const k = parts[i].slice(0, eqIdx);
+                              const v = parts[i].slice(eqIdx + 1);
+                              if (v) labeled.push({ label: k.replace(/_/g, ' '), value: v });
+                            }
+                            const issuedAt = parts[parts.length - 1] ?? '';
+                            if (issuedAt && parts.length > 1) labeled.push({ label: 'Issued At', value: new Date(issuedAt).toLocaleString('en-PH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) });
+                            return (
+                              <div className="grid grid-cols-1 gap-1.5">
+                                {labeled.map(({ label, value }, i) => (
+                                  <div key={i} className="flex gap-2 mono text-[10px]">
+                                    <span className="text-emerald-600/70 dark:text-emerald-400/70 shrink-0 w-36 truncate capitalize">{label}</span>
+                                    <span className="text-[#3d3b36] dark:text-[#c9c6be]">{value}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          })()}
+                          <p className="mono text-[9px] text-emerald-600/50 dark:text-emerald-400/50 mt-2">
+                            Any change to the above fields would produce a different hash and fail verification.
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     <a
