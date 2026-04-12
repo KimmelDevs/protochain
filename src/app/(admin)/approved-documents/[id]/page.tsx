@@ -11,6 +11,7 @@ import { supabase } from '@/app/lib/supabase';
 import {
   type RequestDetail, type Profile,
   normaliseProfile, sha256Hex, generateDocument,
+  buildRequestPayload, hashPayload,
 } from '@/app/lib/utils/Docgenerators';
 import { recordDocumentOnChain } from '@/app/lib/blockchain';
 
@@ -229,27 +230,39 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
   const uploadFile = async (file: Blob, fileName: string) => {
     setUploading(true); setError(''); setChainError('');
     try {
-      const hash = await sha256Hex(file);
-      const path = `documents/${id}/${fileName}`;
-      const { error: upErr } = await supabase.storage.from('documents').upload(path, file, { upsert: true });
+      // ── File-only hash (kept for independent file verification) ───────────────
+      const fileHash = await sha256Hex(file);
+
+      // ── Combined payload hash (file bytes + all locked metadata) ─────────────
+      const _profile    = request ? normaliseProfile(request as unknown as Record<string, string>) : { id: '', firstName: '', lastName: '', email: '' };
+      const payloadStr  = request ? buildRequestPayload(request, _profile) : '';
+      const payloadHash = await hashPayload(file, payloadStr);
+
+      const storagePath = `documents/${id}/${fileName}`;
+      const { error: upErr } = await supabase.storage.from('documents').upload(storagePath, file, { upsert: true });
       if (upErr) throw upErr;
-      const { data: urlData } = supabase.storage.from('documents').getPublicUrl(path);
+      const { data: urlData } = supabase.storage.from('documents').getPublicUrl(storagePath);
       const res = await fetch(`/api/requests?id=${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ file_url: urlData.publicUrl, file_hash: hash }),
+        body: JSON.stringify({
+          file_url:         urlData.publicUrl,
+          file_hash:        fileHash,
+          payload_hash:     payloadHash,
+          payload_snapshot: payloadStr,
+        }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error ?? 'Failed to update.');
-      setRequest(p => p ? { ...p, file_url: urlData.publicUrl, file_hash: hash } : p);
-      setUploadedHash(hash);
+      setRequest(p => p ? { ...p, file_url: urlData.publicUrl, file_hash: fileHash } : p);
+      setUploadedHash(payloadHash);
       setSuccess('Document uploaded. Recording hash on blockchain…');
 
-      // ── Record on-chain ──────────────────────────────────────────────────
+      // ── Record on-chain (combined payload hash) ─────────────────────────
       setChainRecording(true);
       try {
         const docType = request?.document_type ?? request?.type ?? 'barangay-document';
-        const txHash  = await recordDocumentOnChain(hash, docType);
+        const txHash  = await recordDocumentOnChain(payloadHash, docType);
         setChainTxHash(txHash);
         await fetch(`/api/requests?id=${id}`, {
           method: 'PATCH',

@@ -45,11 +45,13 @@ export async function recordDocumentOnChain(
 // ── Verify (read-only, no wallet needed) ─────────────────────────────────────
 
 export interface VerifyResult {
-  exists:       boolean;
-  recordedBy:   string;
-  timestamp:    number;
-  documentType: string;
-  isRevoked:    boolean;
+  exists:           boolean;
+  recordedBy:       string;
+  timestamp:        number;
+  documentType:     string;
+  isRevoked:        boolean;
+  /** The canonical payload string that was hashed into this record, if available. */
+  payloadSnapshot?: string;
 }
 
 export async function verifyDocumentOnChain(hexHash: string): Promise<VerifyResult> {
@@ -74,5 +76,25 @@ export async function verifyDocumentOnChain(hexHash: string): Promise<VerifyResu
   const documentType = String(r[3]  ?? r.documentType ?? '');
   const isRevoked    = false; // contract does not implement revocation
 
-  return { exists, recordedBy, timestamp, documentType, isRevoked };
+  // Fetch the payload_snapshot from Supabase so the verify page can display
+  // every field that was locked into this hash at issuance time.
+  let payloadSnapshot: string | undefined;
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    );
+    // payload_hash is what we record on-chain; look it up in requests table
+    const { data } = await supabase
+      .from('requests')
+      .select('payload_snapshot')
+      .eq('payload_hash', hexHash)
+      .maybeSingle();
+    if (data?.payload_snapshot) payloadSnapshot = data.payload_snapshot;
+  } catch {
+    // Non-fatal — snapshot display is best-effort
+  }
+
+  return { exists, recordedBy, timestamp, documentType, isRevoked, payloadSnapshot };
 }

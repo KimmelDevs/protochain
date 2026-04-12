@@ -1085,3 +1085,99 @@ export async function generateDocument(
 
   return { blob, fileName };
 }
+// ═══════════════════════════════════════════════════════════════════════════════
+// ─── Payload hash helpers ─────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Builds a canonical, deterministic string that encodes all fields that should
+ * be locked into the blockchain record.  The string is:
+ *
+ *   <document_type>|<fullname>|<purpose>|<field1_key>=<field1_val>|…|<issued_at>
+ *
+ * Rules:
+ *  - Keys are sorted alphabetically so the order never changes.
+ *  - Values are trimmed and lowercased for case-insensitive comparison.
+ *  - Empty / undefined values are written as "" so missing fields still produce
+ *    a stable position in the string.
+ *  - The file bytes are NOT included here — the caller should hash the file
+ *    separately and append it before hashing (see buildPayloadString).
+ */
+export function buildRequestPayload(req: RequestDetail, profile: Profile): string {
+  const docType  = (req.document_type ?? req.type ?? '').trim().toLowerCase();
+  const fullName = `${profile.firstName} ${profile.lastName}`.trim().toLowerCase();
+  const purpose  = (req.purpose === 'others' && req.custom_purpose
+    ? req.custom_purpose
+    : req.purpose ?? '').trim().toLowerCase();
+
+  // Type-specific fields — include every relevant column, sorted by key
+  const typeFields: Record<string, string | undefined> = {};
+
+  switch (docType) {
+    case 'barangay-clearance':
+      typeFields['ctc_date_issued']  = req.ctc_date_issued;
+      typeFields['ctc_no']           = req.ctc_no;
+      typeFields['ctc_place_issued'] = req.ctc_place_issued;
+      typeFields['purok']            = req.purok;
+      break;
+    case 'business-clearance':
+      typeFields['business_name']    = req.business_name;
+      typeFields['ctc_date_issued']  = req.ctc_date_issued;
+      typeFields['ctc_no']           = req.ctc_no;
+      typeFields['ctc_place_issued'] = req.ctc_place_issued;
+      typeFields['purok']            = req.purok;
+      break;
+    case 'certification-of-death':
+      typeFields['date_of_death']           = req.date_of_death;
+      typeFields['deceased_age']            = req.deceased_age;
+      typeFields['deceased_name']           = req.deceased_name;
+      typeFields['place_of_death']          = req.place_of_death;
+      typeFields['relationship_to_deceased']= req.relationship_to_deceased;
+      break;
+    case 'job-seeker':
+      typeFields['bcn_no']            = req.bcn_no;
+      typeFields['purok']             = req.purok;
+      typeFields['years_of_residency']= req.years_of_residency;
+      break;
+    case 'oath-of-undertaking':
+      typeFields['age']               = profile.age;      // from profile, not req
+      typeFields['purok']             = req.purok;
+      typeFields['years_of_residency']= req.years_of_residency;
+      break;
+  }
+
+  const fieldParts = Object.entries(typeFields)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([k, v]) => `${k}=${(v ?? '').trim().toLowerCase()}`);
+
+  const issuedAt = (req.created_at ?? '').trim();
+
+  const parts = [
+    docType,
+    fullName,
+    purpose,
+    ...fieldParts,
+    issuedAt,
+  ];
+
+  return parts.join('|');
+}
+
+/**
+ * Hashes the combined payload:  file bytes  +  canonical metadata string.
+ *
+ * Concatenates the raw file ArrayBuffer with the UTF-8 encoded payload string
+ * so a single SHA-256 digest covers both.  This is what gets recorded on-chain
+ * and stored in payload_hash.
+ */
+export async function hashPayload(fileBlob: Blob, payloadString: string): Promise<string> {
+  const fileBytes    = await fileBlob.arrayBuffer();
+  const metaBytes    = new TextEncoder().encode(payloadString);
+  const combined     = new Uint8Array(fileBytes.byteLength + metaBytes.byteLength);
+  combined.set(new Uint8Array(fileBytes), 0);
+  combined.set(metaBytes, fileBytes.byteLength);
+  const digest = await crypto.subtle.digest('SHA-256', combined);
+  return Array.from(new Uint8Array(digest))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}

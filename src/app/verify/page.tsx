@@ -256,9 +256,37 @@ export default function VerifyPage() {
                         <p className="font-mono text-[11px] text-[#b0b4ba] break-all">{result.recordedBy || '—'}</p>
                       </div>
                       <div className="sm:col-span-2 bg-white/5 rounded-lg p-3">
-                        <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#b0b4ba] mb-1">Document Hash</p>
+                        <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#b0b4ba] mb-1">Payload Hash (on-chain)</p>
                         <p className="font-mono text-[10px] text-[#b0b4ba] break-all">{hash}</p>
                       </div>
+                      {result.payloadSnapshot && (
+                        <div className="sm:col-span-2 bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-3">
+                          <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-emerald-400 mb-2">
+                            🔒 Locked Fields (hashed into this record)
+                          </p>
+                          <div className="grid grid-cols-1 gap-1">
+                            {result.payloadSnapshot.split('|').map((field, i) => {
+                              const [key, ...rest] = field.split('=');
+                              const val = rest.join('=');
+                              return (
+                                <div key={i} className="flex gap-2 text-[10px] font-mono">
+                                  {val !== undefined ? (
+                                    <>
+                                      <span className="text-emerald-400/60 shrink-0 w-32 truncate">{key}</span>
+                                      <span className="text-[#b0b4ba]">{val || <em className="opacity-40">empty</em>}</span>
+                                    </>
+                                  ) : (
+                                    <span className="text-[#b0b4ba] col-span-2">{key}</span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <p className="text-[9px] text-emerald-400/50 mt-2">
+                            Any change to the above fields would produce a different hash and fail verification.
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     <a
