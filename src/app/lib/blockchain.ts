@@ -18,9 +18,7 @@ const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS!;
 
 const ABI = [
   'function recordDocument(bytes32 docHash, string calldata documentType) external',
-  // Updated: includes isRevoked as the 5th return value.
-  // If your contract does NOT return isRevoked yet, remove it here too.
-  'function verifyDocument(bytes32 docHash) external view returns (bool exists, address recordedBy, uint256 timestamp, string memory documentType, bool isRevoked)',
+  'function verifyDocument(bytes32 docHash) external view returns (bool exists, address recordedBy, uint256 timestamp, string memory documentType)',
 ];
 
 function hexToBytes32(hexHash: string): string {
@@ -59,7 +57,6 @@ export async function verifyDocumentOnChain(hexHash: string): Promise<VerifyResu
     throw new Error('NEXT_PUBLIC_CONTRACT_ADDRESS is not set.');
   }
 
-  // Support both NEXT_PUBLIC_SEPOLIA_RPC_URL and NEXT_PUBLIC_RPC_URL for compatibility
   const rpcUrl =
     process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL ??
     process.env.NEXT_PUBLIC_RPC_URL ??
@@ -69,15 +66,13 @@ export async function verifyDocumentOnChain(hexHash: string): Promise<VerifyResu
   const contract    = new Contract(CONTRACT_ADDRESS, ABI, provider);
   const bytes32Hash = hexToBytes32(hexHash);
 
-  // Use index-based access so the function works whether or not ethers
-  // returns named properties (depends on ABI tuple support).
   const r = await contract.verifyDocument(bytes32Hash);
 
   const exists       = Boolean(r[0] ?? r.exists);
   const recordedBy   = String(r[1]  ?? r.recordedBy   ?? '');
   const timestamp    = Number(r[2]  ?? r.timestamp    ?? 0);
   const documentType = String(r[3]  ?? r.documentType ?? '');
-  const isRevoked    = Boolean(r[4] ?? r.isRevoked    ?? false);
+  const isRevoked    = false; // contract does not implement revocation
 
   return { exists, recordedBy, timestamp, documentType, isRevoked };
 }
