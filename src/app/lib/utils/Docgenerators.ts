@@ -690,49 +690,59 @@ async function injectBarangayClearance(zip: any, req: RequestDetail, profile: Pr
  */
 async function injectBusinessClearance(zip: any, req: RequestDetail, profile: Profile): Promise<void> {
   const owner    = `${profile.firstName} ${profile.lastName}`.toUpperCase();
-  const business = req.business_name  ?? '___________';
-  const location = req.purok          ?? '___________';
-  const ctcNo    = req.ctc_no         ?? '___________';
+  const business = req.business_name   ?? '___________';
+  const location = req.purok           ?? '___________'; // document-specific field (purok/address of business)
+  const ctcNo    = req.ctc_no          ?? '___________';
   const ctcDate  = req.ctc_date_issued  ?? '___________';
   const ctcPlace = req.ctc_place_issued ?? '___________';
   const { day, suffix, MONTH, year } = getCurrentDateParts();
 
   await patchXml(zip, 'word/document.xml', xml => {
 
-    // ── Normalize split placeholders ─────────────────────────────────────────
-    // Word inserts <w:proofErr> spell-check tags and splits each {placeholder}
-    // across 3 separate runs. Collapse them back to a single complete run.
+    // ── Normalize split placeholders ──────────────────────────────────────────
+    // Word splits each {placeholder} across 3 runs with <w:proofErr> spell-check tags.
+    // Each placeholder has its own unique rsidR and rPr formatting — must match exactly.
 
+    // {fullname} — rsidR="0005616E", sz=24
     xml = xml.replace(
       '<w:r w:rsidR="0005616E" w:rsidRPr="0005616E"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="0005616E" w:rsidRPr="0005616E"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>fullname</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="0005616E" w:rsidRPr="0005616E"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>}</w:t></w:r>',
       '<w:r w:rsidR="0005616E" w:rsidRPr="0005616E"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>{fullname}</w:t></w:r>',
     );
+    // {business_name} — rsidR="00F7455D", sz=24, closing } has xml:space="preserve" and trailing space
+    xml = xml.replace(
+      '<w:r w:rsidR="00F7455D"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="00F7455D"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>business_name</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="00F7455D"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">} </w:t></w:r>',
+      '<w:r w:rsidR="00F7455D"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">{business_name} </w:t></w:r>',
+    );
+    // {this_day} — rsidR="00464B19", sz=24
     xml = xml.replace(
       '<w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>this_day</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>}</w:t></w:r>',
       '<w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>{this_day}</w:t></w:r>',
     );
+    // {ctc_date_issued} — rsidR="00464B19", spacing=-1, kern=0
     xml = xml.replace(
       '<w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:spacing w:val="-1"/><w:kern w:val="0"/></w:rPr><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:spacing w:val="-1"/><w:kern w:val="0"/></w:rPr><w:t>ctc_date_issued</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:spacing w:val="-1"/><w:kern w:val="0"/></w:rPr><w:t>}</w:t></w:r>',
       '<w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:spacing w:val="-1"/><w:kern w:val="0"/></w:rPr><w:t>{ctc_date_issued}</w:t></w:r>',
     );
+    // {ctc_place_issued} — rsidR="00464B19", w:w=102, kern=0
     xml = xml.replace(
       '<w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:w w:val="102"/><w:kern w:val="0"/></w:rPr><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:w w:val="102"/><w:kern w:val="0"/></w:rPr><w:t>ctc_place_issued</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:w w:val="102"/><w:kern w:val="0"/></w:rPr><w:t>}</w:t></w:r>',
       '<w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:w w:val="102"/><w:kern w:val="0"/></w:rPr><w:t>{ctc_place_issued}</w:t></w:r>',
     );
 
-    // ── Replace placeholders with real data ──────────────────────────────────
-    xml = xml.replace(/APPLICANT NAME PLACEHOLDER/g,   xmlEscape(owner));
-    xml = xml.replace(/\{fullname\}/g,                 xmlEscape(owner));
-    xml = xml.replace(/\{this_day\}/g,                 xmlEscape(day));
-    xml = xml.replace(/\{month\}/g,                    xmlEscape(MONTH));
-    xml = xml.replace(/\{year\}/g,                     xmlEscape(year));
-    xml = xml.replace(/\{purok\/location\}/g,          xmlEscape(location));
-    xml = xml.replace(/\{ctc_date_issued\}/g,          xmlEscape(ctcDate));
-    xml = xml.replace(/\{ctc_place_issued\}/g,         xmlEscape(ctcPlace));
-    // {ctc_no} not found in template — keep for future use
-    xml = xml.replace(/\{ctc_no\}/g,                   xmlEscape(ctcNo));
+    // ── Replace placeholders with real values ─────────────────────────────────
+    xml = xml.replace(/APPLICANT NAME PLACEHOLDER/g, xmlEscape(owner));
+    xml = xml.replace(/\{fullname\}/g,               xmlEscape(owner));
+    xml = xml.replace(/\{business_name\} /g,         xmlEscape(business) + ' '); // preserve trailing space
+    xml = xml.replace(/\{business_name\}/g,          xmlEscape(business));
+    xml = xml.replace(/\{purok\/location\}/g,        xmlEscape(location)); // req.purok — document field
+    xml = xml.replace(/\{this_day\}/g,               xmlEscape(day));
+    xml = xml.replace(/\{month\}/g,                  xmlEscape(MONTH));
+    xml = xml.replace(/\{year\}/g,                   xmlEscape(year));
+    xml = xml.replace(/\{ctc_date_issued\}/g,        xmlEscape(ctcDate));
+    xml = xml.replace(/\{ctc_place_issued\}/g,       xmlEscape(ctcPlace));
+    xml = xml.replace(/\{ctc_no\}/g,                 xmlEscape(ctcNo));
 
-    // ── Legacy hardcoded replacements (fallback for old template text) ───────
+    // ── Legacy hardcoded replacements (fallback for old template text) ────────
     xml = xml.replace(
       /BUSINESS CLEARANCE is Grante GREGORIO/g,
       `BUSINESS CLEARANCE is Granted to ${xmlEscape(owner)}`,
@@ -750,6 +760,8 @@ async function injectBusinessClearance(zip: any, req: RequestDetail, profile: Pr
     return xml;
   });
 }
+
+
 
 /**
  * CERTIFICATION OF DEATH
