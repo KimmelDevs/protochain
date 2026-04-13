@@ -624,6 +624,9 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
           </div>
         </div>
       </div>
+      <div>
+        
+      </div>
 
       {/* Edit Modal */}
       {showEdit && profile && (
