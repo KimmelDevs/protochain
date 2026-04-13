@@ -85,7 +85,20 @@ export interface Profile {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+/** Calculates age in whole years from an ISO date string (e.g. "1995-06-15"). */
+function calculateAge(birthday: string): string {
+  if (!birthday) return '';
+  const birth = new Date(birthday);
+  if (isNaN(birth.getTime())) return '';
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age >= 0 ? String(age) : '';
+}
+
 export function normaliseProfile(raw: Record<string, string>): Profile {
+  const birthday = raw.birthday ?? raw.date_of_birth ?? '';
   return {
     id:          raw.id           ?? '',
     firstName:   raw.first_name   ?? raw.firstName   ?? '',
@@ -93,10 +106,10 @@ export function normaliseProfile(raw: Record<string, string>): Profile {
     email:       raw.email        ?? '',
     phone:       raw.phone        ?? raw.contact_number ?? '',
     address:     raw.address      ?? '',
-    birthday:    raw.birthday     ?? raw.date_of_birth  ?? '',
+    birthday,
     civilStatus: raw.civil_status ?? raw.civilStatus ?? '',
     sex:         raw.sex          ?? raw.gender      ?? '',
-    age:         raw.age          ?? '',
+    age:         raw.age          || calculateAge(birthday),
   };
 }
 
