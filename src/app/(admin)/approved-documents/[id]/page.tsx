@@ -258,14 +258,14 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
       const j = await res.json();
       if (!res.ok) throw new Error(j.error ?? 'Failed to update.');
       setRequest(p => p ? { ...p, file_url: urlData.publicUrl, file_hash: fileHash } : p);
-      setUploadedHash(payloadHash);
+      setUploadedHash(fileHash);
       setSuccess('Document uploaded. Recording hash on blockchain…');
 
       // ── Record on-chain (combined payload hash) ─────────────────────────
       setChainRecording(true);
       try {
         const docType = request?.document_type ?? request?.type ?? 'barangay-document';
-        const txHash  = await recordDocumentOnChain(payloadHash, docType);
+        const txHash  = await recordDocumentOnChain(fileHash, docType);
         setChainTxHash(txHash);
         await fetch(`/api/requests?id=${id}`, {
           method: 'PATCH',

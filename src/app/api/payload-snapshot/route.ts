@@ -14,13 +14,16 @@ export async function GET(req: NextRequest) {
 
     const { data, error } = await supabase
       .from('requests')
-      .select('payload_snapshot')
-      .eq('payload_hash', hash)
+      .select('payload_snapshot, payload_hash')
+      .eq('file_hash', hash)
       .maybeSingle();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-    return NextResponse.json({ payload_snapshot: data?.payload_snapshot ?? null });
+    return NextResponse.json({
+      payload_snapshot: data?.payload_snapshot ?? null,
+      payload_hash:     data?.payload_hash     ?? null,
+    });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

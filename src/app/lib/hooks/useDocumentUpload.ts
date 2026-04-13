@@ -136,11 +136,11 @@ export function useDocumentUpload({
       const j = await res.json();
       if (!res.ok) throw new Error(j.error ?? 'Failed to update request.');
 
-      setUploadedHash(payloadHash);
-      onSuccess?.(urlData.publicUrl, payloadHash);
+      setUploadedHash(fileHash);
+      onSuccess?.(urlData.publicUrl, fileHash);
 
       // 5. Record on-chain (non-blocking — errors surfaced via chainError)
-      await _recordOnChain(payloadHash);
+      await _recordOnChain(fileHash);
     } catch (err: unknown) {
       setUploadError(err instanceof Error ? err.message : 'Upload failed.');
     } finally {

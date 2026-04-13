@@ -64,10 +64,28 @@ export async function verifyDocumentOnChain(hexHash: string): Promise<VerifyResu
     process.env.NEXT_PUBLIC_RPC_URL ??
     'https://rpc.sepolia.org';
 
-  const provider    = new JsonRpcProvider(rpcUrl);
-  const contract    = new Contract(CONTRACT_ADDRESS, ABI, provider);
-  const bytes32Hash = hexToBytes32(hexHash);
+  const provider = new JsonRpcProvider(rpcUrl);
+  const contract = new Contract(CONTRACT_ADDRESS, ABI, provider);
 
+  // ── Step 1: use fileHash (🟦) to fetch payloadHash (🟧) + snapshot (🟩) from Supabase
+  let onChainHash    = hexHash;          // fallback: treat the input as the on-chain hash
+  let payloadSnapshot: string | undefined;
+  try {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const res  = await fetch(`${origin}/api/payload-snapshot?hash=${hexHash}`);
+    if (res.ok) {
+      const json = await res.json();
+      // 🟧 payload_hash is what was actually recorded on-chain
+      if (json.payload_hash)     onChainHash     = json.payload_hash;
+      // 🟩 payload_snapshot is the human-readable locked fields
+      if (json.payload_snapshot) payloadSnapshot = json.payload_snapshot;
+    }
+  } catch {
+    // Non-fatal — fall back to using the raw input hash
+  }
+
+  // ── Step 2: verify 🟧 on-chain
+  const bytes32Hash = hexToBytes32(onChainHash);
   const r = await contract.verifyDocument(bytes32Hash);
 
   const exists       = Boolean(r[0] ?? r.exists);
@@ -75,20 +93,6 @@ export async function verifyDocumentOnChain(hexHash: string): Promise<VerifyResu
   const timestamp    = Number(r[2]  ?? r.timestamp    ?? 0);
   const documentType = String(r[3]  ?? r.documentType ?? '');
   const isRevoked    = false; // contract does not implement revocation
-
-  // Fetch the payload_snapshot via API route so verify page can display
-  // every field that was locked into this hash at issuance time.
-  let payloadSnapshot: string | undefined;
-  try {
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    const res = await fetch(`${origin}/api/payload-snapshot?hash=${hexHash}`);
-    if (res.ok) {
-      const json = await res.json();
-      if (json.payload_snapshot) payloadSnapshot = json.payload_snapshot;
-    }
-  } catch {
-    // Non-fatal — snapshot display is best-effort
-  }
 
   return { exists, recordedBy, timestamp, documentType, isRevoked, payloadSnapshot };
 }
