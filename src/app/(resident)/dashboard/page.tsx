@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import {
   FileText, Clock, CheckCircle, XCircle,
@@ -98,7 +99,7 @@ export default function ResidentDashboard() {
           setRequests(json.data ?? []);
         }
       } catch (err) {
-        console.error(err);
+        toast.error('Failed to load dashboard data.');
       } finally {
         setLoading(false);
       }

@@ -1,12 +1,12 @@
 'use client';
 
 import { use, useState, useEffect, useRef } from 'react';
+import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/Card';
 import TextArea from '@/app/components/ui/TextArea';
 import Select from '@/app/components/ui/Select';
 import Button from '@/app/components/ui/Button';
-import Alert from '@/app/components/ui/Alert';
 import { ArrowLeft, Loader2, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -149,7 +149,6 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
   const [bcnNo, setBcnNo] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
@@ -163,7 +162,7 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
         const json = await res.json();
         setProfile({ ...json.data, id: user.id });
       } catch {
-        setError('Failed to load your profile. Please refresh.');
+        toast.error('Failed to load your profile. Please refresh.');
       } finally {
         setLoading(false);
       }
@@ -172,21 +171,20 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
   }, [router]);
 
   const validate = (): boolean => {
-    if (!purpose) { setError('Please select a purpose.'); return false; }
-    if (purpose === 'others' && !customPurpose.trim()) { setError('Please specify your purpose.'); return false; }
-    if (type === 'barangay-clearance' && (!purok.trim() || !ctcNo.trim() || !ctcDateIssued || !ctcPlaceIssued.trim())) { setError('Please fill in all required fields.'); return false; }
-    if (type === 'business-clearance' && (!businessName.trim() || !purok.trim())) { setError('Please fill in all required fields.'); return false; }
-    if (type === 'certification-of-death' && (!deceasedName.trim() || !deceasedAge.trim() || !dateOfDeath || !placeOfDeath.trim() || !relationship.trim())) { setError('Please fill in all deceased person details.'); return false; }
-    if (type === 'job-seeker' && (!purok.trim() || !yearsOfResidency.trim() || !bcnNo.trim())) { setError('Please fill in all required fields.'); return false; }
-    if (type === 'oath-of-undertaking' && (!purok.trim() || !yearsOfResidency.trim())) { setError('Please fill in all required fields.'); return false; }
+    if (!purpose) { toast.error('Please select a purpose.'); return false; }
+    if (purpose === 'others' && !customPurpose.trim()) { toast.error('Please specify your purpose.'); return false; }
+    if (type === 'barangay-clearance' && (!purok.trim() || !ctcNo.trim() || !ctcDateIssued || !ctcPlaceIssued.trim())) { toast.error('Please fill in all required fields.'); return false; }
+    if (type === 'business-clearance' && (!businessName.trim() || !purok.trim())) { toast.error('Please fill in all required fields.'); return false; }
+    if (type === 'certification-of-death' && (!deceasedName.trim() || !deceasedAge.trim() || !dateOfDeath || !placeOfDeath.trim() || !relationship.trim())) { toast.error('Please fill in all deceased person details.'); return false; }
+    if (type === 'job-seeker' && (!purok.trim() || !yearsOfResidency.trim() || !bcnNo.trim())) { toast.error('Please fill in all required fields.'); return false; }
+    if (type === 'oath-of-undertaking' && (!purok.trim() || !yearsOfResidency.trim())) { toast.error('Please fill in all required fields.'); return false; }
     return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     if (!validate()) return;
-    if (!profile) { setError('Profile not loaded. Please refresh.'); return; }
+    if (!profile) { toast.error('Profile not loaded. Please refresh.'); return; }
 
     setSubmitting(true);
     try {
@@ -212,7 +210,7 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
       if (!res.ok) throw new Error(json.error || 'Failed to submit request.');
       setSubmitted(true);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to submit request.');
+      toast.error(err instanceof Error ? err.message : 'Failed to submit request.');
     } finally {
       setSubmitting(false);
     }
@@ -269,11 +267,6 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
           <p className="text-gray-700 dark:text-[#b0b4ba]">{config.description}</p>
         </motion.div>
 
-        {error && (
-          <div className="mb-6">
-            <Alert variant="error" title="Error" onClose={() => setError('')}>{error}</Alert>
-          </div>
-        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <Card className="bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-white/10">
@@ -355,7 +348,7 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
             <CardHeader><CardTitle className="text-black dark:text-white">Request Details</CardTitle></CardHeader>
             <CardContent className="space-y-5">
               <Select label="Purpose *" name="purpose" value={purpose}
-                onChange={(e) => { setPurpose(e.target.value); setError(''); }}
+                onChange={(e) => { setPurpose(e.target.value); }}
                 options={[{ value: '', label: 'Select a purpose...' }, ...config.purposes]} required
               />
               {purpose === 'others' && (

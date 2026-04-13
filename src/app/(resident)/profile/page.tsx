@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { toast } from 'sonner';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/Card';
 import Input from '@/app/components/ui/Input';
 import Button from '@/app/components/ui/Button';
-import Alert from '@/app/components/ui/Alert';
 import { supabase } from '@/app/lib/supabase';
 import { Calendar, Shield, Camera, Save, Key, Loader2, Check } from 'lucide-react';
 
@@ -54,8 +54,6 @@ export default function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isEditing,          setIsEditing]          = useState(false);
   const [showPasswordChange, setShowPasswordChange] = useState(false);
-  const [successMessage,     setSuccessMessage]     = useState('');
-  const [errorMessage,       setErrorMessage]       = useState('');
   const [loading,            setLoading]            = useState(true);
   const [saving,             setSaving]             = useState(false);
   const [justSaved,          setJustSaved]          = useState(false);
@@ -71,8 +69,6 @@ export default function ProfilePage() {
   const [passwordData,  setPasswordData]  = useState({ newPassword: '', confirmPassword: '' });
   const [stats,         setStats]         = useState<Stats>({ total: 0, approved: 0, pending: 0, thisMonth: 0 });
 
-  const showSuccess = (msg: string) => { setSuccessMessage(msg); setTimeout(() => setSuccessMessage(''), 3500); };
-  const showError   = (msg: string) => { setErrorMessage(msg);   setTimeout(() => setErrorMessage(''), 4000); };
 
   useEffect(() => {
     const load = async () => {
@@ -116,7 +112,7 @@ export default function ProfilePage() {
         }
       } catch (err) {
         console.error(err);
-        showError('Failed to load profile data.');
+        toast.error('Failed to load profile data.');
       } finally {
         setLoading(false);
       }
@@ -127,14 +123,14 @@ export default function ProfilePage() {
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { showError('Image must be smaller than 2 MB.'); return; }
+    if (file.size > 2 * 1024 * 1024) { toast.error('Image must be smaller than 2 MB.'); return; }
     try {
       const base64 = await fileToBase64(file);
       setProfileData(prev => ({ ...prev, avatarBase64: base64 }));
       const { error } = await supabase.from('profiles').update({ avatar_base64: base64 }).eq('id', userId);
       if (error) throw error;
-      showSuccess('Profile picture updated!');
-    } catch { showError('Failed to update profile picture.'); }
+      toast.success('Profile picture updated!');
+    } catch { toast.error('Failed to update profile picture.'); }
   };
 
   const handleSaveProfile = async () => {
@@ -159,27 +155,27 @@ export default function ProfilePage() {
       setOriginalData(profileData);
       setIsEditing(false);
       setJustSaved(true);
-      showSuccess('Profile updated successfully!');
+      toast.success('Profile updated successfully!');
       setTimeout(() => setJustSaved(false), 2000);
     } catch (err: any) {
-      showError(err.message || 'Failed to save profile.');
+      toast.error(err.message || 'Failed to save profile.');
     } finally {
       setSaving(false);
     }
   };
 
   const handleChangePassword = async () => {
-    if (passwordData.newPassword !== passwordData.confirmPassword) { showError('Passwords do not match.'); return; }
-    if (passwordData.newPassword.length < 8) { showError('Password must be at least 8 characters.'); return; }
+    if (passwordData.newPassword !== passwordData.confirmPassword) { toast.error('Passwords do not match.'); return; }
+    if (passwordData.newPassword.length < 8) { toast.error('Password must be at least 8 characters.'); return; }
     setSaving(true);
     try {
       const { error } = await supabase.auth.updateUser({ password: passwordData.newPassword });
       if (error) throw error;
       setShowPasswordChange(false);
       setPasswordData({ newPassword: '', confirmPassword: '' });
-      showSuccess('Password changed successfully!');
+      toast.success('Password changed successfully!');
     } catch (err: any) {
-      showError(err.message || 'Failed to change password.');
+      toast.error(err.message || 'Failed to change password.');
     } finally {
       setSaving(false);
     }
@@ -209,34 +205,6 @@ export default function ProfilePage() {
           <h1 className="text-3xl md:text-4xl font-bold mb-2">Profile Settings</h1>
           <p className="text-gray-700 dark:text-[#b0b4ba]">Manage your account information and settings</p>
         </motion.div>
-
-        {/* Alerts */}
-        <AnimatePresence>
-          {successMessage && (
-            <motion.div
-              key="success"
-              initial={{ opacity: 0, y: -12, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0,   scale: 1 }}
-              exit={{    opacity: 0, y: -8,   scale: 0.97 }}
-              transition={{ duration: 0.25 }}
-              className="mb-6"
-            >
-              <Alert variant="success" onClose={() => setSuccessMessage('')}>{successMessage}</Alert>
-            </motion.div>
-          )}
-          {errorMessage && (
-            <motion.div
-              key="error"
-              initial={{ opacity: 0, y: -12, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0,   scale: 1 }}
-              exit={{    opacity: 0, y: -8,   scale: 0.97 }}
-              transition={{ duration: 0.25 }}
-              className="mb-6"
-            >
-              <Alert variant="error" onClose={() => setErrorMessage('')}>{errorMessage}</Alert>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 

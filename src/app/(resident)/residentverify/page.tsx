@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ShieldCheck, ShieldX, ShieldAlert, Loader2, Search,
@@ -37,19 +38,18 @@ export default function VerifyPage() {
   const [result,    setResult]    = useState<VerifyResult | null>(null);
   const [loading,   setLoading]   = useState(false);
   const [hashing,   setHashing]   = useState(false);
-  const [error,     setError]     = useState('');
   const [copied,    setCopied]    = useState(false);
   const [activeTab, setActiveTab] = useState<'hash' | 'file'>('file');
 
   /* ── file drop / pick ─────────────────────────────────────────────────── */
   const handleFile = async (file: File) => {
-    setHashing(true); setError(''); setResult(null);
+    setHashing(true); setResult(null);
     try {
       const h = await computeSha256(file);
       setHash(h);
       setFileName(file.name);
     } catch {
-      setError('Failed to read file.');
+      toast.error('Failed to read file.');
     } finally { setHashing(false); }
   };
 
@@ -67,14 +67,14 @@ export default function VerifyPage() {
   /* ── verify ───────────────────────────────────────────────────────────── */
   const handleVerify = async () => {
     const h = hash.trim();
-    if (!h) { setError('Please enter or upload a document to verify.'); return; }
-    if (h.length !== 64) { setError('SHA-256 hash must be exactly 64 characters.'); return; }
-    setLoading(true); setError(''); setResult(null);
+    if (!h) { toast.error('Please enter or upload a document to verify.'); return; }
+    if (h.length !== 64) { toast.error('SHA-256 hash must be exactly 64 characters.'); return; }
+    setLoading(true); setResult(null);
     try {
       const r = await verifyDocumentOnChain(h);
       setResult(r);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Verification failed.');
+      toast.error(e instanceof Error ? e.message : 'Verification failed.');
     } finally { setLoading(false); }
   };
 
@@ -122,7 +122,7 @@ export default function VerifyPage() {
             {(['file', 'hash'] as const).map(tab => (
               <button
                 key={tab}
-                onClick={() => { setActiveTab(tab); setResult(null); setError(''); }}
+                onClick={() => { setActiveTab(tab); setResult(null); }}
                 className={`mono text-[11px] font-bold tracking-[0.15em] uppercase px-5 py-2.5 transition-colors ${
                   activeTab === tab
                     ? 'bg-[#1a1917] dark:bg-[#f0eee8] text-white dark:text-[#1a1917]'
@@ -199,10 +199,6 @@ export default function VerifyPage() {
                 </motion.div>
               )}
             </AnimatePresence>
-
-            {error && (
-              <p className="text-red-500 text-[12px] mb-4 border-l-2 border-red-400 pl-3">{error}</p>
-            )}
 
             <button
               onClick={handleVerify}

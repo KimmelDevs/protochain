@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import Badge from '@/app/components/ui/Badge';
 import Input from '@/app/components/ui/Input';
@@ -61,7 +62,7 @@ export default function MyDocumentsPage() {
         const json = await res.json();
         setDocuments(json.data ?? []);
       } catch (err) {
-        console.error(err);
+        toast.error('Failed to load documents.');
       } finally {
         setLoading(false);
       }

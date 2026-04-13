@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/Card';
 import Badge from '@/app/components/ui/Badge';
@@ -66,7 +67,7 @@ export default function MyRequestsPage() {
         const json = await res.json();
         setRequests(json.data ?? []);
       } catch (err) {
-        console.error('Failed to load requests:', err);
+        toast.error('Failed to load requests.');
       } finally {
         setLoading(false);
       }

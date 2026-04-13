@@ -1,4 +1,5 @@
 import Sidebar from '@/app/components/layout/sidebar';
+import { Toaster } from 'sonner';
 
 export default function ResidentLayout({
   children,
@@ -12,6 +13,7 @@ export default function ResidentLayout({
       <main className="flex-1 overflow-y-auto">
         {children}
       </main>
+      <Toaster richColors position="top-right" />
     </div>
   );
 }

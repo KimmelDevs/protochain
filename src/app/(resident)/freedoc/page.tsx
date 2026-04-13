@@ -21,6 +21,7 @@
  */
 
 import { useState, CSSProperties, ChangeEvent } from "react";
+import { toast } from "sonner";
 import {
   Document,
   Packer,
@@ -784,7 +785,7 @@ function DocCard({ doc }: DocCardProps) {
     try {
       await doc.onDownload(form);
     } catch (e) {
-      alert("Error generating document: " + (e as Error).message);
+      toast.error("Error generating document: " + (e as Error).message);
     } finally {
       setLoading(false);
     }
