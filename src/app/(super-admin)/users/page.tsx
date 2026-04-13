@@ -64,7 +64,7 @@ function Toast({ msg, type, onDone }: { msg: string; type: 'success' | 'error'; 
           : 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400'
         }`}
       style={{
-        fontFamily: "'IBM Plex Sans', sans-serif",
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
         animation: 'toastIn 0.3s cubic-bezier(0.34,1.56,0.64,1) both',
       }}
     >
@@ -73,8 +73,8 @@ function Toast({ msg, type, onDone }: { msg: string; type: 'success' | 'error'; 
   );
 }
 
-const inputCls = "w-full bg-white dark:bg-[#1a1a20] border border-[#dedad4] dark:border-[#2a2a32] rounded px-3 py-1.5 text-[13px] text-[#1a1917] dark:text-[#f0eee8] focus:outline-none focus:border-orange-400 dark:focus:border-orange-500 placeholder-[#a09e98]";
-const selectCls = "bg-white dark:bg-[#1a1a20] border border-[#dedad4] dark:border-[#2a2a32] rounded px-2 py-1.5 text-[13px] text-[#1a1917] dark:text-[#f0eee8] focus:outline-none focus:border-orange-400 dark:focus:border-orange-500";
+const inputCls = "w-full bg-white dark:bg-[#1C1C1F] border border-[#E8E6E1] dark:border-[#2C2C32] rounded px-3 py-1.5 text-[13px] text-[#1A1A1C] dark:text-[#EAEAEC] focus:outline-none focus:border-orange-400 dark:focus:border-orange-500 placeholder-[#B0B0B8]";
+const selectCls = "bg-white dark:bg-[#1C1C1F] border border-[#E8E6E1] dark:border-[#2C2C32] rounded px-2 py-1.5 text-[13px] text-[#1A1A1C] dark:text-[#EAEAEC] focus:outline-none focus:border-orange-400 dark:focus:border-orange-500";
 
 export default function UsersPage() {
   const [users,         setUsers]         = useState<Profile[]>([]);
@@ -208,11 +208,13 @@ export default function UsersPage() {
     <div
       className="p-8"
       style={{
-        fontFamily: "'IBM Plex Sans', sans-serif",
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
         animation: 'pageEnter 0.35s ease both',
       }}
     >
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+        
         @keyframes pageEnter {
           from { opacity: 0; transform: translateY(8px); }
           to   { opacity: 1; transform: translateY(0); }
@@ -306,12 +308,12 @@ export default function UsersPage() {
       {/* Header */}
       <div className="mb-6" style={{ animation: 'pageEnter 0.35s 0.05s ease both', opacity: 0 }}>
         <p
-          style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-          className="text-[10px] tracking-[0.18em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1"
+          style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+          className="text-[10px] tracking-[0.18em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-1"
         >
           Management
         </p>
-        <h1 className="text-2xl font-semibold text-[#1a1917] dark:text-[#f0eee8]">Users</h1>
+        <h1 className="text-2xl font-semibold text-[#1A1A1C] dark:text-[#EAEAEC]">Users</h1>
       </div>
 
       {/* Toolbar */}
@@ -320,7 +322,7 @@ export default function UsersPage() {
         style={{ animation: 'pageEnter 0.35s 0.1s ease both', opacity: 0 }}
       >
         <div className="relative flex-1 min-w-48">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#a09e98]" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#B0B0B8]" />
           <input
             className={`search-input ${inputCls} pl-8`}
             placeholder="Search name, email, position…"
@@ -330,7 +332,7 @@ export default function UsersPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Filter className="w-3.5 h-3.5 text-[#7a7870] dark:text-[#7e7b75]" />
+          <Filter className="w-3.5 h-3.5 text-[#6C6C74] dark:text-[#9090A0]" />
           {(['all', ...ROLES] as const).map(r => (
             <button
               key={r}
@@ -338,7 +340,7 @@ export default function UsersPage() {
               className={`filter-btn px-3 py-1.5 rounded text-[12px] border
                 ${roleFilter === r
                   ? 'active bg-orange-50 dark:bg-orange-900/20 border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-400'
-                  : 'bg-white dark:bg-[#1a1a20] border-[#dedad4] dark:border-[#2a2a32] text-[#5c5a54] dark:text-[#9e9b94] hover:bg-[#eeecea] dark:hover:bg-[#1e1e24]'
+                  : 'bg-white dark:bg-[#1C1C1F] border-[#E8E6E1] dark:border-[#2C2C32] text-[#55555F] dark:text-[#9090A0] hover:bg-[#F6F5F3] dark:hover:bg-[#1C1C1F]'
                 }`}
             >
               {r === 'all' ? 'All' : r.replace('_', ' ')} ({counts[r === 'all' ? 'all' : r as Role]})
@@ -348,8 +350,8 @@ export default function UsersPage() {
 
         <button
           onClick={load}
-          className="refresh-btn p-2 rounded border border-[#dedad4] dark:border-[#2a2a32] bg-white dark:bg-[#1a1a20]
-            text-[#5c5a54] dark:text-[#9e9b94] hover:bg-[#eeecea] dark:hover:bg-[#1e1e24]"
+          className="refresh-btn p-2 rounded border border-[#E8E6E1] dark:border-[#2C2C32] bg-white dark:bg-[#1C1C1F]
+            text-[#55555F] dark:text-[#9090A0] hover:bg-[#F6F5F3] dark:hover:bg-[#1C1C1F]"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${spinning ? 'spin-icon' : ''}`}
             style={spinning ? { animation: 'spinOnce 0.6s ease' } : {}}
@@ -359,24 +361,24 @@ export default function UsersPage() {
 
       {/* Table */}
       <div
-        className="rounded-lg border border-[#dedad4] dark:border-[#2a2a32] overflow-hidden"
+        className="rounded-lg border border-[#E8E6E1] dark:border-[#2C2C32] overflow-hidden"
         style={{ animation: 'pageEnter 0.4s 0.15s ease both', opacity: 0 }}
       >
         <table className="w-full">
           <thead>
-            <tr className="bg-[#f5f3f0] dark:bg-[#1e1e24] border-b border-[#dedad4] dark:border-[#2a2a32]">
+            <tr className="bg-[#F6F5F3] dark:bg-[#1C1C1F] border-b border-[#E8E6E1] dark:border-[#2C2C32]">
               {['Name', 'Email', 'Role', 'Position', 'Joined', 'Actions'].map(h => (
                 <th
                   key={h}
-                  style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-                  className="text-left px-4 py-3 text-[10px] tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] font-medium"
+                  style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                  className="text-left px-4 py-3 text-[10px] tracking-[0.15em] uppercase text-[#6C6C74] dark:text-[#9090A0] font-medium"
                 >
                   {h}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="bg-white dark:bg-[#1a1a20]">
+          <tbody className="bg-white dark:bg-[#1C1C1F]">
             {loading ? (
               <tr>
                 <td colSpan={6} className="text-center py-14">
@@ -384,14 +386,14 @@ export default function UsersPage() {
                     className="inline-block w-5 h-5 border-2 border-orange-400 border-t-transparent rounded-full mb-3"
                     style={{ animation: 'spinLoop 0.8s linear infinite' }}
                   />
-                  <p className="text-[#7a7870] dark:text-[#7e7b75] text-sm">Loading…</p>
+                  <p className="text-[#6C6C74] dark:text-[#9090A0] text-sm">Loading…</p>
                 </td>
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
                 <td
                   colSpan={6}
-                  className="text-center py-14 text-[#7a7870] dark:text-[#7e7b75] text-sm"
+                  className="text-center py-14 text-[#6C6C74] dark:text-[#9090A0] text-sm"
                   style={{ animation: 'pageEnter 0.3s ease both' }}
                 >
                   No users found.
@@ -422,7 +424,7 @@ export default function UsersPage() {
                       />
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-[#7a7870] dark:text-[#7e7b75] text-[12px]">{u.email}</td>
+                  <td className="px-4 py-3 text-[#6C6C74] dark:text-[#9090A0] text-[12px]">{u.email}</td>
                   <td className="px-4 py-3">
                     <select
                       className={selectCls}
@@ -443,7 +445,7 @@ export default function UsersPage() {
                       {POSITIONS.map(p => <option key={p} value={p}>{p || '— none —'}</option>)}
                     </select>
                   </td>
-                  <td className="px-4 py-3 text-[#7a7870] dark:text-[#7e7b75] text-[12px]">
+                  <td className="px-4 py-3 text-[#6C6C74] dark:text-[#9090A0] text-[12px]">
                     {new Date(u.created_at).toLocaleDateString('en-PH')}
                   </td>
                   <td className="px-4 py-3">
@@ -460,7 +462,7 @@ export default function UsersPage() {
                       </button>
                       <button
                         onClick={() => setEditId(null)}
-                        className="action-btn p-1.5 rounded border border-[#dedad4] dark:border-[#2a2a32] text-[#5c5a54] dark:text-[#9e9b94] hover:bg-[#eeecea] dark:hover:bg-[#1e1e24]"
+                        className="action-btn p-1.5 rounded border border-[#E8E6E1] dark:border-[#2C2C32] text-[#55555F] dark:text-[#9090A0] hover:bg-[#F6F5F3] dark:hover:bg-[#1C1C1F]"
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
@@ -471,7 +473,7 @@ export default function UsersPage() {
                 /* ── Normal row ── */
                 <tr
                   key={u.id}
-                  className="user-row border-b border-[#f0ede8] dark:border-[#22222a] hover:bg-[#fafaf9] dark:hover:bg-[#1e1e24]"
+                  className="user-row border-b border-[#E8E6E1] dark:border-[#2C2C32] hover:bg-[#F6F5F3] dark:hover:bg-[#1C1C1F]"
                   style={
                     mounted
                       ? { animation: `rowIn 0.3s ${idx * 0.03}s ease both` }
@@ -479,19 +481,19 @@ export default function UsersPage() {
                   }
                 >
                   <td className="px-4 py-3.5">
-                    <p className="text-[13px] font-medium text-[#1a1917] dark:text-[#f0eee8]">
+                    <p className="text-[13px] font-medium text-[#1A1A1C] dark:text-[#EAEAEC]">
                       {[u.firstName, u.lastName].filter(Boolean).join(' ') || '—'}
                     </p>
                     {u.username && (
                       <p
-                        style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-                        className="text-[10px] text-[#a09e98] dark:text-[#5c5a54]"
+                        style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                        className="text-[10px] text-[#B0B0B8] dark:text-[#55555F]"
                       >
                         @{u.username}
                       </p>
                     )}
                   </td>
-                  <td className="px-4 py-3.5 text-[12px] text-[#7a7870] dark:text-[#7e7b75]">{u.email || '—'}</td>
+                  <td className="px-4 py-3.5 text-[12px] text-[#6C6C74] dark:text-[#9090A0]">{u.email || '—'}</td>
                   <td className="px-4 py-3.5">
                     <span className={`role-badge inline-block px-2 py-0.5 rounded text-[10px] font-medium tracking-[0.08em] uppercase ${ROLE_BADGE[u.role] || ROLE_BADGE.resident}`}
                       style={{ animationDelay: `${idx * 0.03 + 0.05}s` }}
@@ -500,9 +502,9 @@ export default function UsersPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3.5 text-[12px] text-orange-600 dark:text-orange-400">
-                    {u.position || <span className="text-[#a09e98] dark:text-[#5c5a54]">—</span>}
+                    {u.position || <span className="text-[#B0B0B8] dark:text-[#55555F]">—</span>}
                   </td>
-                  <td className="px-4 py-3.5 text-[12px] text-[#7a7870] dark:text-[#7e7b75]">
+                  <td className="px-4 py-3.5 text-[12px] text-[#6C6C74] dark:text-[#9090A0]">
                     {new Date(u.created_at).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' })}
                   </td>
                   <td className="px-4 py-3.5">
@@ -510,7 +512,7 @@ export default function UsersPage() {
                       <button
                         onClick={() => openEdit(u)}
                         title="Edit"
-                        className="action-btn p-1.5 rounded border border-[#dedad4] dark:border-[#2a2a32] text-[#5c5a54] dark:text-[#9e9b94]
+                        className="action-btn p-1.5 rounded border border-[#E8E6E1] dark:border-[#2C2C32] text-[#55555F] dark:text-[#9090A0]
                           hover:border-orange-300 dark:hover:border-orange-700 hover:text-orange-600 dark:hover:text-orange-400
                           hover:bg-orange-50 dark:hover:bg-orange-900/10"
                       >
@@ -520,7 +522,7 @@ export default function UsersPage() {
                         onClick={() => setDeleteTarget(u)}
                         disabled={u.id === currentUserId}
                         title={u.id === currentUserId ? "Can't delete yourself" : 'Delete'}
-                        className="action-btn p-1.5 rounded border border-[#dedad4] dark:border-[#2a2a32] text-[#5c5a54] dark:text-[#9e9b94]
+                        className="action-btn p-1.5 rounded border border-[#E8E6E1] dark:border-[#2C2C32] text-[#55555F] dark:text-[#9090A0]
                           hover:border-red-300 dark:hover:border-red-800 hover:text-red-600 dark:hover:text-red-400
                           hover:bg-red-50 dark:hover:bg-red-900/10 disabled:opacity-30 disabled:cursor-not-allowed"
                       >
@@ -536,8 +538,8 @@ export default function UsersPage() {
       </div>
 
       <p
-        style={{ fontFamily: "'IBM Plex Mono', monospace", animation: 'pageEnter 0.4s 0.2s ease both', opacity: 0 }}
-        className="text-[10px] text-[#a09e98] dark:text-[#5c5a54] mt-3"
+        style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", animation: 'pageEnter 0.4s 0.2s ease both', opacity: 0 }}
+        className="text-[10px] text-[#B0B0B8] dark:text-[#55555F] mt-3"
       >
         {filtered.length} of {users.length} users
       </p>
@@ -549,23 +551,23 @@ export default function UsersPage() {
           style={{ animation: 'backdropIn 0.2s ease both' }}
         >
           <div
-            className="bg-white dark:bg-[#1a1a20] border border-red-200 dark:border-red-900/50 rounded-xl p-7 max-w-sm w-full mx-4 shadow-xl"
+            className="bg-white dark:bg-[#1C1C1F] border border-red-200 dark:border-red-900/50 rounded-xl p-7 max-w-sm w-full mx-4 shadow-xl"
             style={{
-              fontFamily: "'IBM Plex Sans', sans-serif",
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
               animation: 'modalIn 0.25s cubic-bezier(0.34,1.56,0.64,1) both',
             }}
           >
-            <h3 className="text-[15px] font-semibold text-[#1a1917] dark:text-[#f0eee8] mb-2">Delete user?</h3>
-            <p className="text-[13px] text-[#7a7870] dark:text-[#7e7b75] mb-6">
+            <h3 className="text-[15px] font-semibold text-[#1A1A1C] dark:text-[#EAEAEC] mb-2">Delete user?</h3>
+            <p className="text-[13px] text-[#6C6C74] dark:text-[#9090A0] mb-6">
               This removes{' '}
-              <span className="font-medium text-[#1a1917] dark:text-[#f0eee8]">{deleteTarget.email}</span>{' '}
+              <span className="font-medium text-[#1A1A1C] dark:text-[#EAEAEC]">{deleteTarget.email}</span>{' '}
               from profiles. This cannot be undone.
             </p>
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setDeleteTarget(null)}
-                className="confirm-btn px-4 py-2 rounded border border-[#dedad4] dark:border-[#2a2a32] text-[13px]
-                  text-[#5c5a54] dark:text-[#9e9b94] hover:bg-[#eeecea] dark:hover:bg-[#1e1e24]"
+                className="confirm-btn px-4 py-2 rounded border border-[#E8E6E1] dark:border-[#2C2C32] text-[13px]
+                  text-[#55555F] dark:text-[#9090A0] hover:bg-[#F6F5F3] dark:hover:bg-[#1C1C1F]"
               >
                 Cancel
               </button>

@@ -17,9 +17,6 @@ import {
   History,
 } from 'lucide-react';
 
-/* ─────────────────────────────────────────────────────────────
-   Navigation items
-───────────────────────────────────────────────────────────── */
 const NAV_MAIN = [
   { label: 'Dashboard',      href: '/superadmindashboard', icon: LayoutDashboard },
   { label: 'Users',          href: '/users',               icon: Users           },
@@ -39,17 +36,11 @@ interface Profile {
   email:     string;
 }
 
-/* ─────────────────────────────────────────────────────────────
-   Sidebar — identical structure + tokens to AdminSidebar
-   Dark/light toggle + Sign-out are ALWAYS rendered here,
-   not in individual pages.
-───────────────────────────────────────────────────────────── */
 function SuperAdminSidebar({ profile }: { profile: Profile | null }) {
   const pathname = usePathname();
   const router   = useRouter();
   const [darkMode, setDarkMode] = useState(false);
 
-  /* Read stored preference on mount */
   useEffect(() => {
     if (localStorage.getItem('theme') === 'dark') {
       setDarkMode(true);
@@ -57,7 +48,6 @@ function SuperAdminSidebar({ profile }: { profile: Profile | null }) {
     }
   }, []);
 
-  /* Apply whenever darkMode flips */
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
     localStorage.setItem('theme', darkMode ? 'dark' : 'light');
@@ -68,154 +58,200 @@ function SuperAdminSidebar({ profile }: { profile: Profile | null }) {
     router.push('/login');
   };
 
-  const initials = profile
+  const initials  = profile
     ? `${profile.firstName?.[0] ?? ''}${profile.lastName?.[0] ?? ''}`.toUpperCase()
     : '?';
-  const fullName = profile ? `${profile.firstName} ${profile.lastName}` : 'Loading…';
+  const fullName  = profile ? `${profile.firstName} ${profile.lastName}` : 'Loading…';
+  const roleLabel = profile?.position || 'Super Admin';
 
-  /* Shared link style logic */
   const isActive = (href: string) =>
     pathname === href ||
     (href !== '/superadmindashboard' && pathname.startsWith(href));
 
-  const linkCls = (href: string) =>
-    `relative flex items-center gap-2.5 px-2 py-2.5 rounded transition-colors duration-150
-    ${isActive(href)
-      ? 'bg-[#eeecea] dark:bg-[#1e1e24] text-[#1a1917] dark:text-[#f0eee8]'
-      : 'text-[#3d3b36] dark:text-[#c9c6be] hover:bg-[#eeecea] dark:hover:bg-[#1e1e24] hover:text-[#1a1917] dark:hover:text-[#f0eee8]'
-    }`;
-
   return (
     <>
-      {/* IBM Plex fonts — same as AdminSidebar */}
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap');
-        .sb      { font-family: 'IBM Plex Sans', sans-serif; }
-        .sb-mono { font-family: 'IBM Plex Mono', monospace; }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+
+        .pjs, .pjs * { font-family: 'Plus Jakarta Sans', sans-serif; }
+
+        .sb-nav-link {
+          position: relative;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 9px 10px;
+          border-radius: 12px;
+          font-size: 13.5px;
+          font-weight: 500;
+          color: var(--sb-slate);
+          text-decoration: none;
+          transition: background 0.15s ease, color 0.15s ease;
+        }
+        .sb-nav-link:hover { background: var(--sb-bg); }
+        .sb-nav-link.active {
+          background: var(--sb-orange-pale);
+          color: var(--sb-body);
+          font-weight: 600;
+        }
+        .sb-nav-link .active-bar {
+          display: none;
+          position: absolute;
+          left: 0; top: 8px; bottom: 8px;
+          width: 3px;
+          border-radius: 0 3px 3px 0;
+          background: var(--sb-orange);
+        }
+        .sb-nav-link.active .active-bar { display: block; }
+
+        .sb-btn {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 9px 10px;
+          width: 100%;
+          border-radius: 12px;
+          font-size: 13.5px;
+          font-weight: 500;
+          background: transparent;
+          border: none;
+          cursor: pointer;
+          transition: background 0.15s ease, color 0.15s ease;
+        }
+        .sb-btn:hover { background: var(--sb-bg); }
+        .sb-btn.logout:hover { background: #FEF0F1; color: #B8172A !important; }
+
+        .pjs {
+          --sb-orange:      #E8500A;
+          --sb-orange-pale: #FFF3EE;
+          --sb-bg:          #F6F5F3;
+          --sb-surface:     #FFFFFF;
+          --sb-border:      #E8E6E1;
+          --sb-body:        #1A1A1C;
+          --sb-slate:       #6C6C74;
+          --sb-silver:      #B0B0B8;
+        }
+
+        .dark .pjs {
+          --sb-bg:          #111113;
+          --sb-surface:     #1C1C1F;
+          --sb-border:      #2C2C32;
+          --sb-body:        #EAEAEC;
+          --sb-slate:       #9090A0;
+          --sb-silver:      #55555F;
+          --sb-orange-pale: rgba(232,80,10,0.12);
+        }
       `}</style>
 
-      <aside className="sb w-56 h-screen flex flex-col sticky top-0
-        bg-[#fafaf9]  dark:bg-[#16161a]
-        border-r border-[#dedad4] dark:border-[#2a2a32]
-        transition-colors duration-200">
+      <aside
+        className="pjs w-60 h-screen flex flex-col sticky top-0 transition-colors duration-200"
+        style={{ background: 'var(--sb-surface)', borderRight: '1px solid var(--sb-border)' }}
+      >
 
-        {/* ── LOGO ─────────────────────────────────────── */}
-        <div className="px-5 pt-6 pb-5 border-b border-[#dedad4] dark:border-[#2a2a32]">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded overflow-hidden flex-shrink-0">
-              <Image
-                src="/protochain_logo2.jpg"
-                alt="ProtoChain"
-                width={28}
-                height={28}
-                priority
-              />
+        {/* LOGO */}
+        <div className="px-4 pt-5 pb-4" style={{ borderBottom: '1px solid var(--sb-border)' }}>
+          <Link href="/" className="flex items-center gap-3 no-underline">
+            <div className="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0"
+              style={{ boxShadow: '0 2px 8px rgba(232,80,10,0.25)' }}>
+              <Image src="/protochain_logo2.jpg" alt="ProtoChain" width={36} height={36} priority />
             </div>
             <div>
-              <p className="sb-mono text-[13px] font-medium text-[#1a1917] dark:text-[#f0eee8] leading-none tracking-tight">
+              <p className="text-[14.5px] leading-none tracking-tight"
+                style={{ color: 'var(--sb-body)', fontWeight: 700 }}>
                 ProtoChain
               </p>
-              <p className="sb-mono text-[10px] tracking-[0.15em] uppercase text-orange-600 dark:text-orange-400 leading-none mt-0.5">
+              <p className="text-[10px] tracking-[0.16em] uppercase leading-none mt-[5px]"
+                style={{ color: 'var(--sb-orange)', fontWeight: 600 }}>
                 Super Admin
               </p>
             </div>
           </Link>
         </div>
 
-        {/* ── PRIMARY NAV ──────────────────────────────── */}
-        <nav className="flex-1 overflow-y-auto px-3 pt-4">
+        {/* PRIMARY NAV */}
+        <nav className="flex-1 overflow-y-auto px-3 pt-4 pb-2">
 
-          <p className="sb-mono text-[10px] tracking-[0.18em] uppercase text-[#7a7870] dark:text-[#7e7b75] px-2 mb-2">
+          <p className="text-[10px] tracking-[0.2em] uppercase px-2 mb-2"
+            style={{ color: 'var(--sb-silver)', fontWeight: 600 }}>
             Main
           </p>
 
-          <ul className="space-y-0.5">
-            {NAV_MAIN.map(({ label, href, icon: Icon }) => (
-              <li key={href}>
-                <Link href={href} className={linkCls(href)}>
-                  {isActive(href) && (
-                    <span className="absolute left-0 top-1.5 bottom-1.5 w-[2px] bg-orange-500" />
-                  )}
-                  <Icon className={`w-4 h-4 flex-shrink-0 ${isActive(href) ? 'text-orange-500' : ''}`} />
-                  <span className={`text-[13px] leading-none ${isActive(href) ? 'font-medium' : 'font-normal'}`}>
-                    {label}
-                  </span>
-                </Link>
-              </li>
-            ))}
+          <ul className="space-y-[2px] list-none p-0 m-0">
+            {NAV_MAIN.map(({ label, href, icon: Icon }) => {
+              const active = isActive(href);
+              return (
+                <li key={href}>
+                  <Link href={href} className={`sb-nav-link${active ? ' active' : ''}`}
+                    style={{ color: active ? 'var(--sb-body)' : 'var(--sb-slate)' }}>
+                    <span className="active-bar" />
+                    <Icon style={{ width: 16, height: 16, flexShrink: 0, color: active ? 'var(--sb-orange)' : 'currentColor' }} />
+                    <span>{label}</span>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
 
-          <p className="sb-mono text-[10px] tracking-[0.18em] uppercase text-[#7a7870] dark:text-[#7e7b75] px-2 mt-5 mb-2">
+          <p className="text-[10px] tracking-[0.2em] uppercase px-2 mt-5 mb-2"
+            style={{ color: 'var(--sb-silver)', fontWeight: 600 }}>
             System
           </p>
 
-          <ul className="space-y-0.5">
-            {NAV_SYSTEM.map(({ label, href, icon: Icon }) => (
-              <li key={href}>
-                <Link href={href} className={linkCls(href)}>
-                  {isActive(href) && (
-                    <span className="absolute left-0 top-1.5 bottom-1.5 w-[2px] bg-orange-500" />
-                  )}
-                  <Icon className={`w-4 h-4 flex-shrink-0 ${isActive(href) ? 'text-orange-500' : ''}`} />
-                  <span className={`text-[13px] leading-none ${isActive(href) ? 'font-medium' : 'font-normal'}`}>
-                    {label}
-                  </span>
-                </Link>
-              </li>
-            ))}
+          <ul className="space-y-[2px] list-none p-0 m-0">
+            {NAV_SYSTEM.map(({ label, href, icon: Icon }) => {
+              const active = isActive(href);
+              return (
+                <li key={href}>
+                  <Link href={href} className={`sb-nav-link${active ? ' active' : ''}`}
+                    style={{ color: active ? 'var(--sb-body)' : 'var(--sb-slate)' }}>
+                    <span className="active-bar" />
+                    <Icon style={{ width: 16, height: 16, flexShrink: 0, color: active ? 'var(--sb-orange)' : 'currentColor' }} />
+                    <span>{label}</span>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </nav>
 
-        {/* ── THEME TOGGLE — always visible ────────────── */}
-        <div className="px-3 pb-1">
-          <button
-            onClick={() => setDarkMode(d => !d)}
-            className="flex items-center gap-2.5 px-2 py-2.5 w-full rounded text-[13px]
-              text-[#5c5a54] dark:text-[#9e9b94]
-              hover:text-[#1a1917] dark:hover:text-[#f0eee8]
-              hover:bg-[#eeecea] dark:hover:bg-[#1e1e24]
-              transition-colors duration-150"
-          >
+        {/* THEME TOGGLE */}
+        <div className="px-3 pb-2">
+          <button onClick={() => setDarkMode(d => !d)} className="sb-btn" style={{ color: 'var(--sb-slate)' }}>
             {darkMode
-              ? <><Sun  className="w-4 h-4 flex-shrink-0" /><span>Light mode</span></>
-              : <><Moon className="w-4 h-4 flex-shrink-0" /><span>Dark mode</span></>
+              ? <><Sun  style={{ width: 16, height: 16, flexShrink: 0 }} /><span>Light mode</span></>
+              : <><Moon style={{ width: 16, height: 16, flexShrink: 0 }} /><span>Dark mode</span></>
             }
           </button>
         </div>
 
-        {/* ── PROFILE + SIGN OUT — always visible ──────── */}
-        <div className="px-3 pb-4 pt-3 border-t border-[#dedad4] dark:border-[#2a2a32] space-y-0.5">
-
-          {/* Profile row */}
-          <div className="flex items-center gap-2.5 px-2 py-2">
-            <div className="w-7 h-7 rounded bg-orange-500 flex items-center justify-center flex-shrink-0">
-              <span className="sb-mono text-[10px] font-semibold text-white leading-none">
+        {/* PROFILE + LOGOUT */}
+        <div className="px-3 pt-3 pb-4" style={{ borderTop: '1px solid var(--sb-border)' }}>
+          <div className="flex items-center gap-2.5 px-2.5 py-2 mb-0.5">
+            <div
+              className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: 'var(--sb-orange)' }}
+            >
+              <span className="text-[11px] text-white leading-none" style={{ fontWeight: 700 }}>
                 {initials}
               </span>
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-[13px] font-medium text-[#1a1917] dark:text-[#f0eee8] truncate leading-none">
+              <p className="text-[13px] truncate leading-none"
+                style={{ color: 'var(--sb-body)', fontWeight: 600 }}>
                 {fullName}
               </p>
-              <div className="flex items-center gap-1 mt-0.5">
-                <ShieldCheck className="w-2.5 h-2.5 text-orange-500 flex-shrink-0" />
-                <p className="sb-mono text-[10px] text-orange-600 dark:text-orange-400 leading-none truncate">
-                  {profile?.position || 'Super Admin'}
+              <div className="flex items-center gap-1 mt-[5px]">
+                <ShieldCheck style={{ width: 10, height: 10, color: 'var(--sb-orange)', flexShrink: 0 }} />
+                <p className="text-[11px] leading-none capitalize truncate"
+                  style={{ color: 'var(--sb-orange)', fontWeight: 500 }}>
+                  {roleLabel}
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Sign out — always rendered in the sidebar */}
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2.5 px-2 py-2.5 w-full rounded text-[13px]
-              text-[#5c5a54] dark:text-[#9e9b94]
-              hover:text-red-600 dark:hover:text-red-400
-              hover:bg-red-50 dark:hover:bg-red-500/10
-              transition-colors duration-150"
-          >
-            <LogOut className="w-4 h-4 flex-shrink-0" />
+          <button onClick={handleLogout} className="sb-btn logout" style={{ color: 'var(--sb-slate)' }}>
+            <LogOut style={{ width: 16, height: 16, flexShrink: 0 }} />
             <span>Sign out</span>
           </button>
         </div>
@@ -224,9 +260,6 @@ function SuperAdminSidebar({ profile }: { profile: Profile | null }) {
   );
 }
 
-/* ─────────────────────────────────────────────────────────────
-   Layout wrapper — guards route, fetches profile, renders shell
-───────────────────────────────────────────────────────────── */
 export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
@@ -272,7 +305,6 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
       }
     };
 
-    /* Re-guard on auth state change (e.g. sign-out from another tab) */
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session && mounted) router.replace('/login');
     });
@@ -285,14 +317,19 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
     };
   }, [router]);
 
-  /* Loading screen — matches admin portal style */
   if (checking) {
     return (
-      <div className="min-h-screen bg-[#fafaf9] dark:bg-[#16161a] flex items-center justify-center transition-colors duration-200">
+      <div
+        className="min-h-screen flex items-center justify-center transition-colors duration-200"
+        style={{ background: '#FFFFFF', fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+      >
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
-          <p style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-             className="text-[11px] tracking-[0.18em] uppercase text-[#7a7870] dark:text-[#7e7b75]">
+          <div
+            className="w-8 h-8 border-2 rounded-full animate-spin"
+            style={{ borderColor: '#E8500A', borderTopColor: 'transparent' }}
+          />
+          <p className="text-[11px] tracking-[0.18em] uppercase"
+            style={{ color: '#B0B0B8', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
             Verifying access…
           </p>
         </div>
@@ -301,9 +338,12 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
   }
 
   return (
-    <div className="flex min-h-screen bg-[#fafaf9] dark:bg-[#16161a] transition-colors duration-200">
+    <div
+      className="flex min-h-screen transition-colors duration-200"
+      style={{ background: '#F6F5F3', fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+    >
       <SuperAdminSidebar profile={profile} />
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto min-w-0">
         {children}
       </main>
     </div>

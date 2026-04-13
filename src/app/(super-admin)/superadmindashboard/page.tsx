@@ -146,7 +146,7 @@ export default function SuperAdminDashboard() {
   ];
 
   return (
-    <div className="p-8 space-y-7" style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}>
+    <div className="p-8 space-y-7" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
 
       {/* ── Page header ──────────────────────────────── */}
       <div
@@ -154,19 +154,19 @@ export default function SuperAdminDashboard() {
           ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
       >
         <div className="flex items-center gap-1.5 mb-2">
-          <TrendingUp className="w-3.5 h-3.5 text-[#7a7870] dark:text-[#7e7b75]" />
+          <TrendingUp className="w-3.5 h-3.5 text-[#6C6C74] dark:text-[#9090A0]" />
           <p
-            style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-            className="text-[10px] tracking-[0.18em] uppercase text-[#7a7870] dark:text-[#7e7b75]"
+            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+            className="text-[10px] tracking-[0.18em] uppercase text-[#6C6C74] dark:text-[#9090A0]"
           >
             Overview
           </p>
         </div>
-        <h1 className="text-2xl font-semibold text-[#1a1917] dark:text-[#f0eee8] tracking-tight">
+        <h1 className="text-2xl font-semibold text-[#1A1A1C] dark:text-[#EAEAEC] tracking-tight">
           Welcome back, {profile?.firstName || 'Super Admin'}
         </h1>
         {profile?.position && (
-          <p className="text-sm text-[#7a7870] dark:text-[#7e7b75] mt-1">{profile.position}</p>
+          <p className="text-sm text-[#6C6C74] dark:text-[#9090A0] mt-1">{profile.position}</p>
         )}
       </div>
 
@@ -184,15 +184,15 @@ export default function SuperAdminDashboard() {
           >
             <div className="flex items-start justify-between mb-3">
               <p
-                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-                className="text-[10px] tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75]"
+                style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                className="text-[10px] tracking-[0.15em] uppercase text-[#6C6C74] dark:text-[#9090A0]"
               >
                 {label}
               </p>
               <Icon className={`w-4 h-4 ${accent} transition-transform duration-200 group-hover:scale-110`} />
             </div>
             <p className={`text-3xl font-semibold ${accent}`}>{value ?? '—'}</p>
-            <p className="text-[11px] text-[#7a7870] dark:text-[#7e7b75] mt-1.5">{sub}</p>
+            <p className="text-[11px] text-[#6C6C74] dark:text-[#9090A0] mt-1.5">{sub}</p>
           </div>
         ))}
       </div>
@@ -200,14 +200,14 @@ export default function SuperAdminDashboard() {
       {/* ── Role distribution bar ────────────────────── */}
       <div
         className={`
-          rounded-lg border border-[#dedad4] dark:border-[#2a2a32] bg-white dark:bg-[#1a1a20] p-5
+          rounded-lg border border-[#E8E6E1] dark:border-[#2C2C32] bg-white dark:bg-[#1C1C1F] p-5
           transition-all duration-500 ease-out delay-[420ms]
           ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}
         `}
       >
         <p
-          style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-          className="text-[10px] tracking-[0.18em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-3"
+          style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+          className="text-[10px] tracking-[0.18em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-3"
         >
           Role distribution
         </p>
@@ -225,7 +225,7 @@ export default function SuperAdminDashboard() {
                 title={`Admin: ${stats.admins}`}
               />
               <div
-                className="bg-[#dedad4] dark:bg-[#2a2a32] flex-1 rounded-full"
+                className="bg-[#E8E6E1] dark:bg-[#2C2C32] flex-1 rounded-full"
                 title={`Residents: ${stats.residents}`}
               />
             </>
@@ -235,13 +235,13 @@ export default function SuperAdminDashboard() {
           {[
             { label: 'Super admin', color: 'bg-orange-500',              count: stats?.superAdmins },
             { label: 'Admin',       color: 'bg-blue-500',                count: stats?.admins },
-            { label: 'Resident',    color: 'bg-[#dedad4] dark:bg-[#2a2a32]', count: stats?.residents },
+            { label: 'Resident',    color: 'bg-[#E8E6E1] dark:bg-[#2C2C32]', count: stats?.residents },
           ].map(({ label, color, count }) => (
             <div key={label} className="flex items-center gap-1.5">
               <div className={`w-2 h-2 rounded-full ${color}`} />
-              <span className="text-[11px] text-[#7a7870] dark:text-[#7e7b75]">
+              <span className="text-[11px] text-[#6C6C74] dark:text-[#9090A0]">
                 {label}:{' '}
-                <span className="text-[#3d3b36] dark:text-[#c9c6be] font-medium">{count}</span>
+                <span className="text-[#1A1A1C] dark:text-[#EAEAEC] font-medium">{count}</span>
               </span>
             </div>
           ))}
@@ -254,15 +254,15 @@ export default function SuperAdminDashboard() {
         {/* Recent audit */}
         <div
           className={`
-            xl:col-span-2 rounded-lg border border-[#dedad4] dark:border-[#2a2a32] bg-white dark:bg-[#1a1a20] p-5
+            xl:col-span-2 rounded-lg border border-[#E8E6E1] dark:border-[#2C2C32] bg-white dark:bg-[#1C1C1F] p-5
             transition-all duration-500 ease-out delay-[500ms]
             ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}
           `}
         >
           <div className="flex items-center justify-between mb-4">
             <p
-              style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-              className="text-[10px] tracking-[0.18em] uppercase text-[#7a7870] dark:text-[#7e7b75]"
+              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+              className="text-[10px] tracking-[0.18em] uppercase text-[#6C6C74] dark:text-[#9090A0]"
             >
               Recent audit activity
             </p>
@@ -276,7 +276,7 @@ export default function SuperAdminDashboard() {
           </div>
 
           {stats?.recentLogs.length === 0 ? (
-            <p className="text-sm text-[#7a7870] dark:text-[#7e7b75] text-center py-8">
+            <p className="text-sm text-[#6C6C74] dark:text-[#9090A0] text-center py-8">
               No activity yet.
             </p>
           ) : (
@@ -306,26 +306,26 @@ export default function SuperAdminDashboard() {
                         {log.action.replace(/_/g, ' ')}
                       </span>
                       {log.old_role && log.new_role && (
-                        <span className="text-[11px] text-[#7a7870] dark:text-[#7e7b75]">
+                        <span className="text-[11px] text-[#6C6C74] dark:text-[#9090A0]">
                           {log.old_role.replace('_', ' ')}
                           {' → '}
                           <span className="text-orange-600 dark:text-orange-400">{log.new_role.replace('_', ' ')}</span>
                         </span>
                       )}
                       {!log.old_role && log.old_position !== undefined && log.new_position !== undefined && (
-                        <span className="text-[11px] text-[#7a7870] dark:text-[#7e7b75]">
+                        <span className="text-[11px] text-[#6C6C74] dark:text-[#9090A0]">
                           "{log.old_position || 'none'}"
                           {' → '}
                           <span className="text-blue-600 dark:text-blue-400">"{log.new_position || 'none'}"</span>
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] text-[#7a7870] dark:text-[#7e7b75] mt-0.5">
+                    <p className="text-[11px] text-[#6C6C74] dark:text-[#9090A0] mt-0.5">
                       {log.performer_email || 'System'}
                       {log.notes && ` · ${log.notes}`}
                     </p>
                   </div>
-                  <span className="text-[10px] text-[#a09e98] dark:text-[#5c5a54] flex-shrink-0">
+                  <span className="text-[10px] text-[#B0B0B8] dark:text-[#55555F] flex-shrink-0">
                     {new Date(log.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}
                   </span>
                 </div>
@@ -337,14 +337,14 @@ export default function SuperAdminDashboard() {
         {/* Quick actions */}
         <div
           className={`
-            rounded-lg border border-[#dedad4] dark:border-[#2a2a32] bg-white dark:bg-[#1a1a20] p-5
+            rounded-lg border border-[#E8E6E1] dark:border-[#2C2C32] bg-white dark:bg-[#1C1C1F] p-5
             transition-all duration-500 ease-out delay-[580ms]
             ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}
           `}
         >
           <p
-            style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-            className="text-[10px] tracking-[0.18em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-4"
+            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+            className="text-[10px] tracking-[0.18em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-4"
           >
             Quick actions
           </p>
@@ -358,20 +358,20 @@ export default function SuperAdminDashboard() {
                 key={href}
                 href={href}
                 className="flex items-center justify-between p-3 rounded
-                  border border-[#dedad4] dark:border-[#2a2a32]
-                  hover:bg-[#eeecea] dark:hover:bg-[#1e1e24]
-                  hover:border-[#c9c6be] dark:hover:border-[#3a3a42]
+                  border border-[#E8E6E1] dark:border-[#2C2C32]
+                  hover:bg-[#F6F5F3] dark:hover:bg-[#1C1C1F]
+                  hover:border-[#EAEAEC] dark:hover:border-[#3a3a42]
                   hover:translate-x-0.5
                   active:scale-[0.99]
                   transition-all duration-150 group"
               >
                 <div>
-                  <p className="text-[13px] font-medium text-[#1a1917] dark:text-[#f0eee8]">{label}</p>
-                  <p className="text-[11px] text-[#7a7870] dark:text-[#7e7b75] mt-0.5">{sub}</p>
+                  <p className="text-[13px] font-medium text-[#1A1A1C] dark:text-[#EAEAEC]">{label}</p>
+                  <p className="text-[11px] text-[#6C6C74] dark:text-[#9090A0] mt-0.5">{sub}</p>
                 </div>
                 <ChevronRight
-                  className="w-4 h-4 text-[#a09e98] dark:text-[#5c5a54]
-                    group-hover:text-[#3d3b36] dark:group-hover:text-[#c9c6be]
+                  className="w-4 h-4 text-[#B0B0B8] dark:text-[#55555F]
+                    group-hover:text-[#1A1A1C] dark:group-hover:text-[#EAEAEC]
                     group-hover:translate-x-0.5
                     transition-all duration-150"
                 />

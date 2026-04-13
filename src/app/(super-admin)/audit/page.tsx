@@ -66,11 +66,13 @@ export default function AuditPage() {
     <div
       className="p-8"
       style={{
-        fontFamily: "'IBM Plex Sans', sans-serif",
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
         animation: 'pageEnter 0.35s ease both',
       }}
     >
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+        
         @keyframes pageEnter {
           from { opacity: 0; transform: translateY(8px); }
           to   { opacity: 1; transform: translateY(0); }
@@ -125,12 +127,12 @@ export default function AuditPage() {
       {/* Header */}
       <div className="mb-6" style={{ animation: 'pageEnter 0.35s 0.05s ease both', opacity: 0 }}>
         <p
-          style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-          className="text-[10px] tracking-[0.18em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1"
+          style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+          className="text-[10px] tracking-[0.18em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-1"
         >
           History
         </p>
-        <h1 className="text-2xl font-semibold text-[#1a1917] dark:text-[#f0eee8]">Audit Log</h1>
+        <h1 className="text-2xl font-semibold text-[#1A1A1C] dark:text-[#EAEAEC]">Audit Log</h1>
       </div>
 
       {/* Filters */}
@@ -138,7 +140,7 @@ export default function AuditPage() {
         className="flex flex-wrap gap-2 mb-5 items-center"
         style={{ animation: 'pageEnter 0.35s 0.1s ease both', opacity: 0 }}
       >
-        <Filter className="w-3.5 h-3.5 text-[#7a7870] dark:text-[#7e7b75]" />
+        <Filter className="w-3.5 h-3.5 text-[#6C6C74] dark:text-[#9090A0]" />
         {FILTERS.map(f => (
           <button
             key={f}
@@ -146,7 +148,7 @@ export default function AuditPage() {
             className={`filter-btn px-3 py-1.5 rounded text-[12px] border
               ${filter === f
                 ? 'active bg-orange-50 dark:bg-orange-900/20 border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-400'
-                : 'bg-white dark:bg-[#1a1a20] border-[#dedad4] dark:border-[#2a2a32] text-[#5c5a54] dark:text-[#9e9b94] hover:bg-[#eeecea] dark:hover:bg-[#1e1e24]'
+                : 'bg-white dark:bg-[#1C1C1F] border-[#E8E6E1] dark:border-[#2C2C32] text-[#55555F] dark:text-[#9090A0] hover:bg-[#F6F5F3] dark:hover:bg-[#1C1C1F]'
               }`}
           >
             {f === 'all' ? 'All' : (ACTION_STYLE[f]?.label || f)}
@@ -154,8 +156,8 @@ export default function AuditPage() {
         ))}
         <button
           onClick={load}
-          className="refresh-btn ml-auto p-2 rounded border border-[#dedad4] dark:border-[#2a2a32] bg-white dark:bg-[#1a1a20]
-            text-[#5c5a54] dark:text-[#9e9b94] hover:bg-[#eeecea] dark:hover:bg-[#1e1e24]"
+          className="refresh-btn ml-auto p-2 rounded border border-[#E8E6E1] dark:border-[#2C2C32] bg-white dark:bg-[#1C1C1F]
+            text-[#55555F] dark:text-[#9090A0] hover:bg-[#F6F5F3] dark:hover:bg-[#1C1C1F]"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${spinning ? 'spin-icon' : ''}`} />
         </button>
@@ -163,11 +165,11 @@ export default function AuditPage() {
 
       {/* Log list */}
       <div
-        className="rounded-lg border border-[#dedad4] dark:border-[#2a2a32] bg-white dark:bg-[#1a1a20] divide-y divide-[#f0ede8] dark:divide-[#22222a]"
+        className="rounded-lg border border-[#E8E6E1] dark:border-[#2C2C32] bg-white dark:bg-[#1C1C1F] divide-y divide-[#E8E6E1] dark:divide-[#2C2C32]"
         style={{ animation: 'pageEnter 0.4s 0.15s ease both', opacity: 0 }}
       >
         {loading ? (
-          <div className="text-center py-14 text-[#7a7870] dark:text-[#7e7b75] text-sm">
+          <div className="text-center py-14 text-[#6C6C74] dark:text-[#9090A0] text-sm">
             <div
               className="inline-block w-5 h-5 border-2 border-orange-400 border-t-transparent rounded-full mb-3"
               style={{ animation: 'spinOnce 0.8s linear infinite' }}
@@ -176,7 +178,7 @@ export default function AuditPage() {
           </div>
         ) : filtered.length === 0 ? (
           <div
-            className="text-center py-14 text-[#7a7870] dark:text-[#7e7b75] text-sm"
+            className="text-center py-14 text-[#6C6C74] dark:text-[#9090A0] text-sm"
             style={{ animation: 'pageEnter 0.3s ease both' }}
           >
             No log entries found.
@@ -189,7 +191,7 @@ export default function AuditPage() {
           return (
             <div
               key={log.id}
-              className="log-row flex items-start gap-4 px-5 py-4 hover:bg-[#fafaf9] dark:hover:bg-[#1e1e24]"
+              className="log-row flex items-start gap-4 px-5 py-4 hover:bg-[#F6F5F3] dark:hover:bg-[#1C1C1F]"
               style={
                 mounted
                   ? { animation: `logRowIn 0.3s ${idx * 0.03}s ease both` }
@@ -208,15 +210,15 @@ export default function AuditPage() {
                   </span>
 
                   {log.old_role && log.new_role && (
-                    <span className="text-[11px] text-[#7a7870] dark:text-[#7e7b75]">
-                      <span className="text-[#5c5a54] dark:text-[#9e9b94]">{log.old_role.replace('_', ' ')}</span>
+                    <span className="text-[11px] text-[#6C6C74] dark:text-[#9090A0]">
+                      <span className="text-[#55555F] dark:text-[#9090A0]">{log.old_role.replace('_', ' ')}</span>
                       {' → '}
                       <span className="text-orange-600 dark:text-orange-400">{log.new_role.replace('_', ' ')}</span>
                     </span>
                   )}
 
                   {!log.old_role && log.old_position !== undefined && log.new_position !== undefined && (
-                    <span className="text-[11px] text-[#7a7870] dark:text-[#7e7b75]">
+                    <span className="text-[11px] text-[#6C6C74] dark:text-[#9090A0]">
                       "{log.old_position || 'none'}"
                       {' → '}
                       <span className="text-blue-600 dark:text-blue-400">"{log.new_position || 'none'}"</span>
@@ -224,14 +226,14 @@ export default function AuditPage() {
                   )}
                 </div>
 
-                <p className="text-[11px] text-[#7a7870] dark:text-[#7e7b75]">
+                <p className="text-[11px] text-[#6C6C74] dark:text-[#9090A0]">
                   {log.performer_email
-                    ? <span>By <span className="text-[#5c5a54] dark:text-[#9e9b94]">{log.performer_email}</span></span>
+                    ? <span>By <span className="text-[#55555F] dark:text-[#9090A0]">{log.performer_email}</span></span>
                     : 'System'}
                   {log.target_user && (
                     <span
-                      style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-                      className="ml-2 text-[#a09e98] dark:text-[#5c5a54]"
+                      style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                      className="ml-2 text-[#B0B0B8] dark:text-[#55555F]"
                     >
                       {log.target_user.slice(0, 8)}…
                     </span>
@@ -241,12 +243,12 @@ export default function AuditPage() {
               </div>
 
               <div className="text-right flex-shrink-0">
-                <p className="text-[11px] text-[#7a7870] dark:text-[#7e7b75]">
+                <p className="text-[11px] text-[#6C6C74] dark:text-[#9090A0]">
                   {new Date(log.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
                 </p>
                 <p
-                  style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-                  className="text-[10px] text-[#a09e98] dark:text-[#5c5a54]"
+                  style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                  className="text-[10px] text-[#B0B0B8] dark:text-[#55555F]"
                 >
                   {new Date(log.created_at).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' })}
                 </p>
@@ -257,8 +259,8 @@ export default function AuditPage() {
       </div>
 
       <p
-        style={{ fontFamily: "'IBM Plex Mono', monospace", animation: 'pageEnter 0.4s 0.2s ease both', opacity: 0 }}
-        className="text-[10px] text-[#a09e98] dark:text-[#5c5a54] mt-3"
+        style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", animation: 'pageEnter 0.4s 0.2s ease both', opacity: 0 }}
+        className="text-[10px] text-[#B0B0B8] dark:text-[#55555F] mt-3"
       >
         {filtered.length} entries
       </p>

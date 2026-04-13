@@ -111,7 +111,7 @@ function Toast({ msg, type, onDone }: { msg: string; type: 'success' | 'error'; 
           ? 'bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400'
           : 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400'
         }`}
-      style={{ fontFamily: "'IBM Plex Sans', sans-serif", animation: 'toastIn 0.3s ease both' }}
+      style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", animation: 'toastIn 0.3s ease both' }}
     >
       {msg}
     </div>
@@ -126,8 +126,8 @@ function GroupCard({ group, index, mounted }: { group: GroupedRecord; index: num
   return (
     <div
       className={`
-        rounded-lg border border-[#dedad4] dark:border-[#2a2a32]
-        bg-white dark:bg-[#1a1a20]
+        rounded-lg border border-[#E8E6E1] dark:border-[#2C2C32]
+        bg-white dark:bg-[#1C1C1F]
         transition-all duration-400 ease-out
         ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}
       `}
@@ -136,7 +136,7 @@ function GroupCard({ group, index, mounted }: { group: GroupedRecord; index: num
       {/* Header row */}
       <div
         className="flex items-start gap-3 p-4 cursor-pointer select-none
-          hover:bg-[#fafaf9] dark:hover:bg-[#1e1e24] rounded-lg transition-colors duration-150"
+          hover:bg-[#F6F5F3] dark:hover:bg-[#1C1C1F] rounded-lg transition-colors duration-150"
         onClick={() => setExpanded(e => !e)}
       >
         {/* Avatar */}
@@ -147,11 +147,11 @@ function GroupCard({ group, index, mounted }: { group: GroupedRecord; index: num
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[13px] font-medium text-[#1a1917] dark:text-[#f0eee8]">
+            <span className="text-[13px] font-medium text-[#1A1A1C] dark:text-[#EAEAEC]">
               {displayName}
             </span>
             {group.user_email && group.user_name && (
-              <span className="text-[11px] text-[#7a7870] dark:text-[#7e7b75]">
+              <span className="text-[11px] text-[#6C6C74] dark:text-[#9090A0]">
                 {group.user_email}
               </span>
             )}
@@ -171,12 +171,12 @@ function GroupCard({ group, index, mounted }: { group: GroupedRecord; index: num
               );
             })}
             {group.changes.length === 1 && (
-              <span className="text-[11px] text-[#7a7870] dark:text-[#7e7b75] ml-0.5">
+              <span className="text-[11px] text-[#6C6C74] dark:text-[#9090A0] ml-0.5">
                 changed
               </span>
             )}
             {group.changes.length > 1 && (
-              <span className="text-[11px] text-[#7a7870] dark:text-[#7e7b75] ml-0.5">
+              <span className="text-[11px] text-[#6C6C74] dark:text-[#9090A0] ml-0.5">
                 · {group.changes.length} fields changed
               </span>
             )}
@@ -186,22 +186,22 @@ function GroupCard({ group, index, mounted }: { group: GroupedRecord; index: num
         {/* Time + expand */}
         <div className="flex items-center gap-2 flex-shrink-0">
           <span
-            style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-            className="text-[10px] text-[#a09e98] dark:text-[#5c5a54]"
+            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+            className="text-[10px] text-[#B0B0B8] dark:text-[#55555F]"
             title={formatTime(group.timestamp)}
           >
             {formatTimeShort(group.timestamp)}
           </span>
           {expanded
-            ? <ChevronUp className="w-3.5 h-3.5 text-[#a09e98]" />
-            : <ChevronDown className="w-3.5 h-3.5 text-[#a09e98]" />
+            ? <ChevronUp className="w-3.5 h-3.5 text-[#B0B0B8]" />
+            : <ChevronDown className="w-3.5 h-3.5 text-[#B0B0B8]" />
           }
         </div>
       </div>
 
       {/* Expanded detail */}
       {expanded && (
-        <div className="border-t border-[#dedad4] dark:border-[#2a2a32] px-4 py-3 space-y-2.5">
+        <div className="border-t border-[#E8E6E1] dark:border-[#2C2C32] px-4 py-3 space-y-2.5">
           {group.changes.map(c => {
             const style = FIELD_COLORS[c.field_name] ?? DEFAULT_STYLE;
             return (
@@ -209,24 +209,24 @@ function GroupCard({ group, index, mounted }: { group: GroupedRecord; index: num
                 <div className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${style.dot}`} />
                 <div className="flex-1 min-w-0">
                   <p
-                    style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-                    className="text-[10px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1"
+                    style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                    className="text-[10px] tracking-[0.1em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-1"
                   >
                     {c.field_label}
                   </p>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[12px] text-[#7a7870] dark:text-[#7e7b75] line-through">
+                    <span className="text-[12px] text-[#6C6C74] dark:text-[#9090A0] line-through">
                       {maskValue(c.field_name, c.old_value)}
                     </span>
-                    <span className="text-[10px] text-[#a09e98]">→</span>
-                    <span className="text-[12px] font-medium text-[#1a1917] dark:text-[#f0eee8]">
+                    <span className="text-[10px] text-[#B0B0B8]">→</span>
+                    <span className="text-[12px] font-medium text-[#1A1A1C] dark:text-[#EAEAEC]">
                       {maskValue(c.field_name, c.new_value)}
                     </span>
                   </div>
                 </div>
                 <span
-                  style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-                  className="text-[10px] text-[#a09e98] dark:text-[#5c5a54] flex-shrink-0"
+                  style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                  className="text-[10px] text-[#B0B0B8] dark:text-[#55555F] flex-shrink-0"
                 >
                   {formatTime(c.created_at)}
                 </span>
@@ -300,8 +300,10 @@ export default function RecentChangesPage() {
   };
 
   return (
-    <div className="p-8" style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}>
+    <div className="p-8" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+        
         @keyframes pageEnter {
           from { opacity: 0; transform: translateY(8px); }
           to   { opacity: 1; transform: translateY(0); }
@@ -318,31 +320,31 @@ export default function RecentChangesPage() {
         style={{ animation: 'pageEnter 0.35s ease both' }}
       >
         <div className="flex items-center gap-1.5 mb-2">
-          <History className="w-3.5 h-3.5 text-[#7a7870] dark:text-[#7e7b75]" />
+          <History className="w-3.5 h-3.5 text-[#6C6C74] dark:text-[#9090A0]" />
           <p
-            style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-            className="text-[10px] tracking-[0.18em] uppercase text-[#7a7870] dark:text-[#7e7b75]"
+            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+            className="text-[10px] tracking-[0.18em] uppercase text-[#6C6C74] dark:text-[#9090A0]"
           >
             Super Admin
           </p>
         </div>
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold text-[#1a1917] dark:text-[#f0eee8] tracking-tight">
+            <h1 className="text-2xl font-semibold text-[#1A1A1C] dark:text-[#EAEAEC] tracking-tight">
               Recent Changes
             </h1>
-            <p className="text-[13px] text-[#7a7870] dark:text-[#7e7b75] mt-0.5">
+            <p className="text-[13px] text-[#6C6C74] dark:text-[#9090A0] mt-0.5">
               Profile edits made by residents and admins
             </p>
           </div>
           <button
             onClick={handleRefresh}
             title="Refresh"
-            className="p-2 rounded border border-[#dedad4] dark:border-[#2a2a32]
-              bg-white dark:bg-[#1a1a20]
-              text-[#7a7870] dark:text-[#7e7b75]
-              hover:border-[#c9c6be] dark:hover:border-[#3a3a42]
-              hover:text-[#1a1917] dark:hover:text-[#f0eee8]
+            className="p-2 rounded border border-[#E8E6E1] dark:border-[#2C2C32]
+              bg-white dark:bg-[#1C1C1F]
+              text-[#6C6C74] dark:text-[#9090A0]
+              hover:border-[#EAEAEC] dark:hover:border-[#3a3a42]
+              hover:text-[#1A1A1C] dark:hover:text-[#EAEAEC]
               transition-all duration-150 active:scale-95"
           >
             <RefreshCw className={`w-4 h-4 ${spinning ? 'animate-spin' : ''}`} />
@@ -362,12 +364,12 @@ export default function RecentChangesPage() {
         ].map(({ label, value }) => (
           <div
             key={label}
-            className="px-4 py-2.5 rounded-lg border border-[#dedad4] dark:border-[#2a2a32]
-              bg-white dark:bg-[#1a1a20]"
+            className="px-4 py-2.5 rounded-lg border border-[#E8E6E1] dark:border-[#2C2C32]
+              bg-white dark:bg-[#1C1C1F]"
           >
             <p
-              style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-              className="text-[10px] tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75]"
+              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+              className="text-[10px] tracking-[0.15em] uppercase text-[#6C6C74] dark:text-[#9090A0]"
             >
               {label}
             </p>
@@ -385,22 +387,22 @@ export default function RecentChangesPage() {
       >
         {/* Search */}
         <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#a09e98]" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#B0B0B8]" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search by user, field, value…"
-            className="w-full pl-9 pr-8 py-2 rounded border border-[#dedad4] dark:border-[#2a2a32]
-              bg-white dark:bg-[#1a1a20]
-              text-[13px] text-[#1a1917] dark:text-[#f0eee8]
-              placeholder-[#a09e98]
+            className="w-full pl-9 pr-8 py-2 rounded border border-[#E8E6E1] dark:border-[#2C2C32]
+              bg-white dark:bg-[#1C1C1F]
+              text-[13px] text-[#1A1A1C] dark:text-[#EAEAEC]
+              placeholder-[#B0B0B8]
               focus:outline-none focus:border-orange-400 dark:focus:border-orange-500
               transition-colors duration-150"
           />
           {search && (
             <button
               onClick={() => setSearch('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#a09e98] hover:text-[#3d3b36]"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#B0B0B8] hover:text-[#1A1A1C]"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -417,7 +419,7 @@ export default function RecentChangesPage() {
                 px-3 py-1.5 rounded text-[11px] border transition-all duration-150
                 ${fieldFilter === f
                   ? 'bg-orange-500 border-orange-500 text-white'
-                  : 'border-[#dedad4] dark:border-[#2a2a32] text-[#7a7870] dark:text-[#7e7b75] bg-white dark:bg-[#1a1a20] hover:border-[#c9c6be]'
+                  : 'border-[#E8E6E1] dark:border-[#2C2C32] text-[#6C6C74] dark:text-[#9090A0] bg-white dark:bg-[#1C1C1F] hover:border-[#EAEAEC]'
                 }
               `}
             >
@@ -434,8 +436,8 @@ export default function RecentChangesPage() {
         </div>
       ) : groups.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 gap-3">
-          <User className="w-8 h-8 text-[#a09e98]" />
-          <p className="text-[13px] text-[#7a7870] dark:text-[#7e7b75]">
+          <User className="w-8 h-8 text-[#B0B0B8]" />
+          <p className="text-[13px] text-[#6C6C74] dark:text-[#9090A0]">
             {search || fieldFilter !== 'all'
               ? 'No changes match your filters.'
               : 'No profile changes recorded yet.'}

@@ -33,7 +33,7 @@ function Toast({ msg, type, onDone }: { msg: string; type: 'success' | 'error'; 
           : 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400'
         }`}
       style={{
-        fontFamily: "'IBM Plex Sans', sans-serif",
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
         animation: 'toastSlideUp 0.3s cubic-bezier(0.34,1.56,0.64,1) both',
       }}
     >
@@ -58,8 +58,8 @@ function Field({
       }}
     >
       <label
-        style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-        className="block text-[10px] tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] font-medium mb-1.5"
+        style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+        className="block text-[10px] tracking-[0.15em] uppercase text-[#6C6C74] dark:text-[#9090A0] font-medium mb-1.5"
       >
         {label}
       </label>
@@ -70,13 +70,13 @@ function Field({
         placeholder={placeholder}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        className="w-full bg-white dark:bg-[#1a1a20]
-          border border-[#dedad4] dark:border-[#2a2a32] rounded
-          px-3 py-2 text-[13px] text-[#1a1917] dark:text-[#f0eee8]
+        className="w-full bg-white dark:bg-[#1C1C1F]
+          border border-[#E8E6E1] dark:border-[#2C2C32] rounded
+          px-3 py-2 text-[13px] text-[#1A1A1C] dark:text-[#EAEAEC]
           focus:outline-none focus:border-orange-400 dark:focus:border-orange-500
-          placeholder-[#a09e98] dark:placeholder-[#5c5a54]"
+          placeholder-[#B0B0B8] dark:placeholder-[#55555F]"
         style={{
-          fontFamily: "'IBM Plex Sans', sans-serif",
+          fontFamily: "'Plus Jakarta Sans', sans-serif",
           transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
           boxShadow: focused ? '0 0 0 3px rgba(249,115,22,0.10)' : '0 0 0 0px transparent',
         }}
@@ -88,13 +88,13 @@ function Field({
 function Section({ title, children, delay = 0 }: { title: string; children: React.ReactNode; delay?: number }) {
   return (
     <div
-      className="rounded-lg border border-[#dedad4] dark:border-[#2a2a32] bg-white dark:bg-[#1a1a20] overflow-hidden"
+      className="rounded-lg border border-[#E8E6E1] dark:border-[#2C2C32] bg-white dark:bg-[#1C1C1F] overflow-hidden"
       style={{ animation: `sectionEnter 0.4s ${delay}s ease both`, opacity: 0 }}
     >
-      <div className="px-5 py-3 border-b border-[#dedad4] dark:border-[#2a2a32] bg-[#f5f3f0] dark:bg-[#1e1e24]">
+      <div className="px-5 py-3 border-b border-[#E8E6E1] dark:border-[#2C2C32] bg-[#F6F5F3] dark:bg-[#1C1C1F]">
         <p
-          style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-          className="text-[10px] tracking-[0.18em] uppercase text-[#7a7870] dark:text-[#7e7b75]"
+          style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+          className="text-[10px] tracking-[0.18em] uppercase text-[#6C6C74] dark:text-[#9090A0]"
         >
           {title}
         </p>
@@ -169,9 +169,11 @@ export default function SuperSettingsPage() {
   return (
     <div
       className="p-8 max-w-2xl"
-      style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
+      style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
     >
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+        
         @keyframes pageEnter {
           from { opacity: 0; transform: translateY(10px); }
           to   { opacity: 1; transform: translateY(0); }
@@ -220,15 +222,15 @@ export default function SuperSettingsPage() {
         style={{ animation: 'pageEnter 0.35s ease both' }}
       >
         <p
-          style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-          className="text-[10px] tracking-[0.18em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1"
+          style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+          className="text-[10px] tracking-[0.18em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-1"
         >
           Configuration
         </p>
-        <h1 className="text-2xl font-semibold text-[#1a1917] dark:text-[#f0eee8]">
+        <h1 className="text-2xl font-semibold text-[#1A1A1C] dark:text-[#EAEAEC]">
           Barangay Settings
         </h1>
-        <p className="text-[13px] text-[#7a7870] dark:text-[#7e7b75] mt-1">
+        <p className="text-[13px] text-[#6C6C74] dark:text-[#9090A0] mt-1">
           Update barangay information used across the system.
         </p>
       </div>
@@ -261,10 +263,10 @@ export default function SuperSettingsPage() {
               <img
                 src={form.logo_url}
                 alt="Logo preview"
-                className="logo-preview w-14 h-14 rounded object-contain bg-[#f5f3f0] dark:bg-[#1e1e24] border border-[#dedad4] dark:border-[#2a2a32] p-1"
+                className="logo-preview w-14 h-14 rounded object-contain bg-[#F6F5F3] dark:bg-[#1C1C1F] border border-[#E8E6E1] dark:border-[#2C2C32] p-1"
                 onError={e => (e.currentTarget.style.display = 'none')}
               />
-              <p className="text-[12px] text-[#7a7870] dark:text-[#7e7b75]">Logo preview</p>
+              <p className="text-[12px] text-[#6C6C74] dark:text-[#9090A0]">Logo preview</p>
             </div>
           )}
         </Section>
