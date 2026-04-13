@@ -2,6 +2,7 @@
 
 import { use, useState, useEffect } from 'react';
 import { motion, type Variants } from 'framer-motion';
+import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/Card';
 import Badge from '@/app/components/ui/Badge';
 import Button from '@/app/components/ui/Button';
@@ -15,7 +16,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 
 interface RequestDetail {
-  id: string; type: string; document_type: string; status: string;
+  id: string; document_type: string; status: string;
   created_at: string; processed_at: string | null; purpose: string;
   custom_purpose: string | null; additional_info: string | null;
   notes: string | null; file_url: string | null;
@@ -121,18 +122,16 @@ function EditModal({
   onClose: () => void;
   onSaved: (updated: RequestDetail) => void;
 }) {
-  const fields = getEditableFields(request.document_type ?? request.type ?? '');
+  const fields = getEditableFields(request.document_type ?? '');
   const [form, setForm] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
     for (const f of fields) init[f.key] = (request[f.key] as string) ?? '';
     return init;
   });
   const [saving, setSaving] = useState(false);
-  const [error, setError]   = useState('');
 
   const handleSave = async () => {
     setSaving(true);
-    setError('');
     try {
       const res = await fetch(`/api/requests?id=${request.id}`, {
         method: 'PATCH',
@@ -147,8 +146,9 @@ function EditModal({
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? 'Save failed');
       onSaved(json.data);
+      toast.success('Changes saved successfully.');
     } catch (err: any) {
-      setError(err.message);
+      toast.error(err.message ?? 'Something went wrong.');
     } finally {
       setSaving(false);
     }
@@ -216,9 +216,6 @@ function EditModal({
               )}
             </div>
           ))}
-          {error && (
-            <p className="text-[12px] text-red-600 dark:text-red-400">{error}</p>
-          )}
         </div>
 
         {/* Footer */}
@@ -277,7 +274,7 @@ function EditHistoryPanel({ requestId }: { requestId: string }) {
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {history.map((h, i) => (
+          {history.map((h) => (
             <div key={h.id} className="flex items-start gap-3 text-sm">
               <div className="w-1.5 h-1.5 rounded-full bg-orange-400 mt-2 flex-shrink-0" />
               <div className="flex-1 min-w-0">
@@ -310,12 +307,11 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   const { id }   = use(params);
   const router   = useRouter();
 
-  const [request,    setRequest]    = useState<RequestDetail | null>(null);
-  const [profile,    setProfile]    = useState<Profile | null>(null);
-  const [loading,    setLoading]    = useState(true);
-  const [notFound,   setNotFound]   = useState(false);
-  const [showEdit,   setShowEdit]   = useState(false);
-  const [savedMsg,   setSavedMsg]   = useState('');
+  const [request,  setRequest]  = useState<RequestDetail | null>(null);
+  const [profile,  setProfile]  = useState<Profile | null>(null);
+  const [loading,  setLoading]  = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
 
   useEffect(() => {
     if (localStorage.getItem('theme') === 'dark') {
@@ -405,17 +401,17 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   }
   if (request.document_type === 'certification-of-death') {
     extraDetails.push(
-      { label: 'Deceased Name', value: request.deceased_name },
-      { label: 'Age at Death',  value: request.deceased_age },
-      { label: 'Date of Death', value: request.date_of_death },
+      { label: 'Deceased Name',  value: request.deceased_name },
+      { label: 'Age at Death',   value: request.deceased_age },
+      { label: 'Date of Death',  value: request.date_of_death },
       { label: 'Place of Death', value: request.place_of_death },
-      { label: 'Relationship',  value: request.relationship_to_deceased },
+      { label: 'Relationship',   value: request.relationship_to_deceased },
     );
   }
   if (['job-seeker', 'oath-of-undertaking', 'barangay-residency'].includes(request.document_type ?? '')) {
     extraDetails.push(
-      { label: 'BCN Number',       value: request.bcn_no },
-      { label: 'Purok / Zone',     value: request.purok },
+      { label: 'BCN Number',         value: request.bcn_no },
+      { label: 'Purok / Zone',       value: request.purok },
       { label: 'Years of Residency', value: request.years_of_residency },
     );
   }
@@ -426,7 +422,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                                     <Clock       className="w-6 h-6 text-amber-500" />;
   const statusMsg =
     request.status === 'approved' ? 'Your request has been approved.' :
-    request.status === 'rejected' ? 'Your request was rejected.' :
+    request.status === 'rejected' ? 'Your request was rejected.'      :
                                     'Waiting for admin review.';
 
   const canEdit = request.status === 'pending' || request.status === 'secretary_approved';
@@ -447,7 +443,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
               <h1 className="text-2xl font-bold text-[#1c2024] dark:text-white">
-                {request.type ?? request.document_type}
+                {request.document_type}
               </h1>
               <p className="text-[#60646c] dark:text-[#b0b4ba] font-mono text-sm">
                 ID: {request.id.toUpperCase()}
@@ -472,18 +468,6 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
           </div>
         </motion.div>
 
-        {/* Saved message */}
-        {savedMsg && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="px-4 py-3 rounded border border-green-300 dark:border-green-700
-              bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400 text-[13px]"
-          >
-            {savedMsg}
-          </motion.div>
-        )}
-
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
           {/* Main column */}
@@ -504,7 +488,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                     animate="animate"
                     className="grid grid-cols-2 gap-4"
                   >
-                    <motion.div variants={staggerItem}><DetailRow label="Document Type"  value={request.type ?? request.document_type} /></motion.div>
+                    <motion.div variants={staggerItem}><DetailRow label="Document Type"  value={request.document_type} /></motion.div>
                     <motion.div variants={staggerItem}><DetailRow label="Purpose"        value={displayPurpose ?? '—'} /></motion.div>
                     <motion.div variants={staggerItem}><DetailRow label="Date Requested" value={new Date(request.created_at).toLocaleDateString()} /></motion.div>
                     <motion.div variants={staggerItem}><DetailRow label="Date Processed" value={request.processed_at ? new Date(request.processed_at).toLocaleDateString() : 'Pending'} /></motion.div>
@@ -650,8 +634,6 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
           onSaved={(updated) => {
             setRequest(updated);
             setShowEdit(false);
-            setSavedMsg('Changes saved successfully.');
-            setTimeout(() => setSavedMsg(''), 4000);
           }}
         />
       )}
