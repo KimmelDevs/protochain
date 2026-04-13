@@ -1,4 +1,5 @@
 'use client';
+import { toast } from 'sonner';
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/app/lib/supabase';
@@ -20,27 +21,7 @@ const EMPTY: Settings = {
   email: '', phone: '', address: '', logo_url: '',
 };
 
-function Toast({ msg, type, onDone }: { msg: string; type: 'success' | 'error'; onDone: () => void }) {
-  useEffect(() => {
-    const t = setTimeout(onDone, 3500);
-    return () => clearTimeout(t);
-  }, [onDone]);
-  return (
-    <div
-      className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-lg border text-[13px] max-w-xs shadow-lg
-        ${type === 'success'
-          ? 'bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400'
-          : 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400'
-        }`}
-      style={{
-        fontFamily: "'Plus Jakarta Sans', sans-serif",
-        animation: 'toastSlideUp 0.3s cubic-bezier(0.34,1.56,0.64,1) both',
-      }}
-    >
-      {msg}
-    </div>
-  );
-}
+
 
 function Field({
   label, value, onChange, type = 'text', placeholder = '',
@@ -111,7 +92,6 @@ export default function SuperSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
   const [saved,   setSaved]   = useState(false);
-  const [toast,   setToast]   = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -149,10 +129,10 @@ export default function SuperSettingsPage() {
         .eq('id', 1);
       if (error) throw error;
       setSaved(true);
-      setToast({ msg: 'Settings saved successfully.', type: 'success' });
+      toast.success('Settings saved successfully.');
       setTimeout(() => setSaved(false), 2000);
     } catch (e: any) {
-      setToast({ msg: e.message || 'Failed to save settings.', type: 'error' });
+      toast.error(e.message || 'Failed to save settings.');
     } finally {
       setSaving(false);
     }
@@ -306,8 +286,6 @@ export default function SuperSettingsPage() {
           </button>
         </div>
       </div>
-
-      {toast && <Toast msg={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
     </div>
   );
 }

@@ -1,4 +1,5 @@
 'use client';
+import { toast } from 'sonner';
 
 import { useEffect, useState, useCallback } from 'react';
 import { History, RefreshCw, Search, X, User, ChevronDown, ChevronUp } from 'lucide-react';
@@ -99,24 +100,7 @@ function groupRecords(records: ChangeRecord[]): GroupedRecord[] {
   return groups;
 }
 
-function Toast({ msg, type, onDone }: { msg: string; type: 'success' | 'error'; onDone: () => void }) {
-  useEffect(() => {
-    const t = setTimeout(onDone, 3500);
-    return () => clearTimeout(t);
-  }, [onDone]);
-  return (
-    <div
-      className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-lg border text-[13px] max-w-xs shadow-lg
-        ${type === 'success'
-          ? 'bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400'
-          : 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400'
-        }`}
-      style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", animation: 'toastIn 0.3s ease both' }}
-    >
-      {msg}
-    </div>
-  );
-}
+
 
 function GroupCard({ group, index, mounted }: { group: GroupedRecord; index: number; mounted: boolean }) {
   const [expanded, setExpanded] = useState(false);
@@ -246,7 +230,6 @@ export default function RecentChangesPage() {
   const [search,    setSearch]    = useState('');
   const [fieldFilter, setFieldFilter] = useState('all');
   const [mounted,   setMounted]   = useState(false);
-  const [toast,     setToast]     = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -257,7 +240,7 @@ export default function RecentChangesPage() {
       if (!res.ok) throw new Error(json.error);
       setRecords(json.data ?? []);
     } catch (err: any) {
-      setToast({ msg: err.message ?? 'Failed to load history', type: 'error' });
+      toast.error(err.message ?? 'Failed to load history');
     } finally {
       setLoading(false);
       setTimeout(() => setSpinning(false), 600);
@@ -462,11 +445,6 @@ export default function RecentChangesPage() {
             />
           ))}
         </div>
-      )}
-
-      {/* ── Toast ────────────────────────────────────── */}
-      {toast && (
-        <Toast msg={toast.msg} type={toast.type} onDone={() => setToast(null)} />
       )}
     </div>
   );

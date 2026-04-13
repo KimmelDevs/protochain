@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Toaster } from 'sonner';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -346,6 +347,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
       <main className="flex-1 overflow-y-auto min-w-0">
         {children}
       </main>
+      <Toaster richColors position="top-right" />
     </div>
   );
 }

@@ -78,10 +78,6 @@ function FloatInput({ label, value, onChange, type = 'text', required = false }:
   );
 }
 
-// Dedicated date picker input that:
-// 1. Hides the browser's dd/mm/yyyy mask when unfocused and empty
-// 2. Opens the calendar picker on click/focus
-// 3. Keeps the floating label behaviour
 function FloatDateInput({ label, value, onChange, required = false }: {
   label: string; value: string; onChange: (v: string) => void; required?: boolean;
 }) {
@@ -93,7 +89,6 @@ function FloatDateInput({ label, value, onChange, required = false }: {
 
   const handleFocus = () => {
     setFocused(true);
-    // Delay showPicker slightly so the type switch from 'text' → 'date' is committed first
     setTimeout(() => {
       try { inputRef.current?.showPicker(); } catch { /* some browsers block programmatic picker */ }
     }, 50);
@@ -103,8 +98,7 @@ function FloatDateInput({ label, value, onChange, required = false }: {
     <div className="relative">
       <input
         ref={inputRef}
-        // Use 'text' type when empty + unfocused so the browser hides the dd/mm/yyyy mask
-        type={focused || hasValue ? 'date' : 'text'}
+        type={isFloated ? 'date' : 'text'}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onFocus={handleFocus}
@@ -126,9 +120,11 @@ function FloatDateInput({ label, value, onChange, required = false }: {
   );
 }
 
-export default function RequestDocumentFormPage({ params }: { params: Promise<{ type: string }> }) {
-  const { type } = use(params);
+export default function RequestDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const router = useRouter();
+
+  const [type, setType] = useState('');
   const config = documentConfig[type];
 
   const [profile, setProfile] = useState<Record<string, string> | null>(null);
@@ -153,6 +149,7 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -160,18 +157,49 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { router.push('/login'); return; }
 
-        const res = await fetch(`/api/profile?id=${user.id}`);
-        if (!res.ok) throw new Error('Failed to load profile');
-        const json = await res.json();
-        setProfile({ ...json.data, id: user.id });
+        // Load profile
+        const profileRes = await fetch(`/api/profile?id=${user.id}`);
+        if (!profileRes.ok) throw new Error('Failed to load profile');
+        const profileJson = await profileRes.json();
+        setProfile({ ...profileJson.data, id: user.id });
+
+        // Load the request by ID
+        const { data: req, error: reqError } = await supabase
+          .from('requests')
+          .select('*')
+          .eq('id', id)
+          .eq('user_id', user.id)
+          .single();
+
+        if (reqError || !req) { setNotFound(true); return; }
+
+        // Set type from the request's document_type
+        setType(req.document_type);
+
+        // Pre-fill form fields from existing request data
+        if (req.purpose) setPurpose(req.purpose);
+        if (req.custom_purpose) setCustomPurpose(req.custom_purpose);
+        if (req.additional_info) setAdditionalInfo(req.additional_info);
+        if (req.purok) setPurok(req.purok);
+        if (req.ctc_no) setCtcNo(req.ctc_no);
+        if (req.ctc_date_issued) setCtcDateIssued(req.ctc_date_issued);
+        if (req.ctc_place_issued) setCtcPlaceIssued(req.ctc_place_issued);
+        if (req.business_name) setBusinessName(req.business_name);
+        if (req.years_of_residency) setYearsOfResidency(req.years_of_residency);
+        if (req.bcn_no) setBcnNo(req.bcn_no);
+        if (req.deceased_name) setDeceasedName(req.deceased_name);
+        if (req.deceased_age) setDeceasedAge(req.deceased_age);
+        if (req.date_of_death) setDateOfDeath(req.date_of_death);
+        if (req.place_of_death) setPlaceOfDeath(req.place_of_death);
+        if (req.relationship_to_deceased) setRelationship(req.relationship_to_deceased);
       } catch {
-        toast.error('Failed to load your profile. Please refresh.');
+        toast.error('Failed to load request. Please refresh.');
       } finally {
         setLoading(false);
       }
     };
     load();
-  }, [router]);
+  }, [id, router]);
 
   const validate = (): boolean => {
     if (!purpose) { toast.error('Please select a purpose.'); return false; }
@@ -220,13 +248,19 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
     }
   };
 
-  if (!config) return (
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#171717]">
+      <Loader2 className="w-8 h-8 text-[#0d74ce] animate-spin" />
+    </div>
+  );
+
+  if (notFound || !config) return (
     <div className="min-h-screen p-4 lg:p-8 flex items-center justify-center bg-gray-50 dark:bg-[#171717]">
       <Card className="bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-white/10">
         <CardContent className="p-8 text-center">
-          <p className="text-lg font-semibold text-black dark:text-white mb-2">Not Found</p>
-          <p className="text-[#60646c] dark:text-[#b0b4ba] mb-6">This document type does not exist.</p>
-          <Link href="/request-document"><Button>Back to Document Types</Button></Link>
+          <p className="text-lg font-semibold text-black dark:text-white mb-2">Request Not Found</p>
+          <p className="text-[#60646c] dark:text-[#b0b4ba] mb-6">This request does not exist or you don't have access to it.</p>
+          <Link href="/my-requests"><Button>Back to My Requests</Button></Link>
         </CardContent>
       </Card>
     </div>
@@ -253,16 +287,10 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
     </div>
   );
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#171717]">
-      <Loader2 className="w-8 h-8 text-[#0d74ce] animate-spin" />
-    </div>
-  );
-
   return (
     <div className="min-h-screen p-4 lg:p-8 bg-gray-50 dark:bg-[#171717]">
       <div className="max-w-2xl mx-auto">
-        <Link href="/request-document">
+        <Link href="/my-requests">
           <Button variant="ghost" className="mb-6 gap-2 text-black dark:text-white"><ArrowLeft className="w-4 h-4" />Back</Button>
         </Link>
 
@@ -295,7 +323,6 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
               <CardContent className="space-y-4">
                 <FloatInput label="Purok / Zone" value={purok} onChange={setPurok} required />
                 <FloatInput label="CTC Number" value={ctcNo} onChange={setCtcNo} required />
-                {/* FloatDateInput: calendar picker, hides dd/mm/yyyy mask when empty + unfocused */}
                 <FloatDateInput label="CTC Date Issued" value={ctcDateIssued} onChange={setCtcDateIssued} required />
                 <FloatInput label="CTC Place Issued" value={ctcPlaceIssued} onChange={setCtcPlaceIssued} required />
               </CardContent>
@@ -321,7 +348,6 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
               <CardContent className="space-y-4">
                 <FloatInput label="Full Name of Deceased" value={deceasedName} onChange={setDeceasedName} required />
                 <FloatInput label="Age at Time of Death" value={deceasedAge} onChange={setDeceasedAge} required />
-                {/* FloatDateInput: calendar picker, hides dd/mm/yyyy mask when empty + unfocused */}
                 <FloatDateInput label="Date of Death" value={dateOfDeath} onChange={setDateOfDeath} required />
                 <FloatInput label="Place of Death" value={placeOfDeath} onChange={setPlaceOfDeath} required />
                 <FloatInput label="Your Relationship to Deceased" value={relationship} onChange={setRelationship} required />
@@ -366,7 +392,7 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
             <CardHeader><CardTitle className="text-black dark:text-white">Request Details</CardTitle></CardHeader>
             <CardContent className="space-y-5">
               <Select label="Purpose *" name="purpose" value={purpose}
-                onChange={(e) => { setPurpose(e.target.value); }}
+                onChange={(e) => setPurpose(e.target.value)}
                 options={[{ value: '', label: 'Select a purpose...' }, ...config.purposes]} required
               />
               {purpose === 'others' && (
@@ -378,7 +404,7 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
                 className="bg-white dark:bg-[#1a1a1a] text-black dark:text-white border border-gray-300 dark:border-white/10"
               />
               <div className="flex gap-3 pt-2">
-                <Link href="/request-document" className="flex-1">
+                <Link href="/my-requests" className="flex-1">
                   <Button type="button" variant="outline" className="w-full">Cancel</Button>
                 </Link>
                 <Button

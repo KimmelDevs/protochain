@@ -1,4 +1,5 @@
 'use client';
+import { toast } from 'sonner';
 
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/app/lib/supabase';
@@ -51,27 +52,7 @@ interface EditState {
   address: string;
 }
 
-function Toast({ msg, type, onDone }: { msg: string; type: 'success' | 'error'; onDone: () => void }) {
-  useEffect(() => {
-    const t = setTimeout(onDone, 3500);
-    return () => clearTimeout(t);
-  }, [onDone]);
-  return (
-    <div
-      className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-lg border text-[13px] max-w-xs shadow-lg
-        ${type === 'success'
-          ? 'bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400'
-          : 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400'
-        }`}
-      style={{
-        fontFamily: "'Plus Jakarta Sans', sans-serif",
-        animation: 'toastIn 0.3s cubic-bezier(0.34,1.56,0.64,1) both',
-      }}
-    >
-      {msg}
-    </div>
-  );
-}
+
 
 const inputCls = "w-full bg-white dark:bg-[#1C1C1F] border border-[#E8E6E1] dark:border-[#2C2C32] rounded px-3 py-1.5 text-[13px] text-[#1A1A1C] dark:text-[#EAEAEC] focus:outline-none focus:border-orange-400 dark:focus:border-orange-500 placeholder-[#B0B0B8]";
 const selectCls = "bg-white dark:bg-[#1C1C1F] border border-[#E8E6E1] dark:border-[#2C2C32] rounded px-2 py-1.5 text-[13px] text-[#1A1A1C] dark:text-[#EAEAEC] focus:outline-none focus:border-orange-400 dark:focus:border-orange-500";
@@ -85,7 +66,6 @@ export default function UsersPage() {
   const [editForm,      setEditForm]      = useState<EditState | null>(null);
   const [deleteTarget,  setDeleteTarget]  = useState<Profile | null>(null);
   const [saving,        setSaving]        = useState(false);
-  const [toast,         setToast]         = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const [currentUserId, setCurrentUserId] = useState('');
   const [spinning,      setSpinning]      = useState(false);
   const [mounted,       setMounted]       = useState(false);
@@ -168,10 +148,10 @@ export default function UsersPage() {
       }
 
       setUsers(prev => prev.map(u => u.id === editId ? { ...u, ...editForm } : u));
-      setToast({ msg: 'User updated successfully.', type: 'success' });
+      toast.success('User updated successfully.');
       setEditId(null);
     } catch (e: any) {
-      setToast({ msg: e.message || 'Failed to update.', type: 'error' });
+      toast.error(e.message || 'Failed to update.');
     } finally {
       setSaving(false);
     }
@@ -188,10 +168,10 @@ export default function UsersPage() {
         target_user: deleteTarget.id, notes: `Deleted profile: ${deleteTarget.email}`,
       });
       setUsers(prev => prev.filter(u => u.id !== deleteTarget.id));
-      setToast({ msg: `${deleteTarget.email} removed.`, type: 'success' });
+      toast.success(`${deleteTarget.email} removed.`);
       setDeleteTarget(null);
     } catch (e: any) {
-      setToast({ msg: e.message || 'Failed to delete.', type: 'error' });
+      toast.error(e.message || 'Failed to delete.');
     } finally {
       setSaving(false);
     }
@@ -589,8 +569,6 @@ export default function UsersPage() {
           </div>
         </div>
       )}
-
-      {toast && <Toast msg={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
     </div>
   );
 }
