@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/Ca
 import Badge from '@/app/components/ui/Badge';
 import Button from '@/app/components/ui/Button';
 import {
-  ArrowLeft, Download, FileText, CheckCircle, Loader2, Calendar, User, MapPin,
+  ArrowLeft, Download, FileText, CheckCircle, Loader2, Calendar, User, MapPin, ShieldCheck,
 } from 'lucide-react';
 import Link from 'next/link';
 import { supabase } from '@/app/lib/supabase';
@@ -36,6 +36,8 @@ interface RequestDoc {
   years_of_residency: string | null;
   bcn_no: string | null;
   user_id: string;
+  file_hash: string | null;
+  chain_tx_hash: string | null;
 }
 
 interface Profile {
@@ -71,6 +73,43 @@ const slideIn = (dir: 'left' | 'right' = 'left', delay = 0) => ({
   animate:    { opacity: 1, x: 0 },
   transition: { duration: 0.4, delay, ease: EASE },
 });
+
+const HashDisplay = ({ hash, txHash }: { hash: string; txHash?: string | null }) => {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="border-l-2 border-emerald-500 pl-3 py-1 space-y-2">
+      <div>
+        <div className="flex items-center gap-2 mb-1">
+          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+          <span className="text-[10px] font-700 tracking-[0.08em] uppercase text-emerald-600 dark:text-emerald-400">
+            SHA-256 Hash
+          </span>
+        </div>
+        <p className="mono text-[10px] text-[#6C6C74] dark:text-[#9090A0] break-all leading-relaxed mb-1">
+          {hash}
+        </p>
+        <button
+          onClick={() => { navigator.clipboard.writeText(hash); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+          className="mono text-[10px] text-orange-600 dark:text-orange-400 hover:underline"
+        >
+          {copied ? '✓ Copied' : 'Copy hash'}
+        </button>
+      </div>
+      {txHash && (
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />
+            <span className="text-[10px] font-700 tracking-[0.08em] uppercase text-blue-500">On-Chain (Sepolia)</span>
+          </div>
+          <a href={`https://sepolia.etherscan.io/tx/${txHash}`} target="_blank" rel="noopener noreferrer"
+            className="mono text-[10px] text-blue-500 hover:underline break-all">
+            {txHash.slice(0, 20)}…{txHash.slice(-10)} ↗
+          </a>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function DocumentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id }   = use(params);
@@ -448,6 +487,23 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                 </CardContent>
               </Card>
             </motion.div>
+            {/* Blockchain verification card */}
+            {doc.file_hash && (
+              <motion.div {...slideIn('right', 0.35)}>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <ShieldCheck className="w-5 h-5 text-emerald-500" />
+                      Verification
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <HashDisplay hash={doc.file_hash} txHash={doc.chain_tx_hash} />
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
           </motion.div>
         </div>
       </div>
