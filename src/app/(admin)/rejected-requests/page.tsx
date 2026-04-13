@@ -44,7 +44,7 @@ const isThisMonth = (d: string) => {
 
 /* ─────────────────────────── sub-components ────────────────────────────── */
 const SectionLabel = ({ label }: { label: string }) => (
-  <p className="mono text-[11px] tracking-[0.2em] uppercase text-[#5c5a54] dark:text-[#9e9b94] border-b border-[#c8c6c0] dark:border-[#2a2a32] pb-2 mb-4">
+  <p className="text-[11px] font-semibold tracking-[0.16em] uppercase text-[#6C6C74] dark:text-[#9090A0] border-b border-[#E8E6E1] dark:border-[#2C2C32] pb-2 mb-4">
     {label}
   </p>
 );
@@ -116,33 +116,33 @@ export default function RejectedRequestsPage() {
 
   /* ── loading ─────────────────────────────────────────────────────────── */
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#fafaf9] dark:bg-[#16161a]">
-      <span className="mono text-[12px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] uppercase animate-pulse">Loading…</span>
+    <div className="min-h-screen flex items-center justify-center bg-[#F6F5F3] dark:bg-[#111113]">
+      <span className="mono text-[12px] tracking-[0.25em] text-[#6C6C74] dark:text-[#9090A0] uppercase animate-pulse">Loading…</span>
     </div>
   );
 
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
-        .pg   { font-family: 'IBM Plex Sans', sans-serif; }
-        .mono { font-family: 'IBM Plex Mono', monospace; }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+        .pjs { font-family: 'Plus Jakarta Sans', sans-serif; }
+        
       `}</style>
 
-      <div className="pg min-h-screen bg-[#fafaf9] dark:bg-[#16161a] transition-colors duration-200">
+      <div className="pjs min-h-screen bg-[#F6F5F3] dark:bg-[#111113] transition-colors duration-200">
         <div className="max-w-6xl mx-auto px-6 lg:px-10 pt-6 pb-14">
 
           {/* MASTHEAD */}
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            className="border-b-2 border-[#1a1917] dark:border-[#f0eee8] pb-5 mb-10">
+            className="border-b-2 border-[#1A1A1C] dark:border-[#EAEAEC] pb-5 mb-10">
             <div className="flex items-end justify-between flex-wrap gap-4">
               <div>
-                <p className="mono text-[11px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] uppercase mb-2">Admin Panel</p>
-                <h1 className="mono text-2xl md:text-3xl font-bold text-[#1a1917] dark:text-[#f0eee8] tracking-tight leading-none">
+                <p className="text-[11px] tracking-[0.2em] text-[#6C6C74] dark:text-[#9090A0] uppercase mb-2">Admin Panel</p>
+                <h1 className="mono text-[26px] font-bold leading-tight text-[#1A1A1C] dark:text-[#EAEAEC] tracking-tight leading-none">
                   REJECTED REQUESTS
                 </h1>
               </div>
-              <p className="mono text-[11px] text-[#7a7870] dark:text-[#7e7b75]">
+              <p className="mono text-[11px] text-[#6C6C74] dark:text-[#9090A0]">
                 {requests.length} total rejected
               </p>
             </div>
@@ -152,13 +152,13 @@ export default function RejectedRequestsPage() {
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}
             className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-6 mb-12">
             {[
-              { label: 'Total Rejected', value: requests.length,                                      cls: 'text-[#1a1917] dark:text-[#f0eee8]',  border: 'border-[#1a1917] dark:border-[#f0eee8]' },
+              { label: 'Total Rejected', value: requests.length,                                      cls: 'text-[#1A1A1C] dark:text-[#EAEAEC]',  border: 'border-[#1A1A1C] dark:border-[#EAEAEC]' },
               { label: 'This Week',      value: requests.filter(r => isThisWeek(r.created_at)).length,  cls: 'text-red-600 dark:text-red-400',       border: 'border-red-500' },
               { label: 'This Month',     value: requests.filter(r => isThisMonth(r.created_at)).length, cls: 'text-orange-600 dark:text-orange-400', border: 'border-orange-500' },
-              { label: 'Document Types', value: uniqueTypes.length,                                   cls: 'text-[#5c5a54] dark:text-[#9e9b94]',  border: 'border-[#c8c6c0] dark:border-[#2a2a32]' },
+              { label: 'Document Types', value: uniqueTypes.length,                                   cls: 'text-[#6C6C74] dark:text-[#9090A0]',  border: 'border-[#E8E6E1] dark:border-[#2C2C32]' },
             ].map(s => (
               <div key={s.label} className={`border-t-2 ${s.border} pt-3 pb-4`}>
-                <p className="mono text-[11px] tracking-[0.15em] uppercase text-[#5c5a54] dark:text-[#9e9b94] mb-2">{s.label}</p>
+                <p className="text-[11px] font-semibold tracking-[0.12em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-2">{s.label}</p>
                 <p className={`mono text-4xl font-bold tabular-nums leading-none ${s.cls}`}>{s.value}</p>
               </div>
             ))}
@@ -171,16 +171,16 @@ export default function RejectedRequestsPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7a7870] dark:text-[#7e7b75]" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6C6C74] dark:text-[#9090A0]" />
                 <input
                   value={search} onChange={e => setSearch(e.target.value)}
                   placeholder="Search by name, ID, or document type…"
-                  className="w-full pl-9 pr-3 py-2.5 text-[12px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] placeholder-[#7a7870] dark:placeholder-[#7e7b75] focus:outline-none focus:border-orange-500 dark:focus:border-orange-400 transition-colors mono"
+                  className="w-full pl-9 pr-3 py-2.5 text-[12px] bg-white dark:bg-[#1C1C1F] border border-[#E8E6E1] dark:border-[#2C2C32] text-[#1A1A1C] dark:text-[#EAEAEC] placeholder-[#B0B0B8] dark:placeholder-[#55555F] focus:outline-none focus:border-orange-500 dark:focus:border-orange-400 transition-colors mono"
                 />
               </div>
 
               <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
-                className="w-full px-3 py-2.5 text-[12px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] focus:outline-none focus:border-orange-500 dark:focus:border-orange-400 transition-colors mono">
+                className="w-full px-3 py-2.5 text-[12px] bg-white dark:bg-[#1C1C1F] border border-[#E8E6E1] dark:border-[#2C2C32] text-[#1A1A1C] dark:text-[#EAEAEC] focus:outline-none focus:border-orange-500 dark:focus:border-orange-400 transition-colors mono">
                 <option value="all">All Document Types</option>
                 {uniqueTypes.map(t => (
                   <option key={t} value={t}>{fmtDocType(t)}</option>
@@ -188,7 +188,7 @@ export default function RejectedRequestsPage() {
               </select>
 
               <select value={dateFilter} onChange={e => setDateFilter(e.target.value as any)}
-                className="w-full px-3 py-2.5 text-[12px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] focus:outline-none focus:border-orange-500 dark:focus:border-orange-400 transition-colors mono">
+                className="w-full px-3 py-2.5 text-[12px] bg-white dark:bg-[#1C1C1F] border border-[#E8E6E1] dark:border-[#2C2C32] text-[#1A1A1C] dark:text-[#EAEAEC] focus:outline-none focus:border-orange-500 dark:focus:border-orange-400 transition-colors mono">
                 <option value="all">All Time</option>
                 <option value="today">Today</option>
                 <option value="week">This Week</option>
@@ -202,19 +202,19 @@ export default function RejectedRequestsPage() {
             <SectionLabel label={`Requests (${filtered.length})`} />
 
             {filtered.length === 0 ? (
-              <div className="border border-[#c8c6c0] dark:border-[#2a2a32] bg-white dark:bg-[#1e1e24] py-16 text-center">
+              <div className="border border-[#E8E6E1] dark:border-[#2C2C32] bg-white dark:bg-[#1C1C1F] py-16 text-center">
                 <FileText className="w-8 h-8 text-[#c8c6c0] dark:text-[#2a2a32] mx-auto mb-3" />
-                <p className="text-[13px] text-[#7a7870] dark:text-[#7e7b75]">
+                <p className="text-[13px] text-[#6C6C74] dark:text-[#9090A0]">
                   {requests.length === 0 ? 'No rejected requests yet.' : 'No requests match your filters.'}
                 </p>
               </div>
             ) : (
-              <div className="border border-[#c8c6c0] dark:border-[#2a2a32] bg-white dark:bg-[#1e1e24] overflow-x-auto">
+              <div className="border border-[#E8E6E1] dark:border-[#2C2C32] bg-white dark:bg-[#1C1C1F] overflow-x-auto">
 
                 {/* Header */}
-                <div className="grid grid-cols-[0.6fr_1.4fr_1.2fr_1fr_1.6fr_0.5fr] gap-4 px-5 py-3 border-b border-[#e8e5e0] dark:border-[#222228] bg-[#fafaf9] dark:bg-[#16161a]">
+                <div className="grid grid-cols-[0.6fr_1.4fr_1.2fr_1fr_1.6fr_0.5fr] gap-4 px-5 py-3 border-b border-[#E8E6E1] dark:border-[#2C2C32] bg-[#F6F5F3] dark:bg-[#111113]">
                   {['ID', 'Resident', 'Document Type', 'Date', 'Reason', ''].map(h => (
-                    <p key={h} className="mono text-[10px] font-bold tracking-[0.12em] uppercase text-[#7a7870] dark:text-[#7e7b75]">{h}</p>
+                    <p key={h} className="text-[10px] font-700 tracking-[0.1em] uppercase text-[#6C6C74] dark:text-[#9090A0]">{h}</p>
                   ))}
                 </div>
 
@@ -223,27 +223,27 @@ export default function RejectedRequestsPage() {
                   const name = req.profiles ? `${req.profiles.firstName} ${req.profiles.lastName}` : 'Unknown';
                   return (
                     <div key={req.id}
-                      className={`grid grid-cols-[0.6fr_1.4fr_1.2fr_1fr_1.6fr_0.5fr] gap-4 px-5 py-4 border-b border-[#e8e5e0] dark:border-[#222228] last:border-0 transition-colors hover:bg-[#f5f4f0] dark:hover:bg-[#16161a] ${i % 2 !== 0 ? 'bg-[#faf9f7] dark:bg-[#1a1a20]' : ''}`}>
+                      className={`grid grid-cols-[0.6fr_1.4fr_1.2fr_1fr_1.6fr_0.5fr] gap-4 px-5 py-4 border-b border-[#E8E6E1] dark:border-[#2C2C32] last:border-0 transition-colors hover:bg-[#F6F5F3] dark:hover:bg-[#16161a] ${i % 2 !== 0 ? 'bg-[#F6F5F3] dark:bg-[#1C1C1F]' : ''}`}>
 
                       {/* ID */}
                       <div className="flex items-center">
-                        <p className="mono text-[11px] text-[#5c5a54] dark:text-[#9e9b94]">
+                        <p className="mono text-[11px] text-[#6C6C74] dark:text-[#9090A0]">
                           {req.id.slice(0, 8).toUpperCase()}
                         </p>
                       </div>
 
                       {/* Resident */}
                       <div className="flex items-start gap-2">
-                        <User className="w-3.5 h-3.5 text-[#7a7870] dark:text-[#7e7b75] mt-0.5 flex-shrink-0" />
+                        <User className="w-3.5 h-3.5 text-[#6C6C74] dark:text-[#9090A0] mt-0.5 flex-shrink-0" />
                         <div className="min-w-0">
-                          <p className="text-[13px] font-medium text-[#1a1917] dark:text-[#f0eee8] truncate">{name}</p>
-                          <p className="mono text-[11px] text-[#7a7870] dark:text-[#7e7b75] truncate">{req.profiles?.email ?? ''}</p>
+                          <p className="text-[13px] font-medium text-[#1A1A1C] dark:text-[#EAEAEC] truncate">{name}</p>
+                          <p className="mono text-[11px] text-[#6C6C74] dark:text-[#9090A0] truncate">{req.profiles?.email ?? ''}</p>
                         </div>
                       </div>
 
                       {/* Document type */}
                       <div className="flex items-center">
-                        <p className="text-[12px] text-[#3d3b36] dark:text-[#c9c6be]">
+                        <p className="text-[12px] text-[#3A3A3E] dark:text-[#BABABC]">
                           {fmtDocType(req.type ?? req.document_type)}
                         </p>
                       </div>
@@ -251,10 +251,10 @@ export default function RejectedRequestsPage() {
                       {/* Date */}
                       <div className="flex items-center">
                         <div>
-                          <p className="mono text-[11px] text-[#1a1917] dark:text-[#f0eee8]">
+                          <p className="mono text-[11px] text-[#1A1A1C] dark:text-[#EAEAEC]">
                             {new Date(req.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
                           </p>
-                          <p className="mono text-[10px] text-[#7a7870] dark:text-[#7e7b75] mt-0.5">
+                          <p className="mono text-[10px] text-[#6C6C74] dark:text-[#9090A0] mt-0.5">
                             {new Date(req.created_at).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' })}
                           </p>
                         </div>
@@ -263,19 +263,19 @@ export default function RejectedRequestsPage() {
                       {/* Reason — now decrypted via API */}
                       <div className="flex items-center">
                         {req.notes ? (
-                          <p className="text-[12px] text-[#5c5a54] dark:text-[#9e9b94] line-clamp-2 leading-snug border-l-2 border-red-300 dark:border-red-800 pl-2">
+                          <p className="text-[12px] text-[#6C6C74] dark:text-[#9090A0] line-clamp-2 leading-snug border-l-2 border-red-300 dark:border-red-800 pl-2">
                             {req.notes}
                           </p>
                         ) : (
-                          <p className="text-[12px] text-[#7a7870] dark:text-[#7e7b75] italic">No reason provided</p>
+                          <p className="text-[12px] text-[#6C6C74] dark:text-[#9090A0] italic">No reason provided</p>
                         )}
                       </div>
 
                       {/* Action */}
                       <div className="flex items-center justify-end">
                         <Link href={`/rejected-requests/${req.id}`}
-                          className="group/btn flex items-center justify-center w-7 h-7 border border-[#c8c6c0] dark:border-[#2a2a32] hover:bg-orange-600 hover:border-orange-600 transition-colors duration-150">
-                          <Eye className="w-3.5 h-3.5 text-[#5c5a54] dark:text-[#9e9b94] group-hover/btn:text-white transition-colors" />
+                          className="group/btn flex items-center justify-center w-7 h-7 border border-[#E8E6E1] dark:border-[#2C2C32] hover:bg-orange-600 hover:border-orange-600 transition-colors duration-150">
+                          <Eye className="w-3.5 h-3.5 text-[#6C6C74] dark:text-[#9090A0] group-hover/btn:text-white transition-colors" />
                         </Link>
                       </div>
                     </div>

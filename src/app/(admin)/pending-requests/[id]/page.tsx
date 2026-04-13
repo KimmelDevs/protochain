@@ -25,20 +25,20 @@ const fmtDocType = (s: string) =>
 
 /* ─── sub-components ──────────────────────────────────────────────────── */
 const SectionLabel = ({ label }: { label: string }) => (
-  <p className="mono text-[11px] tracking-[0.2em] uppercase text-[#5c5a54] dark:text-[#9e9b94] border-b border-[#c8c6c0] dark:border-[#2a2a32] pb-2 mb-4">{label}</p>
+  <p className="mono text-[11px] tracking-[0.2em] uppercase text-[#6C6C74] dark:text-[#9090A0] border-b border-[#E8E6E1] dark:border-[#2C2C32] pb-2 mb-4">{label}</p>
 );
 const DetailRow = ({ label, value }: { label: string; value?: string | null }) => (
   <div>
-    <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">{label}</p>
-    <p className="text-[13px] font-medium text-[#1a1917] dark:text-[#f0eee8]">{value ?? '—'}</p>
+    <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-1">{label}</p>
+    <p className="text-[13px] font-medium text-[#1A1A1C] dark:text-[#EAEAEC]">{value ?? '—'}</p>
   </div>
 );
 const IconDetail = ({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value?: string }) => (
-  <div className="flex items-start gap-3 py-3 border-b border-[#e8e5e0] dark:border-[#222228] last:border-0">
-    <Icon className="w-4 h-4 text-[#7a7870] dark:text-[#7e7b75] mt-0.5 flex-shrink-0" />
+  <div className="flex items-start gap-3 py-3 border-b border-[#E8E6E1] dark:border-[#2C2C32] last:border-0">
+    <Icon className="w-4 h-4 text-[#6C6C74] dark:text-[#9090A0] mt-0.5 flex-shrink-0" />
     <div>
-      <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-0.5">{label}</p>
-      <p className="text-[13px] text-[#1a1917] dark:text-[#f0eee8]">{value ?? '—'}</p>
+      <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-0.5">{label}</p>
+      <p className="text-[13px] text-[#1A1A1C] dark:text-[#EAEAEC]">{value ?? '—'}</p>
     </div>
   </div>
 );
@@ -74,13 +74,13 @@ const ActionBtn = ({ label, icon: Icon, onClick, disabled, variant = 'default', 
   disabled?: boolean; variant?: 'default'|'danger'|'orange'|'blue'; loading?: boolean;
 }) => {
   const cls = {
-    default: 'bg-[#1a1917] dark:bg-[#f0eee8] text-white dark:text-[#1a1917] hover:bg-[#3d3b36] dark:hover:bg-white border-[#1a1917] dark:border-[#f0eee8]',
+    default: 'bg-[#1a1917] dark:bg-[#f0eee8] text-white dark:text-[#1a1917] hover:bg-[#3d3b36] dark:hover:bg-white border-[#1A1A1C] dark:border-[#EAEAEC]',
     orange:  'bg-orange-600 text-white hover:bg-orange-700 border-orange-600',
     blue:    'bg-blue-600 text-white hover:bg-blue-700 border-blue-600',
     danger:  'bg-transparent text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 border-red-400 dark:border-red-700',
   }[variant];
   return (
-    <button onClick={onClick} disabled={disabled || loading} className={`flex items-center justify-center gap-2 w-full px-4 py-2.5 border text-[12px] font-semibold transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed ${cls}`}>
+    <button onClick={onClick} disabled={disabled || loading} className={`flex items-center justify-center gap-2 w-full px-4 py-2.5 border rounded-xl text-[12px] font-semibold transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed ${cls}`}>
       {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Icon className="w-4 h-4" />}
       {loading ? 'Processing...' : label}
     </button>
@@ -99,7 +99,7 @@ const HashDisplay = ({
     <div className="border-l-2 border-emerald-500 pl-3 py-1 space-y-2">
       <div>
         <div className="flex items-center gap-2 mb-1"><ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /><span className="mono text-[10px] font-bold tracking-[0.1em] uppercase text-emerald-600 dark:text-emerald-400">SHA-256 Hash</span></div>
-        <p className="mono text-[10px] text-[#5c5a54] dark:text-[#9e9b94] break-all leading-relaxed mb-1">{hash}</p>
+        <p className="mono text-[10px] text-[#6C6C74] dark:text-[#9090A0] break-all leading-relaxed mb-1">{hash}</p>
         <button onClick={() => { navigator.clipboard.writeText(hash); setCopied(true); setTimeout(() => setCopied(false), 2000); }} className="mono text-[10px] text-orange-600 dark:text-orange-400 hover:underline">{copied ? 'Copied' : 'Copy hash'}</button>
       </div>
       {txHash ? (
@@ -131,9 +131,9 @@ const Modal = ({ open, onClose, title, children }: { open: boolean; onClose: () 
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
-      <motion.div initial={{ opacity: 0, scale: 0.97, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ duration: 0.15 }} onClick={e => e.stopPropagation()} className="w-full max-w-md mx-4 bg-[#fafaf9] dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] p-6">
-        <div className="flex items-center justify-between border-b border-[#c8c6c0] dark:border-[#2a2a32] pb-3 mb-5">
-          <h2 className="mono text-[14px] font-bold text-[#1a1917] dark:text-[#f0eee8] tracking-tight uppercase">{title}</h2>
+      <motion.div initial={{ opacity: 0, scale: 0.97, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ duration: 0.15 }} onClick={e => e.stopPropagation()} className="w-full max-w-md mx-4 bg-[#fafaf9] dark:bg-[#1C1C1F] border border-[#E8E6E1] dark:border-[#2C2C32] p-6">
+        <div className="flex items-center justify-between border-b border-[#E8E6E1] dark:border-[#2C2C32] pb-3 mb-5">
+          <h2 className="mono text-[14px] font-bold text-[#1A1A1C] dark:text-[#EAEAEC] tracking-tight uppercase">{title}</h2>
           <button onClick={onClose} className="text-[#7a7870] hover:text-[#1a1917] dark:hover:text-[#f0eee8] transition-colors mono text-[13px]">x</button>
         </div>
         {children}
@@ -150,9 +150,9 @@ function ApprovalFlowBanner({ status, bypassEnabled }: { status: string; bypassE
     { key: 'approved',           label: 'Done',   title: 'Fully Approved',   done: status === 'approved' },
   ];
   return (
-    <div className="border border-[#e8e5e0] dark:border-[#222228] p-4 mb-6">
+    <div className="border border-[#E8E6E1] dark:border-[#2C2C32] p-4 mb-6">
       <div className="flex items-center gap-2 mb-3">
-        <p className="mono text-[10px] tracking-[0.18em] uppercase text-[#5c5a54] dark:text-[#9e9b94]">Approval Flow</p>
+        <p className="mono text-[10px] tracking-[0.18em] uppercase text-[#6C6C74] dark:text-[#9090A0]">Approval Flow</p>
         {bypassEnabled && (
           <span className="mono text-[9px] font-bold tracking-[0.1em] uppercase px-2 py-0.5 bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700">
             Bypass ON
@@ -167,7 +167,7 @@ function ApprovalFlowBanner({ status, bypassEnabled }: { status: string; bypassE
                 ? 'border-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400'
                 : status === step.key
                 ? 'border-orange-400 bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400'
-                : 'border-[#e8e5e0] dark:border-[#222228] text-[#7a7870] dark:text-[#7e7b75]'
+                : 'border-[#E8E6E1] dark:border-[#2C2C32] text-[#6C6C74] dark:text-[#9090A0]'
             }`}>
               {step.done ? <CheckCircle className="w-3 h-3" /> : status === step.key ? <Clock className="w-3 h-3 animate-pulse" /> : <Lock className="w-3 h-3" />}
               <div>
@@ -232,20 +232,20 @@ function EditHistoryPanel({ requestId }: { requestId: string }) {
             <div key={h.id} className="flex items-start gap-3">
               <div className="w-1.5 h-1.5 rounded-full bg-orange-400 mt-1.5 flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="mono text-[10px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">
+                <p className="mono text-[10px] tracking-[0.1em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-1">
                   {h.field_label} · <span className="normal-case not-italic">{who}</span>
                 </p>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[12px] text-[#7a7870] dark:text-[#7e7b75] line-through">
+                  <span className="text-[12px] text-[#6C6C74] dark:text-[#9090A0] line-through">
                     {h.old_value || '(empty)'}
                   </span>
-                  <span className="text-[10px] text-[#a09e98]">→</span>
-                  <span className="text-[12px] font-medium text-[#1a1917] dark:text-[#f0eee8]">
+                  <span className="text-[10px] text-[#B0B0B8]">→</span>
+                  <span className="text-[12px] font-medium text-[#1A1A1C] dark:text-[#EAEAEC]">
                     {h.new_value || '(empty)'}
                   </span>
                 </div>
               </div>
-              <span className="mono text-[10px] text-[#a09e98] dark:text-[#5c5a54] flex-shrink-0">
+              <span className="mono text-[10px] text-[#B0B0B8] dark:text-[#5c5a54] flex-shrink-0">
                 {new Date(h.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}
               </span>
             </div>
@@ -482,14 +482,14 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
 
   /* ── Early returns ────────────────────────────────────────────────────── */
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#fafaf9] dark:bg-[#16161a]">
-      <span className="mono text-[12px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] uppercase animate-pulse">Loading...</span>
+    <div className="min-h-screen flex items-center justify-center bg-[#F6F5F3] dark:bg-[#111113]">
+      <span className="mono text-[12px] tracking-[0.25em] text-[#6C6C74] dark:text-[#9090A0] uppercase animate-pulse">Loading...</span>
     </div>
   );
   if (notFound || !request) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#fafaf9] dark:bg-[#16161a]">
+    <div className="min-h-screen flex items-center justify-center bg-[#F6F5F3] dark:bg-[#111113]">
       <div className="text-center">
-        <p className="text-[14px] text-[#3d3b36] dark:text-[#c9c6be] mb-4">Request not found.</p>
+        <p className="text-[14px] text-[#3A3A3E] dark:text-[#BABABC] mb-4">Request not found.</p>
         <Link href="/pending-requests" className="mono text-[11px] tracking-[0.1em] uppercase text-orange-600 dark:text-orange-400 hover:underline">Back to Pending Requests</Link>
       </div>
     </div>
@@ -513,18 +513,18 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
 
   return (
     <>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap'); .pg{font-family:'IBM Plex Sans',sans-serif} .mono{font-family:'IBM Plex Mono',monospace}`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap'); .pg{font-family:'Plus Jakarta Sans',sans-serif}`}</style>
       <input ref={uploadRef} type="file" accept=".docx,.pdf" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) uploadFile(f, f.name); }} />
 
-      <div className="pg min-h-screen bg-[#fafaf9] dark:bg-[#16161a] transition-colors duration-200">
+      <div className="pjs min-h-screen bg-[#F6F5F3] dark:bg-[#111113] transition-colors duration-200">
         <div className="max-w-6xl mx-auto px-6 lg:px-10 pt-6 pb-14">
 
           {/* MASTHEAD */}
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="border-b-2 border-[#1a1917] dark:border-[#f0eee8] pb-5 mb-10">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="border-b-2 border-[#1A1A1C] dark:border-[#EAEAEC] pb-5 mb-10">
             <div className="flex items-end justify-between flex-wrap gap-4">
               <div>
                 <div className="flex items-center gap-3 mb-2">
-                  <p className="mono text-[11px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] uppercase">{request.id.slice(0, 8).toUpperCase()}</p>
+                  <p className="mono text-[11px] tracking-[0.25em] text-[#6C6C74] dark:text-[#9090A0] uppercase">{request.id.slice(0, 8).toUpperCase()}</p>
                   <StatusBadge status={request.status} />
                   {daysAgo >= 2 && !isFullyApproved && !isRejected && (
                     <span className="flex items-center gap-1 mono text-[10px] font-bold text-red-600 dark:text-red-400">
@@ -532,7 +532,7 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
                     </span>
                   )}
                 </div>
-                <h1 className="mono text-2xl md:text-3xl font-bold text-[#1a1917] dark:text-[#f0eee8] tracking-tight leading-none">
+                <h1 className="text-[26px] font-bold text-[#1A1A1C] dark:text-[#EAEAEC] tracking-tight leading-tight">
                   {fmtDocType(request.type ?? request.document_type).toUpperCase()}
                 </h1>
               </div>
@@ -567,8 +567,8 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
                   <DetailRow label="Waiting"       value={daysAgo === 0 ? 'Submitted today' : `${daysAgo} day${daysAgo > 1 ? 's' : ''}`} />
                   {request.additional_info && (
                     <div className="col-span-2">
-                      <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-2">Additional Information</p>
-                      <p className="text-[13px] text-[#3d3b36] dark:text-[#c9c6be] leading-relaxed border-l-2 border-[#c8c6c0] dark:border-[#2a2a32] pl-3">{request.additional_info}</p>
+                      <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-2">Additional Information</p>
+                      <p className="text-[13px] text-[#3A3A3E] dark:text-[#BABABC] leading-relaxed border-l-2 border-[#E8E6E1] dark:border-[#2C2C32] pl-3">{request.additional_info}</p>
                     </div>
                   )}
                 </div>
@@ -624,7 +624,7 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
 
                     {/* Step 1 — Secretary */}
                     <div>
-                      <p className="mono text-[10px] tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1.5">
+                      <p className="mono text-[10px] tracking-[0.15em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-1.5">
                         Step 1 — Barangay Secretary
                       </p>
                       {isSecApproved ? (
@@ -645,7 +645,7 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
 
                     {/* Step 2 — Captain */}
                     <div>
-                      <p className="mono text-[10px] tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1.5">
+                      <p className="mono text-[10px] tracking-[0.15em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-1.5">
                         Step 2 — Barangay Captain
                         {bypassEnabled && (
                           <span className="ml-2 mono text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700">
@@ -655,9 +655,9 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
                       </p>
                       {captainLocked ? (
                         <div className="space-y-2">
-                          <div className="flex items-center gap-2 px-3 py-2.5 border border-[#c8c6c0] dark:border-[#2a2a32] bg-[#f5f4f0] dark:bg-[#1e1e24] opacity-60 cursor-not-allowed">
-                            <Lock className="w-4 h-4 text-[#7a7870] dark:text-[#7e7b75] flex-shrink-0" />
-                            <span className="text-[12px] font-semibold text-[#5c5a54] dark:text-[#9e9b94]">Captain Approval Locked</span>
+                          <div className="flex items-center gap-2 px-3 py-2.5 border border-[#E8E6E1] dark:border-[#2C2C32] bg-[#f5f4f0] dark:bg-[#1C1C1F] opacity-60 cursor-not-allowed">
+                            <Lock className="w-4 h-4 text-[#6C6C74] dark:text-[#9090A0] flex-shrink-0" />
+                            <span className="text-[12px] font-semibold text-[#6C6C74] dark:text-[#9090A0]">Captain Approval Locked</span>
                           </div>
                           <div className="border-l-2 border-amber-400 pl-3 py-1">
                             <p className="text-[11px] text-amber-700 dark:text-amber-400 leading-snug">
@@ -677,18 +677,18 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
 
                     {/* Reject */}
                     <div>
-                      <p className="mono text-[10px] tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1.5">Reject</p>
+                      <p className="mono text-[10px] tracking-[0.15em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-1.5">Reject</p>
                       <ActionBtn label="Reject Request" icon={XCircle} variant="danger" onClick={() => setShowRejectModal(true)} />
                     </div>
                   </div>
                 )}
 
                 {request.notes && (
-                  <div className="mt-4 border-l-2 border-[#c8c6c0] dark:border-[#2a2a32] pl-3">
-                    <p className="mono text-[10px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">
+                  <div className="mt-4 border-l-2 border-[#E8E6E1] dark:border-[#2C2C32] pl-3">
+                    <p className="mono text-[10px] tracking-[0.1em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-1">
                       {request.status === 'rejected' ? 'Rejection Reason' : 'Notes'}
                     </p>
-                    <p className="text-[12px] text-[#3d3b36] dark:text-[#c9c6be] leading-relaxed">{request.notes}</p>
+                    <p className="text-[12px] text-[#3A3A3E] dark:text-[#BABABC] leading-relaxed">{request.notes}</p>
                   </div>
                 )}
               </div>
@@ -700,20 +700,20 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
                   {request.file_url && (
                     <>
                       <a href={request.file_url} target="_blank" rel="noopener noreferrer" download>
-                        <button className="flex items-center justify-center gap-2 w-full px-4 py-2.5 border border-[#c8c6c0] dark:border-[#2a2a32] text-[12px] font-semibold text-[#3d3b36] dark:text-[#c9c6be] hover:border-[#1a1917] dark:hover:border-[#f0eee8] hover:text-[#1a1917] dark:hover:text-[#f0eee8] transition-colors">
+                        <button className="flex items-center justify-center gap-2 w-full px-4 py-2.5 border border-[#E8E6E1] dark:border-[#2C2C32] text-[12px] font-semibold text-[#3A3A3E] dark:text-[#BABABC] hover:border-[#1a1917] dark:hover:border-[#f0eee8] hover:text-[#1a1917] dark:hover:text-[#f0eee8] transition-colors">
                           <Download className="w-4 h-4" />Download Uploaded Document
                         </button>
                       </a>
                       {uploadedHash && <HashDisplay hash={uploadedHash} txHash={chainTxHash} onRecord={handleRecordOnChain} recording={chainRecording} />}
                       <div className="flex items-center gap-3 py-1">
-                        <div className="flex-1 h-px bg-[#e0deda] dark:bg-[#222228]" />
-                        <span className="mono text-[10px] text-[#7a7870] dark:text-[#7e7b75] uppercase tracking-wider">or replace</span>
-                        <div className="flex-1 h-px bg-[#e0deda] dark:bg-[#222228]" />
+                        <div className="flex-1 h-px bg-[#E8E6E1] dark:bg-[#2C2C32]" />
+                        <span className="mono text-[10px] text-[#6C6C74] dark:text-[#9090A0] uppercase tracking-wider">or replace</span>
+                        <div className="flex-1 h-px bg-[#E8E6E1] dark:bg-[#2C2C32]" />
                       </div>
                     </>
                   )}
                   {!request.file_url && (
-                    <p className="text-[12px] text-[#5c5a54] dark:text-[#9e9b94] leading-relaxed mb-1">
+                    <p className="text-[12px] text-[#6C6C74] dark:text-[#9090A0] leading-relaxed mb-1">
                       Generate the document, then upload it so the resident can download it.
                     </p>
                   )}
@@ -722,11 +722,11 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
                     <ActionBtn label={`Step 2: Upload "${generatedFileName}"`} icon={Upload} onClick={() => uploadFile(generatedBlob, generatedFileName)} loading={uploading} disabled={uploading} />
                   )}
                   <div className="flex items-center gap-3 py-1">
-                    <div className="flex-1 h-px bg-[#e0deda] dark:bg-[#222228]" />
-                    <span className="mono text-[10px] text-[#7a7870] dark:text-[#7e7b75] uppercase tracking-wider">or upload manually</span>
-                    <div className="flex-1 h-px bg-[#e0deda] dark:bg-[#222228]" />
+                    <div className="flex-1 h-px bg-[#E8E6E1] dark:bg-[#2C2C32]" />
+                    <span className="mono text-[10px] text-[#6C6C74] dark:text-[#9090A0] uppercase tracking-wider">or upload manually</span>
+                    <div className="flex-1 h-px bg-[#E8E6E1] dark:bg-[#2C2C32]" />
                   </div>
-                  <button onClick={() => uploadRef.current?.click()} disabled={uploading} className="flex items-center justify-center gap-2 w-full px-4 py-2.5 border border-[#c8c6c0] dark:border-[#2a2a32] text-[12px] font-semibold text-[#3d3b36] dark:text-[#c9c6be] hover:border-[#1a1917] dark:hover:border-[#f0eee8] hover:text-[#1a1917] dark:hover:text-[#f0eee8] transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                  <button onClick={() => uploadRef.current?.click()} disabled={uploading} className="flex items-center justify-center gap-2 w-full px-4 py-2.5 border border-[#E8E6E1] dark:border-[#2C2C32] text-[12px] font-semibold text-[#3A3A3E] dark:text-[#BABABC] hover:border-[#1a1917] dark:hover:border-[#f0eee8] hover:text-[#1a1917] dark:hover:text-[#f0eee8] transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                     <Upload className="w-4 h-4" />Upload Existing File (.docx or .pdf)
                   </button>
                   {!request.file_url && uploadedHash && <HashDisplay hash={uploadedHash} txHash={chainTxHash} onRecord={handleRecordOnChain} recording={chainRecording} />}
@@ -743,12 +743,12 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
         <div className="space-y-4">
           <AlertBanner variant="info">The Secretary is endorsing this request for the Captain's final approval.</AlertBanner>
           <div>
-            <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-2">Endorsement Notes (Optional)</p>
-            <textarea value={approvalNotes} onChange={e => setApprovalNotes(e.target.value)} rows={3} placeholder="Add endorsement notes..." className="w-full px-3 py-2.5 text-[13px] bg-white dark:bg-[#16161a] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] placeholder-[#7a7870] dark:placeholder-[#7e7b75] focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 resize-none transition-colors" />
+            <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-2">Endorsement Notes (Optional)</p>
+            <textarea value={approvalNotes} onChange={e => setApprovalNotes(e.target.value)} rows={3} placeholder="Add endorsement notes..." className="w-full px-3 py-2.5 text-[13px] bg-white dark:bg-[#16161a] border border-[#E8E6E1] dark:border-[#2C2C32] text-[#1A1A1C] dark:text-[#EAEAEC] placeholder-[#7a7870] dark:placeholder-[#7e7b75] focus:outline-none focus:border-blue-500 resize-none transition-colors" />
           </div>
           <div className="flex gap-3 pt-1">
-            <button onClick={() => setShowSecModal(false)} disabled={processing} className="flex-1 py-2.5 text-[12px] font-semibold border border-[#c8c6c0] dark:border-[#2a2a32] text-[#5c5a54] dark:text-[#9e9b94] hover:border-[#1a1917] dark:hover:border-[#f0eee8] hover:text-[#1a1917] dark:hover:text-[#f0eee8] transition-colors disabled:opacity-40">Cancel</button>
-            <button onClick={handleSecretaryApprove} disabled={processing} className="flex-1 flex items-center justify-center gap-2 py-2.5 text-[12px] font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-40">
+            <button onClick={() => setShowSecModal(false)} disabled={processing} className="flex-1 py-2.5 text-[12px] font-semibold border border-[#E8E6E1] dark:border-[#2C2C32] text-[#6C6C74] dark:text-[#9090A0] hover:border-[#1a1917] dark:hover:border-[#f0eee8] hover:text-[#1a1917] dark:hover:text-[#f0eee8] transition-colors disabled:opacity-40">Cancel</button>
+            <button onClick={handleSecretaryApprove} disabled={processing} className="flex-1 flex items-center justify-center gap-2 py-2.5 text-[12px] font-semibold rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-40">
               {processing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
               {processing ? 'Processing...' : 'Endorse to Captain'}
             </button>
@@ -765,12 +765,12 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
               : 'Secretary has endorsed this request. Confirming final approval.'}
           </AlertBanner>
           <div>
-            <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-2">Approval Notes (Optional)</p>
-            <textarea value={approvalNotes} onChange={e => setApprovalNotes(e.target.value)} rows={3} placeholder="Add approval notes..." className="w-full px-3 py-2.5 text-[13px] bg-white dark:bg-[#16161a] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] placeholder-[#7a7870] dark:placeholder-[#7e7b75] focus:outline-none focus:border-orange-500 dark:focus:border-orange-400 resize-none transition-colors" />
+            <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-2">Approval Notes (Optional)</p>
+            <textarea value={approvalNotes} onChange={e => setApprovalNotes(e.target.value)} rows={3} placeholder="Add approval notes..." className="w-full px-3 py-2.5 text-[13px] bg-white dark:bg-[#16161a] border border-[#E8E6E1] dark:border-[#2C2C32] text-[#1A1A1C] dark:text-[#EAEAEC] placeholder-[#7a7870] dark:placeholder-[#7e7b75] focus:outline-none focus:border-[#E8500A] resize-none transition-colors" />
           </div>
           <div className="flex gap-3 pt-1">
-            <button onClick={() => setShowCapModal(false)} disabled={processing} className="flex-1 py-2.5 text-[12px] font-semibold border border-[#c8c6c0] dark:border-[#2a2a32] text-[#5c5a54] dark:text-[#9e9b94] hover:border-[#1a1917] dark:hover:border-[#f0eee8] hover:text-[#1a1917] dark:hover:text-[#f0eee8] transition-colors disabled:opacity-40">Cancel</button>
-            <button onClick={handleCaptainApprove} disabled={processing} className="flex-1 flex items-center justify-center gap-2 py-2.5 text-[12px] font-semibold bg-orange-600 text-white hover:bg-orange-700 transition-colors disabled:opacity-40">
+            <button onClick={() => setShowCapModal(false)} disabled={processing} className="flex-1 py-2.5 text-[12px] font-semibold border border-[#E8E6E1] dark:border-[#2C2C32] text-[#6C6C74] dark:text-[#9090A0] hover:border-[#1a1917] dark:hover:border-[#f0eee8] hover:text-[#1a1917] dark:hover:text-[#f0eee8] transition-colors disabled:opacity-40">Cancel</button>
+            <button onClick={handleCaptainApprove} disabled={processing} className="flex-1 flex items-center justify-center gap-2 py-2.5 text-[12px] font-semibold rounded-xl bg-[#E8500A] text-white hover:bg-[#C44008] transition-colors disabled:opacity-40">
               {processing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
               {processing ? 'Processing...' : 'Confirm Final Approval'}
             </button>
@@ -783,12 +783,12 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
         <div className="space-y-4">
           <AlertBanner variant="warning">Please provide a clear reason for rejection.</AlertBanner>
           <div>
-            <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-2">Reason for Rejection <span className="text-red-500">*</span></p>
-            <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} rows={4} placeholder="Explain why this request is being rejected..." className="w-full px-3 py-2.5 text-[13px] bg-white dark:bg-[#16161a] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] placeholder-[#7a7870] dark:placeholder-[#7e7b75] focus:outline-none focus:border-orange-500 dark:focus:border-orange-400 resize-none transition-colors" />
+            <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-2">Reason for Rejection <span className="text-red-500">*</span></p>
+            <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} rows={4} placeholder="Explain why this request is being rejected..." className="w-full px-3 py-2.5 text-[13px] bg-white dark:bg-[#16161a] border border-[#E8E6E1] dark:border-[#2C2C32] text-[#1A1A1C] dark:text-[#EAEAEC] placeholder-[#7a7870] dark:placeholder-[#7e7b75] focus:outline-none focus:border-[#E8500A] resize-none transition-colors" />
           </div>
           <div className="flex gap-3 pt-1">
-            <button onClick={() => setShowRejectModal(false)} disabled={processing} className="flex-1 py-2.5 text-[12px] font-semibold border border-[#c8c6c0] dark:border-[#2a2a32] text-[#5c5a54] dark:text-[#9e9b94] hover:border-[#1a1917] dark:hover:border-[#f0eee8] hover:text-[#1a1917] dark:hover:text-[#f0eee8] transition-colors disabled:opacity-40">Cancel</button>
-            <button onClick={handleReject} disabled={processing} className="flex-1 flex items-center justify-center gap-2 py-2.5 text-[12px] font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-40">
+            <button onClick={() => setShowRejectModal(false)} disabled={processing} className="flex-1 py-2.5 text-[12px] font-semibold border border-[#E8E6E1] dark:border-[#2C2C32] text-[#6C6C74] dark:text-[#9090A0] hover:border-[#1a1917] dark:hover:border-[#f0eee8] hover:text-[#1a1917] dark:hover:text-[#f0eee8] transition-colors disabled:opacity-40">Cancel</button>
+            <button onClick={handleReject} disabled={processing} className="flex-1 flex items-center justify-center gap-2 py-2.5 text-[12px] font-semibold rounded-xl bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-40">
               {processing ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
               {processing ? 'Processing...' : 'Confirm Rejection'}
             </button>

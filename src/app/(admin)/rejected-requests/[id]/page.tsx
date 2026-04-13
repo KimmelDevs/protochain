@@ -32,24 +32,24 @@ const fmtDocType = (s: string | null) =>
 
 /* ─────────────────────────── sub-components ────────────────────────────── */
 const SectionLabel = ({ label }: { label: string }) => (
-  <p className="mono text-[11px] tracking-[0.2em] uppercase text-[#5c5a54] dark:text-[#9e9b94] border-b border-[#c8c6c0] dark:border-[#2a2a32] pb-2 mb-4">
+  <p className="text-[11px] font-semibold tracking-[0.16em] uppercase text-[#6C6C74] dark:text-[#9090A0] border-b border-[#E8E6E1] dark:border-[#2C2C32] pb-2 mb-4">
     {label}
   </p>
 );
 
 const DetailRow = ({ label, value }: { label: string; value?: string | null }) => (
   <div>
-    <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">{label}</p>
-    <p className="text-[13px] font-medium text-[#1a1917] dark:text-[#f0eee8]">{value ?? '—'}</p>
+    <p className="text-[11px] font-500 tracking-[0.08em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-1">{label}</p>
+    <p className="text-[13px] font-medium text-[#1A1A1C] dark:text-[#EAEAEC]">{value ?? '—'}</p>
   </div>
 );
 
 const IconDetail = ({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value?: string | null }) => (
-  <div className="flex items-start gap-3 py-3 border-b border-[#e8e5e0] dark:border-[#222228] last:border-0">
-    <Icon className="w-4 h-4 text-[#7a7870] dark:text-[#7e7b75] mt-0.5 flex-shrink-0" />
+  <div className="flex items-start gap-3 py-3 border-b border-[#E8E6E1] dark:border-[#2C2C32] last:border-0">
+    <Icon className="w-4 h-4 text-[#6C6C74] dark:text-[#9090A0] mt-0.5 flex-shrink-0" />
     <div>
-      <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-0.5">{label}</p>
-      <p className="text-[13px] text-[#1a1917] dark:text-[#f0eee8]">{value ?? '—'}</p>
+      <p className="text-[11px] font-500 tracking-[0.08em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-0.5">{label}</p>
+      <p className="text-[13px] text-[#1A1A1C] dark:text-[#EAEAEC]">{value ?? '—'}</p>
     </div>
   </div>
 );
@@ -86,16 +86,16 @@ export default function RejectedRequestDetailPage({ params }: { params: Promise<
 
   /* ── loading ────────────────────────────────────────────────────────────── */
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#fafaf9] dark:bg-[#16161a]">
-      <span className="mono text-[12px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] uppercase animate-pulse">Loading…</span>
+    <div className="min-h-screen flex items-center justify-center bg-[#F6F5F3] dark:bg-[#111113]">
+      <span className="mono text-[12px] tracking-[0.25em] text-[#6C6C74] dark:text-[#9090A0] uppercase animate-pulse">Loading…</span>
     </div>
   );
 
   if (notFound || !request) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#fafaf9] dark:bg-[#16161a]">
+    <div className="min-h-screen flex items-center justify-center bg-[#F6F5F3] dark:bg-[#111113]">
       <div className="text-center">
-        <p className="text-[14px] text-[#3d3b36] dark:text-[#c9c6be] mb-4">Request not found.</p>
-        <Link href="/rejected-requests" className="mono text-[11px] tracking-[0.1em] uppercase text-orange-600 dark:text-orange-400 hover:underline">
+        <p className="text-[14px] text-[#3A3A3E] dark:text-[#BABABC] mb-4">Request not found.</p>
+        <Link href="/rejected-requests" className="text-[11px] font-500 tracking-[0.08em] uppercase text-orange-600 dark:text-orange-400 hover:underline">
           ← Back to Rejected Requests
         </Link>
       </div>
@@ -137,34 +137,34 @@ export default function RejectedRequestDetailPage({ params }: { params: Promise<
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
-        .pg   { font-family: 'IBM Plex Sans', sans-serif; }
-        .mono { font-family: 'IBM Plex Mono', monospace; }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+        .pjs { font-family: 'Plus Jakarta Sans', sans-serif; }
+        
       `}</style>
 
-      <div className="pg min-h-screen bg-[#fafaf9] dark:bg-[#16161a] transition-colors duration-200">
+      <div className="pjs min-h-screen bg-[#F6F5F3] dark:bg-[#111113] transition-colors duration-200">
         <div className="max-w-4xl mx-auto px-6 lg:px-10 pt-6 pb-14">
 
           {/* MASTHEAD */}
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            className="border-b-2 border-[#1a1917] dark:border-[#f0eee8] pb-5 mb-10">
+            className="border-b-2 border-[#1A1A1C] dark:border-[#EAEAEC] pb-5 mb-10">
             <div className="flex items-end justify-between flex-wrap gap-4">
               <div>
                 <div className="flex items-center gap-3 mb-2">
-                  <p className="mono text-[11px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] uppercase">
+                  <p className="text-[11px] tracking-[0.2em] text-[#6C6C74] dark:text-[#9090A0] uppercase">
                     {request.id.slice(0, 8).toUpperCase()}
                   </p>
                   {/* Rejected badge */}
-                  <span className="inline-flex items-center gap-1.5 mono text-[10px] font-bold tracking-[0.1em] uppercase px-2.5 py-1 border text-red-600 dark:text-red-400 border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/30">
+                  <span className="inline-flex items-center gap-1.5 text-[10px] font-700 tracking-[0.08em] uppercase px-2.5 py-1 border text-red-600 dark:text-red-400 border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/30">
                     <XCircle className="w-3 h-3" />Rejected
                   </span>
                 </div>
-                <h1 className="mono text-2xl md:text-3xl font-bold text-[#1a1917] dark:text-[#f0eee8] tracking-tight leading-none">
+                <h1 className="mono text-[26px] font-bold leading-tight text-[#1A1A1C] dark:text-[#EAEAEC] tracking-tight leading-none">
                   {fmtDocType(request.type ?? request.document_type).toUpperCase()}
                 </h1>
               </div>
               <Link href="/rejected-requests"
-                className="mono text-[11px] tracking-[0.1em] uppercase text-orange-600 dark:text-orange-400 hover:text-orange-700 transition-colors">
+                className="text-[11px] font-500 tracking-[0.08em] uppercase text-orange-600 dark:text-orange-400 hover:text-orange-700 transition-colors">
                 ← Rejected Requests
               </Link>
             </div>
@@ -182,11 +182,11 @@ export default function RejectedRequestDetailPage({ params }: { params: Promise<
                 <div className="border-l-2 border-red-500 pl-4 py-2">
                   <div className="flex items-center gap-2 mb-2">
                     <XCircle className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
-                    <span className="mono text-[10px] font-bold tracking-[0.1em] uppercase text-red-600 dark:text-red-400">
+                    <span className="text-[10px] font-700 tracking-[0.08em] uppercase text-red-600 dark:text-red-400">
                       Admin Note
                     </span>
                   </div>
-                  <p className="text-[13px] text-[#3d3b36] dark:text-[#c9c6be] leading-relaxed">
+                  <p className="text-[13px] text-[#3A3A3E] dark:text-[#BABABC] leading-relaxed">
                     {request.notes ?? 'No reason provided.'}
                   </p>
                 </div>
@@ -202,8 +202,8 @@ export default function RejectedRequestDetailPage({ params }: { params: Promise<
                   <DetailRow label="Status"         value="Rejected" />
                   {request.additional_info && (
                     <div className="col-span-2">
-                      <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-2">Additional Info</p>
-                      <p className="text-[13px] text-[#3d3b36] dark:text-[#c9c6be] leading-relaxed border-l-2 border-[#c8c6c0] dark:border-[#2a2a32] pl-3">
+                      <p className="text-[11px] font-500 tracking-[0.08em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-2">Additional Info</p>
+                      <p className="text-[13px] text-[#3A3A3E] dark:text-[#BABABC] leading-relaxed border-l-2 border-[#E8E6E1] dark:border-[#2C2C32] pl-3">
                         {request.additional_info}
                       </p>
                     </div>
@@ -250,12 +250,12 @@ export default function RejectedRequestDetailPage({ params }: { params: Promise<
                 <SectionLabel label="References" />
                 <div className="space-y-3">
                   <div>
-                    <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-2">Request ID</p>
-                    <p className="mono text-[11px] text-[#3d3b36] dark:text-[#c9c6be]">{request.id}</p>
+                    <p className="text-[11px] font-500 tracking-[0.08em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-2">Request ID</p>
+                    <p className="mono text-[11px] text-[#3A3A3E] dark:text-[#BABABC]">{request.id}</p>
                   </div>
                   {request.file_url && (
                     <div>
-                      <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-2">Attached File</p>
+                      <p className="text-[11px] font-500 tracking-[0.08em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-2">Attached File</p>
                       <a href={request.file_url} target="_blank" rel="noopener noreferrer" download
                         className="flex items-center gap-2 mono text-[11px] text-orange-600 dark:text-orange-400 hover:underline">
                         <FileText className="w-3.5 h-3.5" />Download →
@@ -263,7 +263,7 @@ export default function RejectedRequestDetailPage({ params }: { params: Promise<
                     </div>
                   )}
                   <div>
-                    <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-2">Audit Trail</p>
+                    <p className="text-[11px] font-500 tracking-[0.08em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-2">Audit Trail</p>
                     <Link href={`/audit-logs?request_id=${request.id}`}
                       className="flex items-center gap-2 mono text-[11px] text-orange-600 dark:text-orange-400 hover:underline">
                       <ExternalLink className="w-3.5 h-3.5" />View events →
@@ -292,10 +292,10 @@ export default function RejectedRequestDetailPage({ params }: { params: Promise<
                 <div className="flex items-start gap-2">
                   <XCircle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="mono text-[11px] font-bold tracking-[0.1em] uppercase text-red-600 dark:text-red-400 leading-none">
+                    <p className="text-[11px] font-700 tracking-[0.08em] uppercase text-red-600 dark:text-red-400 leading-none">
                       Request Rejected
                     </p>
-                    <p className="text-[13px] text-[#3d3b36] dark:text-[#c9c6be] mt-2 leading-snug">
+                    <p className="text-[13px] text-[#3A3A3E] dark:text-[#BABABC] mt-2 leading-snug">
                       This request was reviewed and rejected by an admin.
                     </p>
                   </div>

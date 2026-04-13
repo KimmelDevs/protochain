@@ -100,8 +100,8 @@ export default function ResidentsPage() {
   ];
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#fafaf9] dark:bg-[#16161a]">
-      <span className="mono text-[12px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] uppercase animate-pulse">
+    <div className="min-h-screen flex items-center justify-center bg-[#F6F5F3] dark:bg-[#111113]">
+      <span className="mono text-[12px] tracking-[0.25em] text-[#6C6C74] dark:text-[#9090A0] uppercase animate-pulse">
         Loading…
       </span>
     </div>
@@ -110,32 +110,32 @@ export default function ResidentsPage() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
-        .pg   { font-family: 'IBM Plex Sans', sans-serif; }
-        .mono { font-family: 'IBM Plex Mono', monospace; }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+        .pjs { font-family: 'Plus Jakarta Sans', sans-serif; }
+        
       `}</style>
 
-      <div className="pg min-h-screen bg-[#fafaf9] dark:bg-[#16161a] transition-colors duration-200">
+      <div className="pjs min-h-screen bg-[#F6F5F3] dark:bg-[#111113] transition-colors duration-200">
         <div className="max-w-6xl mx-auto px-6 lg:px-10 pt-6 pb-14">
 
           {/* ── MASTHEAD ───────────────────────────────────────────────── */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="border-b-2 border-[#1a1917] dark:border-[#f0eee8] pb-5 mb-10"
+            className="border-b-2 border-[#1A1A1C] dark:border-[#EAEAEC] pb-5 mb-10"
           >
             <div className="flex items-end justify-between">
               <div>
-                <p className="mono text-[11px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] mb-2 uppercase">
+                <p className="text-[11px] tracking-[0.2em] text-[#6C6C74] dark:text-[#9090A0] mb-2 uppercase">
                   Directory
                 </p>
-                <h1 className="mono text-2xl md:text-3xl font-bold text-[#1a1917] dark:text-[#f0eee8] tracking-tight leading-none">
+                <h1 className="mono text-[26px] font-bold leading-tight text-[#1A1A1C] dark:text-[#EAEAEC] tracking-tight leading-none">
                   RESIDENTS
                 </h1>
               </div>
               <Link
                 href="/admindashboard"
-                className="mono text-[11px] tracking-[0.1em] uppercase text-orange-600 dark:text-orange-400 hover:text-orange-700 transition-colors"
+                className="text-[11px] font-500 tracking-[0.08em] uppercase text-orange-600 dark:text-orange-400 hover:text-orange-700 transition-colors"
               >
                 ← Dashboard
               </Link>
@@ -150,11 +150,11 @@ export default function ResidentsPage() {
             className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-6 mb-12"
           >
             {stats.map(({ label, value }) => (
-              <div key={label} className="border-t-2 border-[#1a1917] dark:border-[#f0eee8] pt-3 pb-4">
-                <p className="mono text-[11px] tracking-[0.15em] uppercase text-[#5c5a54] dark:text-[#9e9b94] mb-2">
+              <div key={label} className="border-t-2 border-[#1A1A1C] dark:border-[#EAEAEC] pt-3 pb-4">
+                <p className="text-[11px] font-semibold tracking-[0.12em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-2">
                   {label}
                 </p>
-                <p className="mono text-4xl font-bold tabular-nums text-[#1a1917] dark:text-[#f0eee8] leading-none">
+                <p className="mono text-4xl font-bold tabular-nums text-[#1A1A1C] dark:text-[#EAEAEC] leading-none">
                   {value}
                 </p>
               </div>
@@ -169,13 +169,13 @@ export default function ResidentsPage() {
             className="mb-6"
           >
             <div className="relative max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7a7870] dark:text-[#7e7b75]" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6C6C74] dark:text-[#9090A0]" />
               <input
                 type="text"
                 placeholder="Search by name, email, or ID…"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 text-[13px] bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] placeholder-[#7a7870] dark:placeholder-[#7e7b75] focus:outline-none focus:border-orange-500 dark:focus:border-orange-400 transition-colors"
+                className="w-full pl-9 pr-4 py-2.5 text-[13px] bg-white dark:bg-[#1C1C1F] border border-[#E8E6E1] dark:border-[#2C2C32] rounded-xl text-[#1A1A1C] dark:text-[#EAEAEC] placeholder-[#B0B0B8] dark:placeholder-[#55555F] focus:outline-none focus:border-[#E8500A] transition-colors"
               />
             </div>
           </motion.div>
@@ -187,9 +187,9 @@ export default function ResidentsPage() {
             transition={{ delay: 0.13 }}
           >
             {/* col headers */}
-            <div className="grid grid-cols-[1fr_180px_140px_80px_44px] py-2 border-b border-[#e0deda] dark:border-[#222228]">
+            <div className="grid grid-cols-[1fr_180px_140px_80px_44px] py-2 border-b border-[#E8E6E1] dark:border-[#2C2C32]">
               {['Resident', 'Contact', 'Registered', 'Requests', ''].map(h => (
-                <span key={h} className="mono text-[11px] tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75]">
+                <span key={h} className="text-[11px] font-semibold tracking-[0.12em] uppercase text-[#6C6C74] dark:text-[#9090A0]">
                   {h}
                 </span>
               ))}
@@ -198,14 +198,14 @@ export default function ResidentsPage() {
             {residents.length === 0 ? (
               <div className="py-20 flex flex-col items-center gap-3">
                 <User className="w-6 h-6 text-[#c8c6c0] dark:text-[#3a3845]" />
-                <p className="mono text-[12px] tracking-widest uppercase text-[#7a7870] dark:text-[#7e7b75]">
+                <p className="mono text-[12px] tracking-widest uppercase text-[#6C6C74] dark:text-[#9090A0]">
                   No residents yet
                 </p>
               </div>
             ) : filtered.length === 0 ? (
               <div className="py-20 flex flex-col items-center gap-3">
                 <Search className="w-6 h-6 text-[#c8c6c0] dark:text-[#3a3845]" />
-                <p className="mono text-[12px] tracking-widest uppercase text-[#7a7870] dark:text-[#7e7b75]">
+                <p className="mono text-[12px] tracking-widest uppercase text-[#6C6C74] dark:text-[#9090A0]">
                   No results match
                 </p>
               </div>
@@ -217,7 +217,7 @@ export default function ResidentsPage() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.025 * i }}
-                    className="group grid grid-cols-[1fr_180px_140px_80px_44px] items-center py-3.5 border-b border-[#e8e5e0] dark:border-[#222228] last:border-0 hover:bg-black/[0.025] dark:hover:bg-[#1e1e24] -mx-2 px-2 transition-colors duration-100"
+                    className="group grid grid-cols-[1fr_180px_140px_80px_44px] items-center py-3.5 border-b border-[#E8E6E1] dark:border-[#2C2C32] last:border-0 hover:bg-[#F6F5F3] dark:hover:bg-[#1C1C1F] -mx-2 px-2 transition-colors duration-100"
                   >
                     {/* resident */}
                     <div className="flex items-center gap-3 min-w-0 pr-4">
@@ -225,7 +225,7 @@ export default function ResidentsPage() {
                         <img
                           src={res.avatar_base64}
                           alt=""
-                          className="w-8 h-8 rounded-full object-cover flex-shrink-0 border border-[#e0deda] dark:border-[#2a2a32]"
+                          className="w-8 h-8 rounded-full object-cover flex-shrink-0 border border-[#E8E6E1] dark:border-[#2C2C32]"
                         />
                       ) : (
                         <div className="w-8 h-8 flex-shrink-0 bg-orange-500 flex items-center justify-center">
@@ -235,10 +235,10 @@ export default function ResidentsPage() {
                         </div>
                       )}
                       <div className="min-w-0">
-                        <p className="text-[14px] font-medium text-[#1a1917] dark:text-[#f0eee8] truncate leading-none">
+                        <p className="text-[14px] font-medium text-[#1A1A1C] dark:text-[#EAEAEC] truncate leading-none">
                           {res.firstName} {res.lastName}
                         </p>
-                        <p className="mono text-[11px] text-[#7a7870] dark:text-[#7e7b75] mt-1.5 truncate">
+                        <p className="mono text-[11px] text-[#6C6C74] dark:text-[#9090A0] mt-1.5 truncate">
                           {res.id.slice(0, 8).toUpperCase()}
                         </p>
                       </div>
@@ -247,29 +247,29 @@ export default function ResidentsPage() {
                     {/* contact */}
                     <div className="pr-3 min-w-0">
                       <div className="flex items-center gap-1.5 mb-1">
-                        <Mail className="w-3 h-3 text-[#7a7870] dark:text-[#7e7b75] flex-shrink-0" />
-                        <p className="text-[12px] text-[#3d3b36] dark:text-[#c9c6be] truncate">{res.email}</p>
+                        <Mail className="w-3 h-3 text-[#6C6C74] dark:text-[#9090A0] flex-shrink-0" />
+                        <p className="text-[12px] text-[#3A3A3E] dark:text-[#BABABC] truncate">{res.email}</p>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <Phone className="w-3 h-3 text-[#7a7870] dark:text-[#7e7b75] flex-shrink-0" />
-                        <p className="text-[12px] text-[#5c5a54] dark:text-[#9e9b94] truncate">{res.phone || '—'}</p>
+                        <Phone className="w-3 h-3 text-[#6C6C74] dark:text-[#9090A0] flex-shrink-0" />
+                        <p className="text-[12px] text-[#6C6C74] dark:text-[#9090A0] truncate">{res.phone || '—'}</p>
                       </div>
                     </div>
 
                     {/* registered */}
-                    <span className="mono text-[11px] text-[#5c5a54] dark:text-[#9e9b94]">
+                    <span className="mono text-[11px] text-[#6C6C74] dark:text-[#9090A0]">
                       {fmt(res.created_at)}
                     </span>
 
                     {/* request count */}
-                    <span className="mono text-[13px] font-bold tabular-nums text-[#1a1917] dark:text-[#f0eee8]">
+                    <span className="mono text-[13px] font-bold tabular-nums text-[#1A1A1C] dark:text-[#EAEAEC]">
                       {res.totalRequests ?? 0}
                     </span>
 
                     {/* view */}
                     <Link href={`/residents/${res.id}`} className="flex justify-end">
-                      <span className="flex items-center justify-center w-7 h-7 border border-[#c8c6c0] dark:border-[#2a2a32] hover:bg-orange-600 hover:border-orange-600 group/btn transition-colors duration-150">
-                        <Eye className="w-3.5 h-3.5 text-[#5c5a54] dark:text-[#9e9b94] group-hover/btn:text-white transition-colors" />
+                      <span className="flex items-center justify-center w-7 h-7 border border-[#E8E6E1] dark:border-[#2C2C32] hover:bg-orange-600 hover:border-orange-600 group/btn transition-colors duration-150">
+                        <Eye className="w-3.5 h-3.5 text-[#6C6C74] dark:text-[#9090A0] group-hover/btn:text-white transition-colors" />
                       </span>
                     </Link>
                   </motion.div>
@@ -278,7 +278,7 @@ export default function ResidentsPage() {
             )}
 
             {filtered.length > 0 && (
-              <p className="mono text-[11px] text-[#7a7870] dark:text-[#7e7b75] mt-3">
+              <p className="mono text-[11px] text-[#6C6C74] dark:text-[#9090A0] mt-3">
                 Showing {filtered.length} of {residents.length} resident{residents.length !== 1 ? 's' : ''}
               </p>
             )}

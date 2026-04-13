@@ -24,17 +24,17 @@ const fmtDocType = (s: string) =>
 
 /* ─────────────────────────── sub-components ────────────────────────────── */
 const SectionLabel = ({ label }: { label: string }) => (
-  <p className="mono text-[11px] tracking-[0.2em] uppercase text-[#5c5a54] dark:text-[#9e9b94] border-b border-[#c8c6c0] dark:border-[#2a2a32] pb-2 mb-4">
+  <p className="text-[11px] font-semibold tracking-[0.16em] uppercase text-[#6C6C74] dark:text-[#9090A0] border-b border-[#E8E6E1] dark:border-[#2C2C32] pb-2 mb-4">
     {label}
   </p>
 );
 
 const DetailRow = ({ label, value }: { label: string; value?: string | null }) => (
   <div>
-    <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">
+    <p className="text-[11px] font-500 tracking-[0.08em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-1">
       {label}
     </p>
-    <p className="text-[13px] font-medium text-[#1a1917] dark:text-[#f0eee8]">
+    <p className="text-[13px] font-medium text-[#1A1A1C] dark:text-[#EAEAEC]">
       {value ?? '—'}
     </p>
   </div>
@@ -43,13 +43,13 @@ const DetailRow = ({ label, value }: { label: string; value?: string | null }) =
 const IconDetail = ({
   icon: Icon, label, value,
 }: { icon: React.ElementType; label: string; value?: string }) => (
-  <div className="flex items-start gap-3 py-3 border-b border-[#e8e5e0] dark:border-[#222228] last:border-0">
-    <Icon className="w-4 h-4 text-[#7a7870] dark:text-[#7e7b75] mt-0.5 flex-shrink-0" />
+  <div className="flex items-start gap-3 py-3 border-b border-[#E8E6E1] dark:border-[#2C2C32] last:border-0">
+    <Icon className="w-4 h-4 text-[#6C6C74] dark:text-[#9090A0] mt-0.5 flex-shrink-0" />
     <div>
-      <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-0.5">
+      <p className="text-[11px] font-500 tracking-[0.08em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-0.5">
         {label}
       </p>
-      <p className="text-[13px] text-[#1a1917] dark:text-[#f0eee8]">{value ?? '—'}</p>
+      <p className="text-[13px] text-[#1A1A1C] dark:text-[#EAEAEC]">{value ?? '—'}</p>
     </div>
   </div>
 );
@@ -77,11 +77,11 @@ const HashDisplay = ({ hash, txHash }: { hash: string; txHash?: string | null })
       <div>
         <div className="flex items-center gap-2 mb-1">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-          <span className="mono text-[10px] font-bold tracking-[0.1em] uppercase text-emerald-600 dark:text-emerald-400">
+          <span className="text-[10px] font-700 tracking-[0.08em] uppercase text-emerald-600 dark:text-emerald-400">
             SHA-256 Hash
           </span>
         </div>
-        <p className="mono text-[10px] text-[#5c5a54] dark:text-[#9e9b94] break-all leading-relaxed mb-1">
+        <p className="mono text-[10px] text-[#6C6C74] dark:text-[#9090A0] break-all leading-relaxed mb-1">
           {hash}
         </p>
         <button
@@ -95,7 +95,7 @@ const HashDisplay = ({ hash, txHash }: { hash: string; txHash?: string | null })
         <div>
           <div className="flex items-center gap-2 mb-1">
             <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />
-            <span className="mono text-[10px] font-bold tracking-[0.1em] uppercase text-blue-500">On-Chain (Sepolia)</span>
+            <span className="text-[10px] font-700 tracking-[0.08em] uppercase text-blue-500">On-Chain (Sepolia)</span>
           </div>
           <a href={`https://sepolia.etherscan.io/tx/${txHash}`} target="_blank" rel="noopener noreferrer"
             className="mono text-[10px] text-blue-500 hover:underline break-all">
@@ -113,7 +113,7 @@ const OutlineBtn = ({
   <button
     onClick={onClick}
     disabled={disabled || loading}
-    className="flex items-center justify-center gap-2 w-full px-4 py-2.5 border border-[#c8c6c0] dark:border-[#2a2a32] text-[12px] font-semibold text-[#3d3b36] dark:text-[#c9c6be] hover:border-[#1a1917] dark:hover:border-[#f0eee8] hover:text-[#1a1917] dark:hover:text-[#f0eee8] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+    className="flex items-center justify-center gap-2 w-full px-4 py-2.5 border border-[#E8E6E1] dark:border-[#2C2C32] text-[12px] font-semibold text-[#3A3A3E] dark:text-[#BABABC] hover:border-[#1a1917] dark:hover:border-[#f0eee8] hover:text-[#1A1A1C] dark:hover:text-[#f0eee8] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
   >
     {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Icon className="w-4 h-4" />}
     {loading ? 'Processing…' : label}
@@ -126,7 +126,7 @@ const FillBtn = ({
   <button
     onClick={onClick}
     disabled={disabled || loading}
-    className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-[#1a1917] dark:bg-[#f0eee8] text-white dark:text-[#1a1917] text-[12px] font-semibold hover:bg-[#3d3b36] dark:hover:bg-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+    className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-[#1a1917] dark:bg-[#f0eee8] text-white dark:text-[#1A1A1C] text-[12px] font-semibold hover:bg-[#3d3b36] dark:hover:bg-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
   >
     {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Icon className="w-4 h-4" />}
     {loading ? 'Processing…' : label}
@@ -284,18 +284,18 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
 
   /* ── early returns ─────────────────────────────────────────────────────── */
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#fafaf9] dark:bg-[#16161a]">
-      <span className="mono text-[12px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] uppercase animate-pulse">
+    <div className="min-h-screen flex items-center justify-center bg-[#F6F5F3] dark:bg-[#111113]">
+      <span className="mono text-[12px] tracking-[0.25em] text-[#6C6C74] dark:text-[#9090A0] uppercase animate-pulse">
         Loading…
       </span>
     </div>
   );
 
   if (notFound || !request) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#fafaf9] dark:bg-[#16161a]">
+    <div className="min-h-screen flex items-center justify-center bg-[#F6F5F3] dark:bg-[#111113]">
       <div className="text-center">
-        <p className="text-[14px] text-[#3d3b36] dark:text-[#c9c6be] mb-4">Document not found.</p>
-        <Link href="/approved-documents" className="mono text-[11px] tracking-[0.1em] uppercase text-orange-600 dark:text-orange-400 hover:underline">
+        <p className="text-[14px] text-[#3A3A3E] dark:text-[#BABABC] mb-4">Document not found.</p>
+        <Link href="/approved-documents" className="text-[11px] font-500 tracking-[0.08em] uppercase text-orange-600 dark:text-orange-400 hover:underline">
           ← Back to Approved Documents
         </Link>
       </div>
@@ -310,9 +310,9 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
-        .pg   { font-family: 'IBM Plex Sans', sans-serif; }
-        .mono { font-family: 'IBM Plex Mono', monospace; }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+        .pjs { font-family: 'Plus Jakarta Sans', sans-serif; }
+        
       `}</style>
 
       <input
@@ -323,33 +323,33 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
         onChange={e => { const f = e.target.files?.[0]; if (f) uploadFile(f, f.name); }}
       />
 
-      <div className="pg min-h-screen bg-[#fafaf9] dark:bg-[#16161a] transition-colors duration-200">
+      <div className="pjs min-h-screen bg-[#F6F5F3] dark:bg-[#111113] transition-colors duration-200">
         <div className="max-w-6xl mx-auto px-6 lg:px-10 pt-6 pb-14">
 
           {/* ── MASTHEAD ─────────────────────────────────────────────── */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="border-b-2 border-[#1a1917] dark:border-[#f0eee8] pb-5 mb-10"
+            className="border-b-2 border-[#1A1A1C] dark:border-[#EAEAEC] pb-5 mb-10"
           >
             <div className="flex items-end justify-between flex-wrap gap-4">
               <div>
                 <div className="flex items-center gap-3 mb-2">
-                  <p className="mono text-[11px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] uppercase">
+                  <p className="text-[11px] tracking-[0.2em] text-[#6C6C74] dark:text-[#9090A0] uppercase">
                     {request.id.slice(0, 8).toUpperCase()}
                   </p>
                   {/* approved badge */}
-                  <span className="mono text-[10px] font-bold tracking-[0.12em] uppercase px-2.5 py-1 border text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30">
+                  <span className="text-[10px] font-700 tracking-[0.1em] uppercase px-2.5 py-1 border text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30">
                     Approved
                   </span>
                 </div>
-                <h1 className="mono text-2xl md:text-3xl font-bold text-[#1a1917] dark:text-[#f0eee8] tracking-tight leading-none">
+                <h1 className="mono text-[26px] font-bold leading-tight text-[#1A1A1C] dark:text-[#EAEAEC] tracking-tight leading-none">
                   {fmtDocType(request.type ?? request.document_type).toUpperCase()}
                 </h1>
               </div>
               <Link
                 href="/approved-documents"
-                className="mono text-[11px] tracking-[0.1em] uppercase text-orange-600 dark:text-orange-400 hover:text-orange-700 transition-colors"
+                className="text-[11px] font-500 tracking-[0.08em] uppercase text-orange-600 dark:text-orange-400 hover:text-orange-700 transition-colors"
               >
                 ← Approved Documents
               </Link>
@@ -384,20 +384,20 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
                   <DetailRow label="Date Approved"    value={new Date(approvedDate).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })} />
                   {request.additional_info && (
                     <div className="col-span-2">
-                      <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-2">
+                      <p className="text-[11px] font-500 tracking-[0.08em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-2">
                         Additional Information
                       </p>
-                      <p className="text-[13px] text-[#3d3b36] dark:text-[#c9c6be] leading-relaxed border-l-2 border-[#c8c6c0] dark:border-[#2a2a32] pl-3">
+                      <p className="text-[13px] text-[#3A3A3E] dark:text-[#BABABC] leading-relaxed border-l-2 border-[#E8E6E1] dark:border-[#2C2C32] pl-3">
                         {request.additional_info}
                       </p>
                     </div>
                   )}
                   {request.notes && (
                     <div className="col-span-2">
-                      <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-2">
+                      <p className="text-[11px] font-500 tracking-[0.08em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-2">
                         Approval Notes
                       </p>
-                      <p className="text-[13px] text-[#3d3b36] dark:text-[#c9c6be] leading-relaxed border-l-2 border-emerald-400 pl-3">
+                      <p className="text-[13px] text-[#3A3A3E] dark:text-[#BABABC] leading-relaxed border-l-2 border-emerald-400 pl-3">
                         {request.notes}
                       </p>
                     </div>
@@ -453,12 +453,12 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
                   </span>
                 </div>
                 <div className="mt-3 space-y-1">
-                  <p className="mono text-[10px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75]">Submitted</p>
-                  <p className="text-[12px] text-[#3d3b36] dark:text-[#c9c6be]">
+                  <p className="text-[10px] font-500 tracking-[0.08em] uppercase text-[#6C6C74] dark:text-[#9090A0]">Submitted</p>
+                  <p className="text-[12px] text-[#3A3A3E] dark:text-[#BABABC]">
                     {new Date(request.created_at).toLocaleString('en-PH')}
                   </p>
-                  <p className="mono text-[10px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mt-2">Approved</p>
-                  <p className="text-[12px] text-[#3d3b36] dark:text-[#c9c6be]">
+                  <p className="text-[10px] font-500 tracking-[0.08em] uppercase text-[#6C6C74] dark:text-[#9090A0] mt-2">Approved</p>
+                  <p className="text-[12px] text-[#3A3A3E] dark:text-[#BABABC]">
                     {new Date(approvedDate).toLocaleString('en-PH')}
                   </p>
                 </div>
@@ -487,14 +487,14 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
                       {uploadedHash && <HashDisplay hash={uploadedHash} txHash={chainTxHash} />}
                       <div className="flex items-center gap-3 py-1">
                         <div className="flex-1 h-px bg-[#e0deda] dark:bg-[#222228]" />
-                        <span className="mono text-[10px] text-[#7a7870] dark:text-[#7e7b75] uppercase tracking-wider">or replace</span>
+                        <span className="mono text-[10px] text-[#6C6C74] dark:text-[#9090A0] uppercase tracking-wider">or replace</span>
                         <div className="flex-1 h-px bg-[#e0deda] dark:bg-[#222228]" />
                       </div>
                     </>
                   )}
 
                   {!request.file_url && (
-                    <p className="text-[12px] text-[#5c5a54] dark:text-[#9e9b94] leading-relaxed mb-1">
+                    <p className="text-[12px] text-[#6C6C74] dark:text-[#9090A0] leading-relaxed mb-1">
                       Generate the document, then upload it so the resident can download it.
                     </p>
                   )}
@@ -519,7 +519,7 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
 
                   <div className="flex items-center gap-3 py-1">
                     <div className="flex-1 h-px bg-[#e0deda] dark:bg-[#222228]" />
-                    <span className="mono text-[10px] text-[#7a7870] dark:text-[#7e7b75] uppercase tracking-wider">or upload manually</span>
+                    <span className="mono text-[10px] text-[#6C6C74] dark:text-[#9090A0] uppercase tracking-wider">or upload manually</span>
                     <div className="flex-1 h-px bg-[#e0deda] dark:bg-[#222228]" />
                   </div>
 

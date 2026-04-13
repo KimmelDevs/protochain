@@ -28,10 +28,10 @@ function Field({ label, value, onChange, type = 'text', placeholder = '', rows }
   label: string; value: string; onChange: (v: string) => void;
   type?: string; placeholder?: string; rows?: number;
 }) {
-  const base = `w-full bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] placeholder-[#7a7870] dark:placeholder-[#7e7b75] text-[13px] px-3 py-2.5 focus:outline-none focus:border-orange-500 dark:focus:border-orange-400 transition-colors duration-150`;
+  const base = `w-full bg-white dark:bg-[#1C1C1F] border border-[#E8E6E1] dark:border-[#2C2C32] text-[#1A1A1C] dark:text-[#EAEAEC] placeholder-[#B0B0B8] dark:placeholder-[#55555F] text-[13px] px-3 py-2.5 focus:outline-none focus:border-orange-500 dark:focus:border-orange-400 transition-colors duration-150`;
   return (
     <div>
-      <label className="block mono text-[10px] tracking-[0.18em] uppercase text-[#5c5a54] dark:text-[#9e9b94] mb-1.5">{label}</label>
+      <label className="block text-[10px] font-semibold tracking-[0.14em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-1.5">{label}</label>
       {rows
         ? <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={rows} className={base + ' resize-none'} />
         : <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className={base} />}
@@ -48,7 +48,7 @@ function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (
       onClick={() => !disabled && onChange(!checked)}
       disabled={disabled}
       className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center border-2 focus:outline-none transition-colors duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed ${
-        checked ? 'bg-orange-500 border-orange-500' : 'bg-[#e8e5e0] dark:bg-[#2a2a32] border-[#c8c6c0] dark:border-[#3a3a42]'
+        checked ? 'bg-orange-500 border-orange-500' : 'bg-[#e8e5e0] dark:bg-[#2a2a32] border-[#E8E6E1] dark:border-[#3a3a42]'
       }`}
       role="switch"
       aria-checked={checked}
@@ -64,14 +64,14 @@ function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (
 // ─── SectionLabel ─────────────────────────────────────────────────────────────
 
 function SectionLabel({ label }: { label: string }) {
-  return <p className="mono text-[11px] tracking-[0.2em] uppercase text-[#5c5a54] dark:text-[#9e9b94] border-b border-[#c8c6c0] dark:border-[#2a2a32] pb-2 mb-5">{label}</p>;
+  return <p className="text-[11px] font-semibold tracking-[0.16em] uppercase text-[#6C6C74] dark:text-[#9090A0] border-b border-[#E8E6E1] dark:border-[#2C2C32] pb-2 mb-5">{label}</p>;
 }
 
 // ─── SaveButton ───────────────────────────────────────────────────────────────
 
 function SaveButton({ onClick, loading, label = 'Save changes' }: { onClick: () => void; loading: boolean; label?: string }) {
   return (
-    <button onClick={onClick} disabled={loading} className="mono text-[11px] font-bold tracking-[0.1em] uppercase text-white bg-orange-600 dark:bg-orange-500 hover:bg-orange-700 dark:hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors px-4 py-2 flex items-center gap-2">
+    <button onClick={onClick} disabled={loading} className="text-[11px] font-700 tracking-[0.08em] uppercase text-white bg-[#E8500A] hover:bg-[#C44008] disabled:opacity-50 disabled:cursor-not-allowed transition-colors px-4 py-2 rounded-lg flex items-center gap-2">
       {loading ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving&hellip;</> : <><Save className="w-3.5 h-3.5" /> {label}</>}
     </button>
   );
@@ -86,8 +86,8 @@ function Toast({ msg, type, onClose }: { msg: string; type: 'success' | 'error';
       initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
       className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 border text-[13px] shadow-lg max-w-xs ${
         type === 'success'
-          ? 'bg-[#fafaf9] dark:bg-[#1e1e24] border-emerald-400 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400'
-          : 'bg-[#fafaf9] dark:bg-[#1e1e24] border-red-400 dark:border-red-700 text-red-600 dark:text-red-400'
+          ? 'bg-[#F6F5F3] dark:bg-[#1C1C1F] border-emerald-400 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400'
+          : 'bg-[#F6F5F3] dark:bg-[#1C1C1F] border-red-400 dark:border-red-700 text-red-600 dark:text-red-400'
       }`}
       style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
     >
@@ -284,24 +284,24 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <div className="border-t border-[#e8e5e0] dark:border-[#222228]" />
+      <div className="border-t border-[#E8E6E1] dark:border-[#2C2C32]" />
 
       <div>
         <SectionLabel label="Barangay Logo" />
         <input ref={logoInputRef} type="file" accept=".png,.jpg,.jpeg" className="hidden" onChange={handleLogoUpload} />
         <div className="flex items-center gap-6">
-          <div className="w-24 h-24 flex-shrink-0 border-2 border-dashed border-[#c8c6c0] dark:border-[#2a2a32] flex items-center justify-center overflow-hidden bg-[#f5f4f0] dark:bg-[#1e1e24]">
+          <div className="w-24 h-24 flex-shrink-0 border-2 border-dashed border-[#E8E6E1] dark:border-[#2C2C32] flex items-center justify-center overflow-hidden bg-[#F6F5F3] dark:bg-[#1C1C1F]">
             {barangayInfo.logo_url
               ? <img src={barangayInfo.logo_url} alt="Logo" className="w-full h-full object-cover" />
               : <Building2 className="w-10 h-10 text-[#c8c6c0] dark:text-[#2a2a32]" />}
           </div>
           <div>
-            <p className="text-[13px] text-[#3d3b36] dark:text-[#c9c6be] mb-1">Upload your barangay logo</p>
-            <p className="mono text-[11px] text-[#7a7870] dark:text-[#7e7b75] mb-3">PNG or JPG — stored in documents bucket</p>
+            <p className="text-[13px] text-[#3A3A3E] dark:text-[#BABABC] mb-1">Upload your barangay logo</p>
+            <p className="mono text-[11px] text-[#6C6C74] dark:text-[#9090A0] mb-3">PNG or JPG — stored in documents bucket</p>
             <button
               onClick={() => logoInputRef.current?.click()}
               disabled={uploadingLogo}
-              className="mono text-[11px] font-bold tracking-[0.1em] uppercase border border-[#c8c6c0] dark:border-[#2a2a32] text-[#3d3b36] dark:text-[#c9c6be] hover:border-[#1a1917] dark:hover:border-[#f0eee8] hover:text-[#1a1917] dark:hover:text-[#f0eee8] disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 flex items-center gap-2 transition-colors"
+              className="text-[11px] font-700 tracking-[0.08em] uppercase border border-[#E8E6E1] dark:border-[#2C2C32] text-[#3A3A3E] dark:text-[#BABABC] hover:border-[#1a1917] dark:hover:border-[#f0eee8] hover:text-[#1A1A1C] dark:hover:text-[#f0eee8] disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 flex items-center gap-2 transition-colors"
             >
               {uploadingLogo ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Uploading&hellip;</> : <><Upload className="w-3.5 h-3.5" /> Upload Logo</>}
             </button>
@@ -325,19 +325,19 @@ export default function SettingsPage() {
         <Field label="Allowed File Types" value={sysSettings.allowedFileTypes} onChange={v => setSysSettings(p => ({ ...p, allowedFileTypes: v }))} />
 
         {/* Require email verification */}
-        <div className="flex items-center justify-between py-3.5 mt-5 border-y border-[#e8e5e0] dark:border-[#222228]">
+        <div className="flex items-center justify-between py-3.5 mt-5 border-y border-[#E8E6E1] dark:border-[#2C2C32]">
           <div>
-            <p className="text-[14px] font-medium text-[#1a1917] dark:text-[#f0eee8] leading-none">Require Email Verification</p>
-            <p className="text-[12px] text-[#5c5a54] dark:text-[#9e9b94] mt-1.5">Users must verify email before making requests</p>
+            <p className="text-[14px] font-medium text-[#1A1A1C] dark:text-[#EAEAEC] leading-none">Require Email Verification</p>
+            <p className="text-[12px] text-[#6C6C74] dark:text-[#9090A0] mt-1.5">Users must verify email before making requests</p>
           </div>
           <Toggle checked={sysSettings.requireVerification} onChange={val => setSysSettings(p => ({ ...p, requireVerification: val }))} />
         </div>
 
         {/* Bypass 2-step approval */}
-        <div className={`flex items-center justify-between py-3.5 border-b border-[#e8e5e0] dark:border-[#222228] transition-colors ${bypassEnabled ? 'bg-amber-50/50 dark:bg-amber-950/10 px-3 -mx-3' : ''}`}>
+        <div className={`flex items-center justify-between py-3.5 border-b border-[#E8E6E1] dark:border-[#2C2C32] transition-colors ${bypassEnabled ? 'bg-amber-50/50 dark:bg-amber-950/10 px-3 -mx-3' : ''}`}>
           <div>
             <div className="flex items-center gap-2">
-              <p className="text-[14px] font-medium text-[#1a1917] dark:text-[#f0eee8] leading-none">
+              <p className="text-[14px] font-medium text-[#1A1A1C] dark:text-[#EAEAEC] leading-none">
                 Bypass 2-Step Approval
               </p>
               {savingBypass && <Loader2 className="w-3 h-3 animate-spin text-orange-500" />}
@@ -347,7 +347,7 @@ export default function SettingsPage() {
                 </span>
               )}
             </div>
-            <p className="text-[12px] text-[#5c5a54] dark:text-[#9e9b94] mt-1.5 leading-snug">
+            <p className="text-[12px] text-[#6C6C74] dark:text-[#9090A0] mt-1.5 leading-snug">
               When ON, the Captain can approve documents without waiting for the Secretary.
               Use this for testing or emergency approvals only.
             </p>
@@ -360,27 +360,27 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <div className="border-t border-[#e8e5e0] dark:border-[#222228]" />
+      <div className="border-t border-[#E8E6E1] dark:border-[#2C2C32]" />
 
       <div>
         <SectionLabel label="Security Settings" />
         <div className="border-l-2 border-orange-500 pl-4 py-0.5 mb-6">
-          <p className="mono text-[11px] font-bold tracking-[0.1em] uppercase text-orange-600 dark:text-orange-400 leading-none mb-1">Caution</p>
-          <p className="text-[13px] text-[#3d3b36] dark:text-[#c9c6be]">
+          <p className="text-[11px] font-700 tracking-[0.08em] uppercase text-orange-600 dark:text-orange-400 leading-none mb-1">Caution</p>
+          <p className="text-[13px] text-[#3A3A3E] dark:text-[#BABABC]">
             Blockchain settings should only be modified by system administrators. Contact your IT department for assistance.
           </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5 mb-6">
           <div>
-            <p className="mono text-[10px] tracking-[0.18em] uppercase text-[#5c5a54] dark:text-[#9e9b94] mb-1.5">Blockchain Network</p>
-            <p className="text-[14px] font-medium text-[#1a1917] dark:text-[#f0eee8]">Ethereum Sepolia Testnet</p>
+            <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-1.5">Blockchain Network</p>
+            <p className="text-[14px] font-medium text-[#1A1A1C] dark:text-[#EAEAEC]">Ethereum Sepolia Testnet</p>
           </div>
           <div>
-            <p className="mono text-[10px] tracking-[0.18em] uppercase text-[#5c5a54] dark:text-[#9e9b94] mb-1.5">Smart Contract</p>
-            <p className="mono text-[13px] text-[#1a1917] dark:text-[#f0eee8]">0x1234&hellip;5678</p>
+            <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-1.5">Smart Contract</p>
+            <p className="mono text-[13px] text-[#1A1A1C] dark:text-[#EAEAEC]">0x1234&hellip;5678</p>
           </div>
         </div>
-        <button className="mono text-[11px] font-bold tracking-[0.1em] uppercase border border-[#c8c6c0] dark:border-[#2a2a32] text-[#3d3b36] dark:text-[#c9c6be] hover:border-[#1a1917] dark:hover:border-[#f0eee8] hover:text-[#1a1917] dark:hover:text-[#f0eee8] px-4 py-2 flex items-center gap-2 transition-colors">
+        <button className="text-[11px] font-700 tracking-[0.08em] uppercase border border-[#E8E6E1] dark:border-[#2C2C32] text-[#3A3A3E] dark:text-[#BABABC] hover:border-[#1a1917] dark:hover:border-[#f0eee8] hover:text-[#1A1A1C] dark:hover:text-[#f0eee8] px-4 py-2 flex items-center gap-2 transition-colors">
           <Key className="w-3.5 h-3.5" />
           Manage API Keys
         </button>
@@ -394,17 +394,17 @@ export default function SettingsPage() {
   ) : (
     <div className="space-y-10">
       <div className="border-l-2 border-orange-500 pl-4 py-0.5">
-        <p className="mono text-[11px] font-bold tracking-[0.1em] uppercase text-orange-600 dark:text-orange-400 leading-none mb-1">ECDSA Digital Signatures</p>
-        <p className="text-[13px] text-[#3d3b36] dark:text-[#c9c6be]">
+        <p className="text-[11px] font-700 tracking-[0.08em] uppercase text-orange-600 dark:text-orange-400 leading-none mb-1">ECDSA Digital Signatures</p>
+        <p className="text-[13px] text-[#3A3A3E] dark:text-[#BABABC]">
           Draw and save official signatures for the Barangay Captain and Secretary. Each signature is cryptographically signed using <strong>ECDSA P-256</strong> and will be automatically embedded into generated documents. The public key is stored for verification; the private key is never persisted.
         </p>
       </div>
-      <div className="border border-[#e8e5e0] dark:border-[#222228] p-6">
+      <div className="border border-[#E8E6E1] dark:border-[#2C2C32] p-6">
         <SectionLabel label="Barangay Captain / Punong Barangay" />
         <SignaturePad role="captain" label="Captain's Official Signature" existingRecord={captainSig} onSave={handleSaveSignature} />
       </div>
-      <div className="border-t border-[#e8e5e0] dark:border-[#222228]" />
-      <div className="border border-[#e8e5e0] dark:border-[#222228] p-6">
+      <div className="border-t border-[#E8E6E1] dark:border-[#2C2C32]" />
+      <div className="border border-[#E8E6E1] dark:border-[#2C2C32] p-6">
         <SectionLabel label="Barangay Secretary" />
         <SignaturePad role="secretary" label="Secretary's Official Signature" existingRecord={secretarySig} onSave={handleSaveSignature} />
       </div>
@@ -421,17 +421,17 @@ export default function SettingsPage() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
-        .pg   { font-family: 'IBM Plex Sans', sans-serif; }
-        .mono { font-family: 'IBM Plex Mono', monospace; }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+        .pjs { font-family: 'Plus Jakarta Sans', sans-serif; }
+        
       `}</style>
 
-      <div className="pg min-h-screen bg-[#fafaf9] dark:bg-[#16161a] transition-colors duration-200">
+      <div className="pjs min-h-screen bg-[#F6F5F3] dark:bg-[#111113] transition-colors duration-200">
         <div className="max-w-4xl mx-auto px-6 lg:px-10 pt-6 pb-14">
 
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.35 }} className="border-b-2 border-[#1a1917] dark:border-[#f0eee8] pb-5 mb-10">
-            <p className="mono text-[11px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] mb-2 uppercase">System</p>
-            <h1 className="mono text-2xl md:text-3xl font-bold text-[#1a1917] dark:text-[#f0eee8] tracking-tight leading-none">Settings</h1>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.35 }} className="border-b-2 border-[#1A1A1C] dark:border-[#EAEAEC] pb-5 mb-10">
+            <p className="text-[11px] tracking-[0.2em] text-[#6C6C74] dark:text-[#9090A0] mb-2 uppercase">System</p>
+            <h1 className="mono text-[26px] font-bold leading-tight text-[#1A1A1C] dark:text-[#EAEAEC] tracking-tight leading-none">Settings</h1>
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.07 }} className="flex items-center gap-1 mb-10 flex-wrap">
@@ -443,8 +443,8 @@ export default function SettingsPage() {
                   onClick={() => setActiveTab(key)}
                   className={`px-4 py-2 text-[12px] font-medium border transition-colors duration-150 ${
                     active
-                      ? 'bg-orange-600 dark:bg-orange-500 text-white border-orange-600 dark:border-orange-500'
-                      : 'bg-transparent text-[#5c5a54] dark:text-[#9e9b94] border-[#c8c6c0] dark:border-[#2a2a32] hover:border-orange-500 dark:hover:border-orange-400 hover:text-orange-600 dark:hover:text-orange-400'
+                      ? 'bg-[#E8500A] dark:bg-[#E8500A] text-white border-[#E8500A] dark:border-[#E8500A] rounded-full'
+                      : 'bg-transparent text-[#6C6C74] dark:text-[#9090A0] border-[#E8E6E1] dark:border-[#2C2C32] hover:border-orange-500 dark:hover:border-orange-400 hover:text-orange-600 dark:hover:text-orange-400'
                   }`}
                 >
                   {label}

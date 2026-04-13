@@ -75,17 +75,17 @@ const StatCell = ({
     ? 'border-orange-500'
     : accent === 'red'
     ? 'border-red-500'
-    : 'border-[#1a1917] dark:border-[#f0eee8]';
+    : 'border-[#1A1A1C] dark:border-[#EAEAEC]';
   const valCls = accent === 'orange'
     ? 'text-orange-600 dark:text-orange-400'
     : accent === 'red'
     ? 'text-red-600 dark:text-red-400'
-    : 'text-[#1a1917] dark:text-[#f0eee8]';
+    : 'text-[#1A1A1C] dark:text-[#EAEAEC]';
 
   return (
     <Link href={href} className="group block">
       <div className={`border-t-2 ${borderCls} pt-3 pb-4`}>
-        <p className="mono text-[11px] tracking-[0.15em] uppercase text-[#5c5a54] dark:text-[#9e9b94] mb-2">
+        <p className="mono text-[11px] tracking-[0.15em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-2">
           {label}
         </p>
         <p className={`mono text-4xl font-bold tabular-nums leading-none group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors duration-150 ${valCls}`}>
@@ -188,7 +188,7 @@ export default function DashboardPage() {
 
   const dateStr = now.toLocaleDateString('en-PH', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-  }).toUpperCase();
+  });
 
   const firstName = adminName ? adminName.split(' ')[0].toUpperCase() : '';
 
@@ -202,8 +202,8 @@ export default function DashboardPage() {
   /* ── loading ─────────────────────────────────────────────────────────── */
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#fafaf9] dark:bg-[#16161a]">
-        <span className="mono text-[12px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] uppercase animate-pulse">
+      <div className="min-h-screen flex items-center justify-center bg-[#F6F5F3] dark:bg-[#111113]">
+        <span className="mono text-[12px] tracking-[0.25em] text-[#6C6C74] dark:text-[#9090A0] uppercase animate-pulse">
           Loading…
         </span>
       </div>
@@ -214,12 +214,11 @@ export default function DashboardPage() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
-        .dash { font-family: 'IBM Plex Sans', sans-serif; }
-        .mono { font-family: 'IBM Plex Mono', monospace; }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+        .dash { font-family: 'Plus Jakarta Sans', sans-serif; }
       `}</style>
 
-      <div className="dash min-h-screen bg-[#fafaf9] dark:bg-[#16161a] transition-colors duration-200">
+      <div className="dash min-h-screen bg-[#F6F5F3] dark:bg-[#111113] transition-colors duration-200">
         <div className="max-w-6xl mx-auto px-6 lg:px-10 pt-6 pb-10 lg:pb-14">
 
           {/* ── MASTHEAD ───────────────────────────────────────────────── */}
@@ -227,13 +226,13 @@ export default function DashboardPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.35 }}
-            className="border-b-2 border-[#1a1917] dark:border-[#f0eee8] pb-5 mb-10"
+            className="border-b-2 border-[#1A1A1C] dark:border-[#EAEAEC] pb-5 mb-10"
           >
-            <p className="mono text-[11px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] mb-2">
+            <p className="mono text-[11px] tracking-[0.25em] text-[#6C6C74] dark:text-[#9090A0] mb-2">
               {dateStr}
             </p>
-            <h1 className="mono text-2xl md:text-3xl font-bold text-[#1a1917] dark:text-[#f0eee8] tracking-tight leading-none">
-              {firstName ? `${firstName} /` : ''} ADMIN DASHBOARD
+            <h1 className="mono text-2xl md:text-3xl font-bold text-[#1A1A1C] dark:text-[#EAEAEC] tracking-tight leading-none">
+              {firstName ? `Good day, ${firstName} 👋` : 'Admin Dashboard'}
             </h1>
           </motion.div>
 
@@ -262,8 +261,8 @@ export default function DashboardPage() {
             >
 
               {/* section header */}
-              <div className="flex items-baseline justify-between border-b border-[#c8c6c0] dark:border-[#2a2a32] pb-2 mb-4">
-                <span className="mono text-[11px] tracking-[0.2em] uppercase text-[#5c5a54] dark:text-[#9e9b94]">
+              <div className="flex items-baseline justify-between border-b border-[#E8E6E1] dark:border-[#2C2C32] pb-2 mb-4">
+                <span className="mono text-[11px] tracking-[0.2em] uppercase text-[#6C6C74] dark:text-[#9090A0]">
                   Recent Requests
                 </span>
                 <Link
@@ -283,11 +282,11 @@ export default function DashboardPage() {
                       key={key}
                       onClick={() => setActiveTab(key)}
                       className={`
-                        flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium
-                        border transition-colors duration-150
+                        flex items-center gap-1.5 px-4 py-1.5 text-[12px] font-semibold
+                        rounded-full border transition-colors duration-150
                         ${isActive
-                          ? 'bg-orange-600 dark:bg-orange-500 text-white border-orange-600 dark:border-orange-500'
-                          : 'bg-transparent text-[#5c5a54] dark:text-[#9e9b94] border-[#c8c6c0] dark:border-[#2a2a32] hover:border-orange-500 dark:hover:border-orange-400 hover:text-orange-600 dark:hover:text-orange-400'
+                          ? 'bg-[#E8500A] text-white border-[#E8500A] rounded-full'
+                          : 'bg-transparent text-[#6C6C74] dark:text-[#9090A0] border-[#E8E6E1] dark:border-[#2C2C32] rounded-full hover:border-[#E8500A] hover:text-[#E8500A]'
                         }
                       `}
                     >
@@ -299,7 +298,7 @@ export default function DashboardPage() {
                           ? 'text-amber-600 dark:text-amber-400'
                           : key === 'rejected'
                           ? 'text-red-600 dark:text-red-400'
-                          : 'text-[#7a7870] dark:text-[#7e7b75]'
+                          : 'text-[#6C6C74] dark:text-[#9090A0]'
                       }`}>
                         {count}
                       </span>
@@ -309,18 +308,18 @@ export default function DashboardPage() {
               </div>
 
               {/* col headers */}
-              <div className="grid grid-cols-[1fr_100px_56px_36px] py-2 border-b border-[#e0deda] dark:border-[#222228]">
-                <span className="mono text-[11px] tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75]">Resident</span>
-                <span className="mono text-[11px] tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75]">Status</span>
-                <span className="mono text-[11px] tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] text-right">Date</span>
+              <div className="grid grid-cols-[1fr_100px_56px_36px] py-2 border-b border-[#E8E6E1] dark:border-[#2C2C32]">
+                <span className="mono text-[11px] tracking-[0.15em] uppercase text-[#6C6C74] dark:text-[#9090A0]">Resident</span>
+                <span className="mono text-[11px] tracking-[0.15em] uppercase text-[#6C6C74] dark:text-[#9090A0]">Status</span>
+                <span className="mono text-[11px] tracking-[0.15em] uppercase text-[#6C6C74] dark:text-[#9090A0] text-right">Date</span>
                 <span />
               </div>
 
               {/* rows */}
               {filteredReqs.length === 0 ? (
                 <div className="py-16 flex flex-col items-center gap-3">
-                  <FileText className="w-6 h-6 text-[#c8c6c0] dark:text-[#3a3845]" />
-                  <span className="mono text-[12px] tracking-widest uppercase text-[#7a7870] dark:text-[#7e7b75]">
+                  <FileText className="w-6 h-6 text-[#B0B0B8] dark:text-[#3A3A44]" />
+                  <span className="mono text-[12px] tracking-widest uppercase text-[#6C6C74] dark:text-[#9090A0]">
                     No {activeTab === 'all' ? '' : activeTab} records
                   </span>
                 </div>
@@ -344,28 +343,28 @@ export default function DashboardPage() {
                       return (
                         <div
                           key={req.id}
-                          className="grid grid-cols-[1fr_100px_56px_36px] items-center py-3.5 border-b border-[#e8e5e0] dark:border-[#222228] last:border-0 hover:bg-black/[0.025] dark:hover:bg-[#1e1e24] -mx-2 px-2 transition-colors duration-100"
+                          className="grid grid-cols-[1fr_100px_56px_36px] items-center py-3.5 border-b border-[#E8E6E1] dark:border-[#2C2C32] last:border-0 hover:bg-[#F0EFED] dark:hover:bg-[#1C1C1F] -mx-2 px-2 transition-colors duration-100"
                         >
                           <div className="min-w-0 pr-4">
-                            <p className="text-[14px] font-medium text-[#1a1917] dark:text-[#f0eee8] truncate leading-none">
+                            <p className="text-[14px] font-medium text-[#1A1A1C] dark:text-[#EAEAEC] truncate leading-none">
                               {name}
                             </p>
                             {/* sentence case, regular weight, not mono */}
-                            <p className="text-[12px] text-[#5c5a54] dark:text-[#9e9b94] mt-1.5 truncate">
+                            <p className="text-[12px] text-[#6C6C74] dark:text-[#9090A0] mt-1.5 truncate">
                               {docType}
                             </p>
                           </div>
 
                           <StatusTag status={req.status} />
 
-                          <span className="mono text-[11px] text-[#5c5a54] dark:text-[#9e9b94] text-right">
+                          <span className="mono text-[11px] text-[#6C6C74] dark:text-[#9090A0] text-right">
                             {fmt(req.created_at)}
                           </span>
 
                           {/* always-visible open button */}
                           <Link href={requestLink(req)} className="flex justify-end">
-                            <span className="flex items-center justify-center w-7 h-7 border border-[#c8c6c0] dark:border-[#2a2a32] hover:bg-orange-600 hover:border-orange-600 group/btn transition-colors duration-150">
-                              <Eye className="w-3.5 h-3.5 text-[#5c5a54] dark:text-[#9e9b94] group-hover/btn:text-white transition-colors" />
+                            <span className="flex items-center justify-center w-8 h-8 border border-[#E8E6E1] dark:border-[#2C2C32] rounded-lg hover:bg-[#E8500A] hover:border-[#E8500A] group/btn transition-colors duration-150">
+                              <Eye className="w-3.5 h-3.5 text-[#6C6C74] dark:text-[#9090A0] group-hover/btn:text-white transition-colors" />
                             </span>
                           </Link>
                         </div>
@@ -377,7 +376,7 @@ export default function DashboardPage() {
 
               {/* show count footer */}
               {filteredReqs.length > 0 && (
-                <p className="mono text-[11px] text-[#7a7870] dark:text-[#7e7b75] mt-3">
+                <p className="mono text-[11px] text-[#6C6C74] dark:text-[#9090A0] mt-3">
                   Showing {filteredReqs.length} of {
                     activeTab === 'all' ? stats.total :
                     activeTab === 'pending' ? stats.pending :
@@ -403,23 +402,23 @@ export default function DashboardPage() {
 
               {/* ── QUICK ACTIONS ──────────────────────────────────── */}
               <div>
-                <p className="mono text-[11px] tracking-[0.2em] uppercase text-[#5c5a54] dark:text-[#9e9b94] border-b border-[#c8c6c0] dark:border-[#2a2a32] pb-2 mb-1">
+                <p className="mono text-[11px] tracking-[0.2em] uppercase text-[#6C6C74] dark:text-[#9090A0] border-b border-[#E8E6E1] dark:border-[#2C2C32] pb-2 mb-1">
                   Quick Actions
                 </p>
                 {quickActions.map(({ label, href, icon: Icon, count, urgent }) => (
                   <Link key={href} href={href}>
-                    <div className="flex items-center justify-between py-3 border-b border-[#e8e5e0] dark:border-[#222228] last:border-0 hover:bg-black/[0.025] dark:hover:bg-[#1e1e24] -mx-2 px-2 transition-colors duration-100 group">
+                    <div className="flex items-center justify-between py-3 border-b border-[#E8E6E1] dark:border-[#2C2C32] last:border-0 hover:bg-[#F0EFED] dark:hover:bg-[#1C1C1F] -mx-2 px-2 transition-colors duration-100 group">
                       <div className="flex items-center gap-2.5">
-                        <Icon className={`w-4 h-4 flex-shrink-0 ${urgent ? 'text-orange-500' : 'text-[#7a7870] dark:text-[#7e7b75]'}`} />
-                        <span className="text-[13px] text-[#3d3b36] dark:text-[#c9c6be] group-hover:text-[#1a1917] dark:group-hover:text-[#f0eee8] transition-colors">
+                        <Icon className={`w-4 h-4 flex-shrink-0 ${urgent ? 'text-orange-500' : 'text-[#6C6C74] dark:text-[#9090A0]'}`} />
+                        <span className="text-[13px] text-[#3A3A3E] dark:text-[#BABABC] group-hover:text-[#1a1917] dark:group-hover:text-[#f0eee8] transition-colors">
                           {label}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className={`mono text-[12px] font-bold tabular-nums ${urgent ? 'text-orange-600 dark:text-orange-400' : 'text-[#5c5a54] dark:text-[#9e9b94]'}`}>
+                        <span className={`mono text-[12px] font-bold tabular-nums ${urgent ? 'text-orange-600 dark:text-orange-400' : 'text-[#6C6C74] dark:text-[#9090A0]'}`}>
                           {count}
                         </span>
-                        <ChevronRight className="w-3.5 h-3.5 text-[#c8c6c0] dark:text-[#2a2a32] group-hover:text-[#5c5a54] dark:group-hover:text-[#9e9b94] transition-colors" />
+                        <ChevronRight className="w-3.5 h-3.5 text-[#B0B0B8] dark:text-[#44444C] group-hover:text-[#5c5a54] dark:group-hover:text-[#9e9b94] transition-colors" />
                       </div>
                     </div>
                   </Link>
@@ -429,28 +428,28 @@ export default function DashboardPage() {
               {/* ── APPROVAL RATE (THIS MONTH) ──────────────────────── */}
               {stats.thisMonth > 0 && (
                 <div>
-                  <div className="flex items-baseline justify-between border-b border-[#c8c6c0] dark:border-[#2a2a32] pb-2 mb-3">
-                    <p className="mono text-[11px] tracking-[0.2em] uppercase text-[#5c5a54] dark:text-[#9e9b94]">
+                  <div className="flex items-baseline justify-between border-b border-[#E8E6E1] dark:border-[#2C2C32] pb-2 mb-3">
+                    <p className="mono text-[11px] tracking-[0.2em] uppercase text-[#6C6C74] dark:text-[#9090A0]">
                       Approval Rate
                     </p>
-                    <span className="text-[11px] text-[#5c5a54] dark:text-[#9e9b94]">
+                    <span className="text-[11px] text-[#6C6C74] dark:text-[#9090A0]">
                       This month
                     </span>
                   </div>
 
-                  <div className="relative h-[3px] bg-[#dedad4] dark:bg-[#2a2a32] mb-4">
+                  <div className="relative h-[6px] bg-[#E8E6E1] dark:bg-[#2C2C32] mb-4 rounded-full overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${approvalRateThis}%` }}
                       transition={{ delay: 0.5, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-                      className="absolute inset-y-0 left-0 bg-emerald-600 dark:bg-emerald-500"
+                      className="absolute inset-y-0 left-0 bg-emerald-500 rounded-full"
                     />
                   </div>
 
                   <div className="flex items-baseline justify-between">
-                    <p className="mono text-3xl font-bold tabular-nums text-[#1a1917] dark:text-[#f0eee8] leading-none">
+                    <p className="mono text-3xl font-bold tabular-nums text-[#1A1A1C] dark:text-[#EAEAEC] leading-none">
                       {approvalRateThis}
-                      <span className="text-lg font-normal text-[#5c5a54] dark:text-[#9e9b94]">%</span>
+                      <span className="text-lg font-normal text-[#6C6C74] dark:text-[#9090A0]">%</span>
                     </p>
                     {/* month-over-month delta */}
                     {stats.lastMonth > 0 && (
@@ -459,7 +458,7 @@ export default function DashboardPage() {
                           ? 'text-emerald-600 dark:text-emerald-400'
                           : rateDelta < 0
                           ? 'text-red-600 dark:text-red-400'
-                          : 'text-[#7a7870] dark:text-[#7e7b75]'
+                          : 'text-[#6C6C74] dark:text-[#9090A0]'
                       }`}>
                         {rateDelta > 0 ? '+' : ''}{rateDelta}% vs last month
                       </span>
@@ -482,13 +481,13 @@ export default function DashboardPage() {
                       <p className="mono text-[11px] font-bold tracking-[0.1em] uppercase text-orange-600 dark:text-orange-400 leading-none">
                         Action Required
                       </p>
-                      <p className="text-[13px] text-[#3d3b36] dark:text-[#c9c6be] mt-2 leading-snug">
+                      <p className="text-[13px] text-[#3A3A3E] dark:text-[#BABABC] mt-2 leading-snug">
                         {stats.pending} request{stats.pending > 1 ? 's' : ''} awaiting review.
                       </p>
                     </div>
                   </div>
                   <Link href="/pending-requests">
-                    <button className="mono text-[11px] font-bold tracking-[0.1em] uppercase text-white bg-orange-600 dark:bg-orange-500 hover:bg-orange-700 dark:hover:bg-orange-600 transition-colors px-4 py-2">
+                    <button className="text-[12px] font-semibold text-white bg-[#E8500A] hover:bg-[#C44008] transition-colors px-4 py-2 rounded-xl">
                       Review now →
                     </button>
                   </Link>

@@ -49,13 +49,13 @@ const ACTION_CFG = {
 
 /* ─── sub-components ────────────────────────────────────────────────────── */
 const SectionLabel = ({ label }: { label: string }) => (
-  <p className="mono text-[11px] tracking-[0.2em] uppercase text-[#5c5a54] dark:text-[#9e9b94] border-b border-[#c8c6c0] dark:border-[#2a2a32] pb-2 mb-4">{label}</p>
+  <p className="text-[11px] font-semibold tracking-[0.16em] uppercase text-[#6C6C74] dark:text-[#9090A0] border-b border-[#E8E6E1] dark:border-[#2C2C32] pb-2 mb-4">{label}</p>
 );
 
 const DetailRow = ({ label, value, mono }: { label: string; value?: string | null; mono?: boolean }) => (
   <div>
-    <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">{label}</p>
-    <p className={`text-[13px] font-medium text-[#1a1917] dark:text-[#f0eee8] break-all ${mono ? 'font-mono' : ''}`}>{value ?? '—'}</p>
+    <p className="text-[11px] font-500 tracking-[0.08em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-1">{label}</p>
+    <p className={`text-[13px] font-medium text-[#1A1A1C] dark:text-[#EAEAEC] break-all ${mono ? 'font-mono' : ''}`}>{value ?? '—'}</p>
   </div>
 );
 
@@ -63,7 +63,7 @@ const ActionBadge = ({ action }: { action: AuditLogDetail['action'] }) => {
   const cfg  = ACTION_CFG[action] ?? ACTION_CFG.approved;
   const Icon = cfg.icon;
   return (
-    <span className={`inline-flex items-center gap-1.5 mono text-[10px] font-bold tracking-[0.1em] uppercase px-2.5 py-1 border ${cfg.cls}`}>
+    <span className={`inline-flex items-center gap-1.5 text-[10px] font-700 tracking-[0.08em] uppercase px-2.5 py-1 border ${cfg.cls}`}>
       <Icon className="w-3 h-3" />{cfg.label}
     </span>
   );
@@ -142,16 +142,16 @@ export default function AuditLogDetailPage({ params }: { params: Promise<{ id: s
   }, [id, router]);
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#fafaf9] dark:bg-[#16161a]">
-      <span className="mono text-[12px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] uppercase animate-pulse">Loading…</span>
+    <div className="min-h-screen flex items-center justify-center bg-[#F6F5F3] dark:bg-[#111113]">
+      <span className="mono text-[12px] tracking-[0.25em] text-[#6C6C74] dark:text-[#9090A0] uppercase animate-pulse">Loading…</span>
     </div>
   );
 
   if (notFound || !log) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#fafaf9] dark:bg-[#16161a]">
+    <div className="min-h-screen flex items-center justify-center bg-[#F6F5F3] dark:bg-[#111113]">
       <div className="text-center">
-        <p className="text-[14px] text-[#3d3b36] dark:text-[#c9c6be] mb-4">Audit log not found.</p>
-        <Link href="/audit-logs" className="mono text-[11px] tracking-[0.1em] uppercase text-orange-600 dark:text-orange-400 hover:underline">
+        <p className="text-[14px] text-[#3A3A3E] dark:text-[#BABABC] mb-4">Audit log not found.</p>
+        <Link href="/audit-logs" className="text-[11px] font-500 tracking-[0.08em] uppercase text-orange-600 dark:text-orange-400 hover:underline">
           ← Back to Audit Logs
         </Link>
       </div>
@@ -162,26 +162,26 @@ export default function AuditLogDetailPage({ params }: { params: Promise<{ id: s
 
   return (
     <>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap'); .pg{font-family:'IBM Plex Sans',sans-serif} .mono{font-family:'IBM Plex Mono',monospace}`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap'); .pjs{font-family:'Plus Jakarta Sans',sans-serif} `}</style>
 
-      <div className="pg min-h-screen bg-[#fafaf9] dark:bg-[#16161a] transition-colors duration-200">
+      <div className="pjs min-h-screen bg-[#F6F5F3] dark:bg-[#111113] transition-colors duration-200">
         <div className="max-w-4xl mx-auto px-6 lg:px-10 pt-6 pb-14">
 
           {/* MASTHEAD */}
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="border-b-2 border-[#1a1917] dark:border-[#f0eee8] pb-5 mb-10">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="border-b-2 border-[#1A1A1C] dark:border-[#EAEAEC] pb-5 mb-10">
             <div className="flex items-end justify-between flex-wrap gap-4">
               <div>
                 <div className="flex items-center gap-3 mb-2">
-                  <p className="mono text-[11px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] uppercase">
+                  <p className="text-[11px] tracking-[0.2em] text-[#6C6C74] dark:text-[#9090A0] uppercase">
                     {log.id.slice(0, 8).toUpperCase()}
                   </p>
                   <ActionBadge action={log.action} />
                 </div>
-                <h1 className="mono text-2xl md:text-3xl font-bold text-[#1a1917] dark:text-[#f0eee8] tracking-tight leading-none">
+                <h1 className="mono text-[26px] font-bold leading-tight text-[#1A1A1C] dark:text-[#EAEAEC] tracking-tight leading-none">
                   AUDIT LOG DETAIL
                 </h1>
               </div>
-              <Link href="/audit-logs" className="mono text-[11px] tracking-[0.1em] uppercase text-orange-600 dark:text-orange-400 hover:text-orange-700 transition-colors flex items-center gap-1">
+              <Link href="/audit-logs" className="text-[11px] font-500 tracking-[0.08em] uppercase text-orange-600 dark:text-orange-400 hover:text-orange-700 transition-colors flex items-center gap-1">
                 <ArrowLeft className="w-3 h-3" /> Audit Logs
               </Link>
             </div>
@@ -202,8 +202,8 @@ export default function AuditLogDetailPage({ params }: { params: Promise<{ id: s
                   <DetailRow label="Document Type" value={fmtDocType(log.document_type)} />
                   {log.notes && (
                     <div className="col-span-2">
-                      <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">Notes</p>
-                      <p className="text-[13px] text-[#3d3b36] dark:text-[#c9c6be] leading-relaxed border-l-2 border-[#c8c6c0] dark:border-[#2a2a32] pl-3">{log.notes}</p>
+                      <p className="text-[11px] font-500 tracking-[0.08em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-1">Notes</p>
+                      <p className="text-[13px] text-[#3A3A3E] dark:text-[#BABABC] leading-relaxed border-l-2 border-[#E8E6E1] dark:border-[#2C2C32] pl-3">{log.notes}</p>
                     </div>
                   )}
                 </div>
@@ -213,18 +213,18 @@ export default function AuditLogDetailPage({ params }: { params: Promise<{ id: s
               <div>
                 <SectionLabel label="Performed By" />
                 <div className="space-y-0">
-                  <div className="flex items-start gap-3 py-3 border-b border-[#e8e5e0] dark:border-[#222228]">
-                    <User className="w-4 h-4 text-[#7a7870] dark:text-[#7e7b75] mt-0.5 flex-shrink-0" />
+                  <div className="flex items-start gap-3 py-3 border-b border-[#E8E6E1] dark:border-[#2C2C32]">
+                    <User className="w-4 h-4 text-[#6C6C74] dark:text-[#9090A0] mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-0.5">Admin Name</p>
-                      <p className="text-[13px] text-[#1a1917] dark:text-[#f0eee8]">{log.performer_name ?? '—'}</p>
+                      <p className="text-[11px] font-500 tracking-[0.08em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-0.5">Admin Name</p>
+                      <p className="text-[13px] text-[#1A1A1C] dark:text-[#EAEAEC]">{log.performer_name ?? '—'}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3 py-3">
-                    <Mail className="w-4 h-4 text-[#7a7870] dark:text-[#7e7b75] mt-0.5 flex-shrink-0" />
+                    <Mail className="w-4 h-4 text-[#6C6C74] dark:text-[#9090A0] mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-0.5">Admin Email</p>
-                      <p className="text-[13px] text-[#1a1917] dark:text-[#f0eee8]">{log.performer_email ?? '—'}</p>
+                      <p className="text-[11px] font-500 tracking-[0.08em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-0.5">Admin Email</p>
+                      <p className="text-[13px] text-[#1A1A1C] dark:text-[#EAEAEC]">{log.performer_email ?? '—'}</p>
                     </div>
                   </div>
                 </div>
@@ -234,18 +234,18 @@ export default function AuditLogDetailPage({ params }: { params: Promise<{ id: s
               <div>
                 <SectionLabel label="Resident" />
                 <div className="space-y-0">
-                  <div className="flex items-start gap-3 py-3 border-b border-[#e8e5e0] dark:border-[#222228]">
-                    <User className="w-4 h-4 text-[#7a7870] dark:text-[#7e7b75] mt-0.5 flex-shrink-0" />
+                  <div className="flex items-start gap-3 py-3 border-b border-[#E8E6E1] dark:border-[#2C2C32]">
+                    <User className="w-4 h-4 text-[#6C6C74] dark:text-[#9090A0] mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-0.5">Full Name</p>
-                      <p className="text-[13px] text-[#1a1917] dark:text-[#f0eee8]">{log.resident_name ?? '—'}</p>
+                      <p className="text-[11px] font-500 tracking-[0.08em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-0.5">Full Name</p>
+                      <p className="text-[13px] text-[#1A1A1C] dark:text-[#EAEAEC]">{log.resident_name ?? '—'}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3 py-3">
-                    <Mail className="w-4 h-4 text-[#7a7870] dark:text-[#7e7b75] mt-0.5 flex-shrink-0" />
+                    <Mail className="w-4 h-4 text-[#6C6C74] dark:text-[#9090A0] mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-0.5">Email</p>
-                      <p className="text-[13px] text-[#1a1917] dark:text-[#f0eee8]">{log.resident_email ?? '—'}</p>
+                      <p className="text-[11px] font-500 tracking-[0.08em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-0.5">Email</p>
+                      <p className="text-[13px] text-[#1A1A1C] dark:text-[#EAEAEC]">{log.resident_email ?? '—'}</p>
                     </div>
                   </div>
                 </div>
@@ -264,9 +264,9 @@ export default function AuditLogDetailPage({ params }: { params: Promise<{ id: s
                     <div className="border-l-2 border-emerald-500 pl-3 py-1">
                       <div className="flex items-center gap-2 mb-1">
                         <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                        <span className="mono text-[10px] font-bold tracking-[0.1em] uppercase text-emerald-600 dark:text-emerald-400">SHA-256 Hash</span>
+                        <span className="text-[10px] font-700 tracking-[0.08em] uppercase text-emerald-600 dark:text-emerald-400">SHA-256 Hash</span>
                       </div>
-                      <p className="mono text-[10px] text-[#5c5a54] dark:text-[#9e9b94] break-all leading-relaxed mb-1">{log.file_hash}</p>
+                      <p className="mono text-[10px] text-[#6C6C74] dark:text-[#9090A0] break-all leading-relaxed mb-1">{log.file_hash}</p>
                       <button
                         onClick={() => { navigator.clipboard.writeText(log.file_hash!); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
                         className="mono text-[10px] text-orange-600 dark:text-orange-400 hover:underline"
@@ -275,8 +275,8 @@ export default function AuditLogDetailPage({ params }: { params: Promise<{ id: s
                       </button>
                     </div>
                   ) : (
-                    <div className="border-l-2 border-[#c8c6c0] dark:border-[#2a2a32] pl-3 py-1">
-                      <p className="text-[12px] text-[#7a7870] dark:text-[#7e7b75] italic">No hash recorded yet.</p>
+                    <div className="border-l-2 border-[#E8E6E1] dark:border-[#2C2C32] pl-3 py-1">
+                      <p className="text-[12px] text-[#6C6C74] dark:text-[#9090A0] italic">No hash recorded yet.</p>
                     </div>
                   )}
 
@@ -284,9 +284,9 @@ export default function AuditLogDetailPage({ params }: { params: Promise<{ id: s
                     <div className="border-l-2 border-blue-500 pl-3 py-1">
                       <div className="flex items-center gap-2 mb-1">
                         <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />
-                        <span className="mono text-[10px] font-bold tracking-[0.1em] uppercase text-blue-500">On-Chain (Sepolia)</span>
+                        <span className="text-[10px] font-700 tracking-[0.08em] uppercase text-blue-500">On-Chain (Sepolia)</span>
                       </div>
-                      <p className="mono text-[10px] text-[#5c5a54] dark:text-[#9e9b94] break-all leading-relaxed mb-1">{log.chain_tx_hash}</p>
+                      <p className="mono text-[10px] text-[#6C6C74] dark:text-[#9090A0] break-all leading-relaxed mb-1">{log.chain_tx_hash}</p>
                       <a
                         href={`https://sepolia.etherscan.io/tx/${log.chain_tx_hash}`}
                         target="_blank"
@@ -297,8 +297,8 @@ export default function AuditLogDetailPage({ params }: { params: Promise<{ id: s
                       </a>
                     </div>
                   ) : (
-                    <div className="border-l-2 border-[#c8c6c0] dark:border-[#2a2a32] pl-3 py-1">
-                      <p className="text-[12px] text-[#7a7870] dark:text-[#7e7b75] italic">Not yet recorded on-chain.</p>
+                    <div className="border-l-2 border-[#E8E6E1] dark:border-[#2C2C32] pl-3 py-1">
+                      <p className="text-[12px] text-[#6C6C74] dark:text-[#9090A0] italic">Not yet recorded on-chain.</p>
                     </div>
                   )}
                 </div>
@@ -313,12 +313,12 @@ export default function AuditLogDetailPage({ params }: { params: Promise<{ id: s
                     target="_blank"
                     rel="noopener noreferrer"
                     download
-                    className="flex items-center gap-2 w-full px-4 py-2.5 border border-[#c8c6c0] dark:border-[#2a2a32] text-[12px] font-semibold text-[#3d3b36] dark:text-[#c9c6be] hover:border-[#1a1917] dark:hover:border-[#f0eee8] hover:text-[#1a1917] dark:hover:text-[#f0eee8] transition-colors"
+                    className="flex items-center gap-2 w-full px-4 py-2.5 border border-[#E8E6E1] dark:border-[#2C2C32] text-[12px] font-semibold text-[#3A3A3E] dark:text-[#BABABC] hover:border-[#1a1917] dark:hover:border-[#f0eee8] hover:text-[#1A1A1C] dark:hover:text-[#f0eee8] transition-colors"
                   >
                     <FileText className="w-4 h-4" /> Download Document
                   </a>
                 ) : (
-                  <p className="text-[12px] text-[#7a7870] dark:text-[#7e7b75] italic">No document uploaded yet.</p>
+                  <p className="text-[12px] text-[#6C6C74] dark:text-[#9090A0] italic">No document uploaded yet.</p>
                 )}
               </div>
 
@@ -330,7 +330,7 @@ export default function AuditLogDetailPage({ params }: { params: Promise<{ id: s
                   {log.request_id && (
                     <Link
                       href={requestDetailHref(log)}
-                      className="flex items-center gap-2 w-full px-4 py-2.5 bg-[#1a1917] dark:bg-[#f0eee8] text-white dark:text-[#1a1917] text-[12px] font-semibold hover:bg-[#3d3b36] dark:hover:bg-white transition-colors mt-3"
+                      className="flex items-center gap-2 w-full px-4 py-2.5 bg-[#1a1917] dark:bg-[#f0eee8] text-white dark:text-[#1A1A1C] text-[12px] font-semibold hover:bg-[#3d3b36] dark:hover:bg-white transition-colors mt-3"
                     >
                       <ExternalLink className="w-4 h-4" /> View Full Request
                     </Link>

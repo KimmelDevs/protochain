@@ -41,7 +41,7 @@ const DATE_LABELS: Record<DateRange, string> = {
 
 /* ─────────────────────────── sub-components ────────────────────────────── */
 const SectionLabel = ({ label }: { label: string }) => (
-  <p className="mono text-[11px] tracking-[0.2em] uppercase text-[#5c5a54] dark:text-[#9e9b94] border-b border-[#c8c6c0] dark:border-[#2a2a32] pb-2 mb-5">
+  <p className="text-[11px] font-semibold tracking-[0.16em] uppercase text-[#6C6C74] dark:text-[#9090A0] border-b border-[#E8E6E1] dark:border-[#2C2C32] pb-2 mb-5">
     {label}
   </p>
 );
@@ -167,8 +167,8 @@ export default function ReportsPage() {
 
   /* ── loading ─────────────────────────────────────────────────────────── */
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f5f4f0] dark:bg-[#16161a]">
-      <span className="mono text-[12px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] uppercase animate-pulse">
+    <div className="min-h-screen flex items-center justify-center bg-[#F6F5F3] dark:bg-[#111113]">
+      <span className="mono text-[12px] tracking-[0.25em] text-[#6C6C74] dark:text-[#9090A0] uppercase animate-pulse">
         Loading…
       </span>
     </div>
@@ -177,26 +177,26 @@ export default function ReportsPage() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
-        .pg   { font-family: 'IBM Plex Sans', sans-serif; }
-        .mono { font-family: 'IBM Plex Mono', monospace; }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+        .pjs { font-family: 'Plus Jakarta Sans', sans-serif; }
+        
       `}</style>
 
-      <div className="pg min-h-screen bg-[#fafaf9] dark:bg-[#16161a] transition-colors duration-200">
+      <div className="pjs min-h-screen bg-[#F6F5F3] dark:bg-[#111113] transition-colors duration-200">
         <div className="max-w-6xl mx-auto px-6 lg:px-10 pt-6 pb-14">
 
           {/* ── MASTHEAD ───────────────────────────────────────────────── */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="border-b-2 border-[#1a1917] dark:border-[#f0eee8] pb-5 mb-10"
+            className="border-b-2 border-[#1A1A1C] dark:border-[#EAEAEC] pb-5 mb-10"
           >
             <div className="flex items-end justify-between flex-wrap gap-4">
               <div>
-                <p className="mono text-[11px] tracking-[0.25em] text-[#5c5a54] dark:text-[#9e9b94] mb-2 uppercase">
+                <p className="text-[11px] tracking-[0.2em] text-[#6C6C74] dark:text-[#9090A0] mb-2 uppercase">
                   Analytics
                 </p>
-                <h1 className="mono text-2xl md:text-3xl font-bold text-[#1a1917] dark:text-[#f0eee8] tracking-tight leading-none">
+                <h1 className="mono text-[26px] font-bold leading-tight text-[#1A1A1C] dark:text-[#EAEAEC] tracking-tight leading-none">
                   REPORTS
                 </h1>
               </div>
@@ -205,7 +205,7 @@ export default function ReportsPage() {
                 <select
                   value={dateRange}
                   onChange={e => setDateRange(e.target.value as DateRange)}
-                  className="mono text-[12px] px-3 py-2 bg-white dark:bg-[#1e1e24] border border-[#c8c6c0] dark:border-[#2a2a32] text-[#1a1917] dark:text-[#f0eee8] focus:outline-none focus:border-orange-500 dark:focus:border-orange-400 transition-colors"
+                  className="mono text-[12px] px-3 py-2 bg-white dark:bg-[#1C1C1F] border border-[#E8E6E1] dark:border-[#2C2C32] text-[#1A1A1C] dark:text-[#EAEAEC] focus:outline-none focus:border-orange-500 dark:focus:border-orange-400 transition-colors"
                 >
                   <option value="last-7-days">Last 7 days</option>
                   <option value="last-30-days">Last 30 days</option>
@@ -218,7 +218,7 @@ export default function ReportsPage() {
                 <button
                   onClick={handleExport}
                   disabled={exporting || filtered.length === 0}
-                  className="flex items-center gap-2 mono text-[11px] font-bold tracking-[0.1em] uppercase px-4 py-2 border border-orange-600 dark:border-orange-500 text-orange-600 dark:text-orange-400 hover:bg-orange-600 dark:hover:bg-orange-500 hover:text-white dark:hover:text-white transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 text-[11px] font-700 tracking-[0.08em] uppercase px-4 py-2 border border-orange-600 dark:border-orange-500 text-orange-600 dark:text-orange-400 hover:bg-orange-600 dark:hover:bg-orange-500 hover:text-white dark:hover:text-white transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <Download className="w-3.5 h-3.5" />
                   {exporting ? 'Exporting…' : `Export CSV (${filtered.length})`}
@@ -226,7 +226,7 @@ export default function ReportsPage() {
 
                 <Link
                   href="/admindashboard"
-                  className="mono text-[11px] tracking-[0.1em] uppercase text-orange-600 dark:text-orange-400 hover:text-orange-700 transition-colors"
+                  className="text-[11px] font-500 tracking-[0.08em] uppercase text-orange-600 dark:text-orange-400 hover:text-orange-700 transition-colors"
                 >
                   ← Dashboard
                 </Link>
@@ -247,11 +247,11 @@ export default function ReportsPage() {
               { label: 'Pending',        value: pending,        accent: pending  > 0 },
               { label: 'Residents',      value: residentCount,  accent: false },
             ].map(({ label, value, accent }) => (
-              <div key={label} className={`border-t-2 ${accent ? 'border-amber-500' : 'border-[#1a1917] dark:border-[#f0eee8]'} pt-3 pb-4`}>
-                <p className="mono text-[11px] tracking-[0.15em] uppercase text-[#5c5a54] dark:text-[#9e9b94] mb-2">
+              <div key={label} className={`border-t-2 ${accent ? 'border-amber-500' : 'border-[#1A1A1C] dark:border-[#EAEAEC]'} pt-3 pb-4`}>
+                <p className="text-[11px] font-semibold tracking-[0.12em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-2">
                   {label}
                 </p>
-                <p className={`mono text-4xl font-bold tabular-nums leading-none ${accent ? 'text-amber-600 dark:text-amber-400' : 'text-[#1a1917] dark:text-[#f0eee8]'}`}>
+                <p className={`mono text-4xl font-bold tabular-nums leading-none ${accent ? 'text-[#92600A] dark:text-[#F5C06A]' : 'text-[#1A1A1C] dark:text-[#EAEAEC]'}`}>
                   {value}
                 </p>
               </div>
@@ -275,7 +275,7 @@ export default function ReportsPage() {
                 {typeData.length === 0 ? (
                   <div className="py-10 flex flex-col items-center gap-3">
                     <FileText className="w-5 h-5 text-[#c8c6c0] dark:text-[#3a3845]" />
-                    <p className="mono text-[12px] tracking-widest uppercase text-[#7a7870] dark:text-[#7e7b75]">
+                    <p className="mono text-[12px] tracking-widest uppercase text-[#6C6C74] dark:text-[#9090A0]">
                       No data for {DATE_LABELS[dateRange].toLowerCase()}
                     </p>
                   </div>
@@ -284,12 +284,12 @@ export default function ReportsPage() {
                     {typeData.map(({ type, count, pct }) => (
                       <div key={type}>
                         <div className="flex items-baseline justify-between mb-1.5">
-                          <span className="text-[13px] text-[#3d3b36] dark:text-[#c9c6be]">
+                          <span className="text-[13px] text-[#3A3A3E] dark:text-[#BABABC]">
                             {toSentenceCase(type)}
                           </span>
                           <div className="flex items-baseline gap-4">
-                            <span className="mono text-[11px] text-[#5c5a54] dark:text-[#9e9b94]">{pct}%</span>
-                            <span className="mono text-[13px] font-bold tabular-nums text-[#1a1917] dark:text-[#f0eee8] w-6 text-right">{count}</span>
+                            <span className="mono text-[11px] text-[#6C6C74] dark:text-[#9090A0]">{pct}%</span>
+                            <span className="mono text-[13px] font-bold tabular-nums text-[#1A1A1C] dark:text-[#EAEAEC] w-6 text-right">{count}</span>
                           </div>
                         </div>
                         <RuledBar pct={pct} cls="bg-orange-500" />
@@ -306,9 +306,9 @@ export default function ReportsPage() {
                   {monthlyData.map(({ month, total: t, approved: a, rejected: rj, pending: p }) => (
                     <div key={month}>
                       <div className="flex items-baseline justify-between mb-1.5">
-                        <span className="mono text-[12px] font-semibold text-[#1a1917] dark:text-[#f0eee8] w-14">{month}</span>
+                        <span className="mono text-[12px] font-semibold text-[#1A1A1C] dark:text-[#EAEAEC] w-14">{month}</span>
                         <div className="flex gap-4 mono text-[11px]">
-                          <span className="text-[#5c5a54] dark:text-[#9e9b94]">{t} total</span>
+                          <span className="text-[#6C6C74] dark:text-[#9090A0]">{t} total</span>
                           <span className="text-emerald-600 dark:text-emerald-400">{a} approved</span>
                           <span className="text-red-600 dark:text-red-400">{rj} rejected</span>
                         </div>
@@ -345,7 +345,7 @@ export default function ReportsPage() {
                     ].map(({ cls, label }) => (
                       <div key={label} className="flex items-center gap-1.5">
                         <div className={`w-3 h-[3px] ${cls}`} />
-                        <span className="mono text-[10px] text-[#7a7870] dark:text-[#7e7b75] uppercase tracking-wider">{label}</span>
+                        <span className="mono text-[10px] text-[#6C6C74] dark:text-[#9090A0] uppercase tracking-wider">{label}</span>
                       </div>
                     ))}
                   </div>
@@ -363,16 +363,16 @@ export default function ReportsPage() {
             >
               <div>
                 <SectionLabel label="Performance" />
-                <p className="mono text-[10px] text-[#7a7870] dark:text-[#7e7b75] uppercase tracking-wider mb-5">
+                <p className="mono text-[10px] text-[#6C6C74] dark:text-[#9090A0] uppercase tracking-wider mb-5">
                   {DATE_LABELS[dateRange]}
                 </p>
 
                 {/* approval rate with progress bar */}
                 <div className="mb-6">
                   <div className="flex items-baseline justify-between mb-2">
-                    <span className="text-[13px] text-[#3d3b36] dark:text-[#c9c6be]">Approval rate</span>
+                    <span className="text-[13px] text-[#3A3A3E] dark:text-[#BABABC]">Approval rate</span>
                     <span className="mono text-[22px] font-bold tabular-nums text-emerald-600 dark:text-emerald-400 leading-none">
-                      {approvalRate}<span className="text-sm font-normal text-[#5c5a54] dark:text-[#9e9b94]">%</span>
+                      {approvalRate}<span className="text-sm font-normal text-[#6C6C74] dark:text-[#9090A0]">%</span>
                     </span>
                   </div>
                   <RuledBar pct={approvalRate} cls="bg-emerald-500" />
@@ -381,9 +381,9 @@ export default function ReportsPage() {
                 {/* rejection rate */}
                 <div className="mb-6">
                   <div className="flex items-baseline justify-between mb-2">
-                    <span className="text-[13px] text-[#3d3b36] dark:text-[#c9c6be]">Rejection rate</span>
+                    <span className="text-[13px] text-[#3A3A3E] dark:text-[#BABABC]">Rejection rate</span>
                     <span className="mono text-[22px] font-bold tabular-nums text-red-600 dark:text-red-400 leading-none">
-                      {rejRate}<span className="text-sm font-normal text-[#5c5a54] dark:text-[#9e9b94]">%</span>
+                      {rejRate}<span className="text-sm font-normal text-[#6C6C74] dark:text-[#9090A0]">%</span>
                     </span>
                   </div>
                   <RuledBar pct={rejRate} cls="bg-red-500" />
@@ -392,24 +392,24 @@ export default function ReportsPage() {
                 {/* pending rate */}
                 <div className="mb-8">
                   <div className="flex items-baseline justify-between mb-2">
-                    <span className="text-[13px] text-[#3d3b36] dark:text-[#c9c6be]">Pending rate</span>
-                    <span className="mono text-[22px] font-bold tabular-nums text-amber-600 dark:text-amber-400 leading-none">
-                      {pendingRate}<span className="text-sm font-normal text-[#5c5a54] dark:text-[#9e9b94]">%</span>
+                    <span className="text-[13px] text-[#3A3A3E] dark:text-[#BABABC]">Pending rate</span>
+                    <span className="mono text-[22px] font-bold tabular-nums text-[#92600A] dark:text-[#F5C06A] leading-none">
+                      {pendingRate}<span className="text-sm font-normal text-[#6C6C74] dark:text-[#9090A0]">%</span>
                     </span>
                   </div>
                   <RuledBar pct={pendingRate} cls="bg-amber-400" />
                 </div>
 
                 {/* totals ledger */}
-                <div className="border-t border-[#c8c6c0] dark:border-[#2a2a32] pt-4 space-y-0">
+                <div className="border-t border-[#E8E6E1] dark:border-[#2C2C32] pt-4 space-y-0">
                   {[
-                    { label: 'Total processed', value: approved + rejected,                         cls: 'text-[#1a1917] dark:text-[#f0eee8]'    },
+                    { label: 'Total processed', value: approved + rejected,                         cls: 'text-[#1A1A1C] dark:text-[#EAEAEC]'    },
                     { label: 'Approved',         value: approved,                                   cls: 'text-emerald-600 dark:text-emerald-400' },
                     { label: 'Rejected',         value: rejected,                                   cls: 'text-red-600 dark:text-red-400'         },
-                    { label: 'Still pending',    value: pending,                                    cls: 'text-amber-600 dark:text-amber-400'     },
+                    { label: 'Still pending',    value: pending,                                    cls: 'text-[#92600A] dark:text-[#F5C06A]'     },
                   ].map(({ label, value, cls }) => (
-                    <div key={label} className="flex items-baseline justify-between py-2.5 border-b border-[#e8e5e0] dark:border-[#222228] last:border-0">
-                      <span className="text-[13px] text-[#3d3b36] dark:text-[#c9c6be]">{label}</span>
+                    <div key={label} className="flex items-baseline justify-between py-2.5 border-b border-[#E8E6E1] dark:border-[#2C2C32] last:border-0">
+                      <span className="text-[13px] text-[#3A3A3E] dark:text-[#BABABC]">{label}</span>
                       <span className={`mono text-[14px] font-bold tabular-nums ${cls}`}>{value}</span>
                     </div>
                   ))}
