@@ -147,6 +147,9 @@ function buildExtraDetails(req: RequestDetail) {
       return [
         { label: 'Business Name',    value: req.business_name },
         { label: 'Location / Purok', value: req.purok },
+        { label: 'CTC Number',       value: req.ctc_no },
+        { label: 'CTC Date Issued',  value: req.ctc_date_issued },
+        { label: 'CTC Place Issued', value: req.ctc_place_issued },
       ];
     case 'certification-of-death':
       return [
