@@ -4,7 +4,7 @@ import { use, useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   CheckCircle, User, Mail, Phone, MapPin,
-  Loader2, Download, Upload, Wand2, ShieldCheck,
+  Loader2, Download, Upload, Wand2, ShieldCheck, ShieldOff,
 } from 'lucide-react';
 import Link from 'next/link';
 import { supabase } from '@/app/lib/supabase';
@@ -13,7 +13,7 @@ import {
   normaliseProfile, sha256Hex, generateDocument,
   buildRequestPayload, hashPayload,
 } from '@/app/lib/utils/Docgenerators';
-import { recordDocumentOnChain } from '@/app/lib/blockchain';
+import { recordDocumentOnChain, revokeDocumentOnChain } from '@/app/lib/blockchain';
 
 /* ─────────────────────────── helpers ───────────────────────────────────── */
 const toSentenceCase = (s: string) =>
@@ -193,6 +193,10 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
   const [uploadedHash,      setUploadedHash]      = useState<string | null>(null);
   const [chainTxHash,       setChainTxHash]       = useState<string | null>(null);
   const [chainRecording,    setChainRecording]    = useState(false);
+  const [revoking,          setRevoking]          = useState(false);
+  const [revokeError,       setRevokeError]       = useState('');
+  const [revokeSuccess,     setRevokeSuccess]     = useState('');
+  const [isRevoked,         setIsRevoked]         = useState(false);
   const [chainError,        setChainError]        = useState('');
 
   useEffect(() => {
@@ -213,6 +217,21 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
       finally  { setLoading(false); }
     })();
   }, [id]);
+
+  const handleRevoke = async () => {
+    if (!uploadedHash) return;
+    if (!confirm('Are you sure you want to revoke this document on-chain? This action cannot be undone.')) return;
+    setRevoking(true); setRevokeError(''); setRevokeSuccess('');
+    try {
+      const txHash = await revokeDocumentOnChain(uploadedHash);
+      setIsRevoked(true);
+      setRevokeSuccess(`Document revoked on-chain. Tx: ${txHash.slice(0, 20)}…${txHash.slice(-10)}`);
+    } catch (e: unknown) {
+      setRevokeError(e instanceof Error ? e.message : 'Revocation failed.');
+    } finally {
+      setRevoking(false);
+    }
+  };
 
   const handleGenerate = async () => {
     if (!request || !profile) return;
@@ -476,6 +495,16 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
                       {chainError}
                     </AlertBanner>
                   )}
+                  {revokeError && (
+                    <AlertBanner variant="error" onClose={() => setRevokeError('')}>
+                      {revokeError}
+                    </AlertBanner>
+                  )}
+                  {revokeSuccess && (
+                    <AlertBanner variant="success" onClose={() => setRevokeSuccess('')}>
+                      {revokeSuccess}
+                    </AlertBanner>
+                  )}
                   {chainRecording && (
                     <div className="flex items-center gap-2 py-1 text-blue-500">
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -534,6 +563,34 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
                   />
 
                   {!request.file_url && uploadedHash && <HashDisplay hash={uploadedHash} txHash={chainTxHash} />}
+
+                  {/* ── Revoke — only shown when a hash is on-chain and not yet revoked ── */}
+                  {uploadedHash && chainTxHash && !isRevoked && (
+                    <>
+                      <div className="flex items-center gap-3 py-1">
+                        <div className="flex-1 h-px bg-[#e0deda] dark:bg-[#222228]" />
+                        <span className="mono text-[10px] text-[#6C6C74] dark:text-[#9090A0] uppercase tracking-wider">danger zone</span>
+                        <div className="flex-1 h-px bg-[#e0deda] dark:bg-[#222228]" />
+                      </div>
+                      <button
+                        onClick={handleRevoke}
+                        disabled={revoking}
+                        className="flex items-center justify-center gap-2 w-full px-4 py-2.5 border border-red-300 dark:border-red-800 text-[12px] font-semibold text-red-600 dark:text-red-400 hover:border-red-500 dark:hover:border-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        {revoking
+                          ? <><Loader2 className="w-4 h-4 animate-spin" /> Revoking…</>
+                          : <><ShieldOff className="w-4 h-4" /> Revoke Document</>
+                        }
+                      </button>
+                    </>
+                  )}
+
+                  {isRevoked && (
+                    <div className="flex items-center gap-2 py-1 border-l-2 border-amber-400 pl-3">
+                      <ShieldOff className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                      <span className="mono text-[11px] text-amber-700 dark:text-amber-400">Document revoked on-chain</span>
+                    </div>
+                  )}
                 </div>
               </div>
 

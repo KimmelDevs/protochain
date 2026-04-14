@@ -2,7 +2,7 @@
  * app/lib/blockchain.ts
  *
  * Client-side blockchain utilities.
- * Recording is done server-side via /api/blockchain to avoid MetaMask dependency.
+ * Recording and revocation are done server-side via /api/blockchain to avoid MetaMask dependency.
  * Verification is read-only and works without a wallet.
  */
 
@@ -18,7 +18,8 @@ const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS!;
 
 const ABI = [
   'function recordDocument(bytes32 docHash, string calldata documentType) external',
-  'function verifyDocument(bytes32 docHash) external view returns (bool exists, address recordedBy, uint256 timestamp, string memory documentType)',
+  'function revokeDocument(bytes32 docHash) external',
+  'function verifyDocument(bytes32 docHash) external view returns (bool exists, address recordedBy, uint256 timestamp, string memory documentType, bool isRevoked)',
 ];
 
 function hexToBytes32(hexHash: string): string {
@@ -39,6 +40,19 @@ export async function recordDocumentOnChain(
   });
   const json = await res.json();
   if (!res.ok) throw new Error(json.error ?? 'Blockchain recording failed.');
+  return json.txHash as string;
+}
+
+// ── Revoke (calls server API — no MetaMask needed) ────────────────────────────
+
+export async function revokeDocumentOnChain(hexHash: string): Promise<string> {
+  const res = await fetch('/api/blockchain', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ hexHash }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error ?? 'Blockchain revocation failed.');
   return json.txHash as string;
 }
 
@@ -92,7 +106,7 @@ export async function verifyDocumentOnChain(hexHash: string): Promise<VerifyResu
   const recordedBy   = String(r[1]  ?? r.recordedBy   ?? '');
   const timestamp    = Number(r[2]  ?? r.timestamp    ?? 0);
   const documentType = String(r[3]  ?? r.documentType ?? '');
-  const isRevoked    = false; // contract does not implement revocation
+  const isRevoked    = Boolean(r[4] ?? r.isRevoked    ?? false);
 
   return { exists, recordedBy, timestamp, documentType, isRevoked, payloadSnapshot };
 }
