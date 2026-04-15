@@ -983,13 +983,23 @@ async function injectOathOfUndertaking(zip: any, req: RequestDetail, profile: Pr
 
     // ── Normalize split placeholders ──────────────────────────────────────────
     // {fullname} — rsidR="00CC4651", bold, sz=24
+    // Word splits this as: "{" | spellStart | "fullname" | spellEnd | gramStart | "}"
     xml = xml.replace(
       '<w:r w:rsidR="00CC4651"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>{</w:t></w:r>' +
       '<w:proofErr w:type="spellStart"/>' +
       '<w:r w:rsidR="00CC4651"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>fullname</w:t></w:r>' +
       '<w:proofErr w:type="spellEnd"/>' +
+      '<w:proofErr w:type="gramStart"/>' +
       '<w:r w:rsidR="00CC4651"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>}</w:t></w:r>',
       '<w:r w:rsidR="00CC4651"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>{fullname}</w:t></w:r>',
+    );
+    // {year} — rsidR="00CC4651", no bold, sz=24
+    // Word splits this as: "{" | gramEnd | "year}"
+    xml = xml.replace(
+      '<w:r w:rsidR="00CC4651"><w:rPr><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>{</w:t></w:r>' +
+      '<w:proofErr w:type="gramEnd"/>' +
+      '<w:r w:rsidR="00CC4651"><w:rPr><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>year}</w:t></w:r>',
+      '<w:r w:rsidR="00CC4651"><w:rPr><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>{year}</w:t></w:r>',
     );
     // {this_day} — rsidR="00CC4651", no bold, sz=24
     // Word splits this across 4 runs: "{" | "this_" | "day" | "}" with proofErr tags interspersed
