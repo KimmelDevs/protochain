@@ -992,10 +992,13 @@ async function injectOathOfUndertaking(zip: any, req: RequestDetail, profile: Pr
       '<w:r w:rsidR="00CC4651"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>{fullname}</w:t></w:r>',
     );
     // {this_day} — rsidR="00CC4651", no bold, sz=24
+    // Word splits this across 4 runs: "{" | "this_" | "day" | "}" with proofErr tags interspersed
     xml = xml.replace(
       '<w:r w:rsidR="00CC4651"><w:rPr><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>{</w:t></w:r>' +
       '<w:proofErr w:type="spellStart"/>' +
-      '<w:r w:rsidR="00CC4651"><w:rPr><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>this_day</w:t></w:r>' +
+      '<w:r w:rsidR="00CC4651"><w:rPr><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>this_</w:t></w:r>' +
+      '<w:proofErr w:type="gramStart"/>' +
+      '<w:r w:rsidR="00CC4651"><w:rPr><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>day</w:t></w:r>' +
       '<w:proofErr w:type="spellEnd"/>' +
       '<w:r w:rsidR="00CC4651"><w:rPr><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>}</w:t></w:r>',
       '<w:r w:rsidR="00CC4651"><w:rPr><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>{this_day}</w:t></w:r>',
@@ -1004,7 +1007,9 @@ async function injectOathOfUndertaking(zip: any, req: RequestDetail, profile: Pr
     // ── Replace placeholders with real values ─────────────────────────────────
     xml = xml.replace(/\{fullname\}/g,  xmlEscape(fullName));
     xml = xml.replace(/\{age\}/g,       xmlEscape(age));
-    xml = xml.replace(/\{this_day\}/g,  xmlEscape(day));
+    // {this_day} renders as e.g. "2nd" — the template already has "  day of {month}" after it
+    xml = xml.replace(/\{this_day\}/g,  xmlEscape(day + suffix));
+    xml = xml.replace(/\{purok\}/g,     xmlEscape(purok));
     xml = xml.replace(/\{month\}/g,     xmlEscape(MONTH));
     xml = xml.replace(/\{year\}/g,      xmlEscape(year));
 
