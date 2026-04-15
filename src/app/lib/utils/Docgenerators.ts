@@ -651,7 +651,7 @@ async function injectBarangayClearance(zip: any, req: RequestDetail, profile: Pr
     // ── Replace placeholders with real values ─────────────────────────────────
     xml = xml.replace(/APPLICANT NAME PLACEHOLDER/g,  xmlEscape(name));
     xml = xml.replace(/\{fullname\}/g,                xmlEscape(name));
-    xml = xml.replace(/\{this_day\}/g,                xmlEscape(day));
+    xml = xml.replace(/\{this_day\}/g,                xmlEscape(day + suffix));
     xml = xml.replace(/\{month\}/g,                   xmlEscape(MONTH));
     xml = xml.replace(/\{year\}/g,                    xmlEscape(year));
     xml = xml.replace(/\{ctc_no\}/g,                  xmlEscape(ctcNo));
@@ -748,7 +748,7 @@ async function injectBusinessClearance(zip: any, req: RequestDetail, profile: Pr
     xml = xml.replace(/\{business_name\} /g,         xmlEscape(business) + ' '); // preserve trailing space
     xml = xml.replace(/\{business_name\}/g,          xmlEscape(business));
     xml = xml.replace(/\{purok\/location\}/g,        xmlEscape(location)); // req.purok — document field
-    xml = xml.replace(/\{this_day\}/g,               xmlEscape(day));
+    xml = xml.replace(/\{this_day\}/g,               xmlEscape(day + suffix));
     xml = xml.replace(/\{month\}/g,                  xmlEscape(MONTH));
     xml = xml.replace(/\{year\}/g,                   xmlEscape(year));
     xml = xml.replace(/\{ctc_date_issued\}/g,        xmlEscape(ctcDate));
@@ -833,7 +833,7 @@ async function injectCertificationOfDeath(zip: any, req: RequestDetail, profile:
     xml = xml.replace(/\{age_at_death\}/g,  xmlEscape(deceasedAge));
     xml = xml.replace(/\{place_of_death\}/g,xmlEscape(placeRaw));
     xml = xml.replace(/\{fullname\}/g,      xmlEscape(requestor));
-    xml = xml.replace(/\{this_day\}/g,      xmlEscape(day));
+    xml = xml.replace(/\{this_day\}/g,      xmlEscape(day + suffix));
     xml = xml.replace(/\{month\}/g,         xmlEscape(MONTH));
     xml = xml.replace(/\{year\}/g,          xmlEscape(year));
 
@@ -913,7 +913,7 @@ async function injectJobSeekerCert(zip: any, req: RequestDetail, profile: Profil
     // ── Replace placeholders with real values ─────────────────────────────────
     xml = xml.replace(/\{fullname\}/g,        xmlEscape(fullName));
     xml = xml.replace(/\{purok\/location\}/g, xmlEscape(purok));
-    xml = xml.replace(/\{this_day\}/g,        xmlEscape(day));
+    xml = xml.replace(/\{this_day\}/g,        xmlEscape(day + suffix));
     xml = xml.replace(/\{month\}/g,           xmlEscape(MONTH));
     xml = xml.replace(/\{year\}/g,            xmlEscape(year));
 
