@@ -227,7 +227,12 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
       setIsRevoked(true);
       setRevokeSuccess(`Document revoked on-chain. Tx: ${txHash.slice(0, 20)}…${txHash.slice(-10)}`);
     } catch (e: unknown) {
-      setRevokeError(e instanceof Error ? e.message : 'Revocation failed.');
+      const raw = e instanceof Error ? e.message : 'Revocation failed.';
+      // Ethers CALL_EXCEPTION errors are verbose and technical — show a clean message instead
+      const friendly = raw.includes('CALL_EXCEPTION') || raw.includes('estimateGas')
+        ? 'Revocation failed: document may not exist on-chain or was already revoked.'
+        : raw;
+      setRevokeError(friendly);
     } finally {
       setRevoking(false);
     }
