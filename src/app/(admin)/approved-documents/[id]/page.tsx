@@ -224,6 +224,12 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
     setRevoking(true); setRevokeError(''); setRevokeSuccess('');
     try {
       const txHash = await revokeDocumentOnChain(uploadedHash);
+      // Update status in DB so it appears in the Revoked Documents list
+      await fetch(`/api/requests?id=${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'revoked', revoke_tx_hash: txHash }),
+      });
       setIsRevoked(true);
       setRevokeSuccess(`Document revoked on-chain. Tx: ${txHash.slice(0, 20)}…${txHash.slice(-10)}`);
     } catch (e: unknown) {
