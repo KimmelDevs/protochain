@@ -970,9 +970,6 @@ async function injectOathOfUndertaking(zip: any, req: RequestDetail, profile: Pr
   const firstName = profile.firstName.toUpperCase();
   const lastName  = profile.lastName.toUpperCase();
   const fullName  = `${firstName} ${lastName}`;
-  const nameParts  = fullName.trim().split(/\s+/);
-  const nameFirst  = nameParts.length > 1 ? nameParts.slice(0, -1).join(' ') : fullName;
-  const nameLast   = nameParts.length > 1 ? nameParts[nameParts.length - 1]  : '';
 
   const age    = profile.age            ?? '___';
   const purok  = req.purok              ?? '___';
@@ -1024,14 +1021,13 @@ async function injectOathOfUndertaking(zip: any, req: RequestDetail, profile: Pr
     xml = xml.replace(/\{year\}/g,      xmlEscape(year));
 
     // ── Legacy hardcoded replacements (fallback) ──────────────────────────────
-    xml = xml.replace(/I, EGBERT KIA DELA /g, `I, ${xmlEscape(nameFirst)} `);
-    xml = xml.replace(/CRUZ ,/g,               `${xmlEscape(nameLast)} ,`);
+    xml = xml.replace(/I, EGBERT KIA DELA CRUZ ,/g, `I, ${xmlEscape(fullName)} ,`);
+    xml = xml.replace(/EGBERT KIA DELA CRUZ(?=<\/w:t>)/g, xmlEscape(fullName));
     xml = xml.replace(/  23 /g,                `  ${xmlEscape(age)} `);
     xml = xml.replace(
       / a resident of Purok 2, Brgy\. Guin-on, Calbayog City, Samar for 5 years,/g,
       ` a resident of ${xmlEscape(purok)}, Brgy. Guin-on, Calbayog City, Samar for ${xmlEscape(years)} years,`,
     );
-    xml = xml.replace(/EGBERT KIA DELA CRUZ(?![, ])/g, xmlEscape(fullName));
     xml = xml.replace(/Signed, this 2(?=<\/w:t>)/g,    `Signed, this ${xmlEscape(day)}`);
     xml = xml.replace(
       /(<w:t[^>]*>)nd(<\/w:t><\/w:r>[\s\S]{0,200}  day)/g,
