@@ -157,6 +157,7 @@ function buildExtraDetails(req: RequestDetail) {
         { label: 'Age at Death',      value: req.deceased_age },
         { label: 'Date of Death',     value: req.date_of_death },
         { label: 'Place of Death',    value: req.place_of_death },
+        { label: "Deceased's Home Address", value: req.deceased_address },
         { label: 'Relationship',      value: req.relationship_to_deceased },
       ];
     case 'job-seeker':

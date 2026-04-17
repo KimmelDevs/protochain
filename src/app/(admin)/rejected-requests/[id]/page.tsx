@@ -16,7 +16,7 @@ interface RequestDetail {
   purok: string | null; ctc_no: string | null; ctc_date_issued: string | null;
   ctc_place_issued: string | null; business_name: string | null;
   deceased_name: string | null; deceased_age: string | null;
-  date_of_death: string | null; place_of_death: string | null;
+  date_of_death: string | null; place_of_death: string | null; deceased_address: string | null;
   relationship_to_deceased: string | null; years_of_residency: string | null;
   bcn_no: string | null; user_id: string;
 }
@@ -122,6 +122,7 @@ export default function RejectedRequestDetailPage({ params }: { params: Promise<
     { label: 'Age at Death',       value: request.deceased_age },
     { label: 'Date of Death',      value: request.date_of_death },
     { label: 'Place of Death',     value: request.place_of_death },
+    { label: "Deceased's Home Address", value: request.deceased_address },
     { label: 'Relationship',       value: request.relationship_to_deceased },
   );
   if (request.document_type === 'job-seeker') extraDetails.push(

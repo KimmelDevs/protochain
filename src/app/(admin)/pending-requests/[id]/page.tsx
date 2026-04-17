@@ -188,7 +188,7 @@ function buildExtraDetails(req: RequestDetail) {
   switch (req.document_type) {
     case 'barangay-clearance':     return [{ label: 'Purok / Zone', value: req.purok }, { label: 'CTC Number', value: req.ctc_no }, { label: 'CTC Date Issued', value: req.ctc_date_issued }, { label: 'CTC Place Issued', value: req.ctc_place_issued }];
     case 'business-clearance':     return [{ label: 'Business Name', value: req.business_name }, { label: 'Location / Purok', value: req.purok }, { label: 'CTC Number', value: req.ctc_no }, { label: 'CTC Date Issued', value: req.ctc_date_issued }, { label: 'CTC Place Issued', value: req.ctc_place_issued }];
-    case 'certification-of-death': return [{ label: 'Deceased Name', value: req.deceased_name }, { label: 'Age at Death', value: req.deceased_age }, { label: 'Date of Death', value: req.date_of_death }, { label: 'Place of Death', value: req.place_of_death }, { label: 'Relationship', value: req.relationship_to_deceased }];
+    case 'certification-of-death': return [{ label: 'Deceased Name', value: req.deceased_name }, { label: 'Age at Death', value: req.deceased_age }, { label: 'Date of Death', value: req.date_of_death }, { label: 'Place of Death', value: req.place_of_death }, { label: "Deceased's Home Address", value: req.deceased_address }, { label: 'Relationship', value: req.relationship_to_deceased }];
     case 'job-seeker':             return [{ label: 'BCN Number', value: req.bcn_no }, { label: 'Purok / Zone', value: req.purok }, { label: 'Years of Residency', value: req.years_of_residency }];
     case 'oath-of-undertaking':    return [{ label: 'Purok / Zone', value: req.purok }, { label: 'Years of Residency', value: req.years_of_residency }];
     default: return [];

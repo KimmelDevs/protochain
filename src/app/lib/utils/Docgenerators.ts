@@ -65,6 +65,7 @@ export interface RequestDetail {
   deceased_age?:             string;
   date_of_death?:            string;
   place_of_death?:           string;
+  deceased_address?:         string;
   relationship_to_deceased?: string;
   bcn_no?:                   string;
   years_of_residency?:       string;

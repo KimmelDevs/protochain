@@ -144,6 +144,7 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
   const [deceasedAge, setDeceasedAge] = useState('');
   const [dateOfDeath, setDateOfDeath] = useState('');
   const [placeOfDeath, setPlaceOfDeath] = useState('');
+  const [deceasedAddress, setDeceasedAddress] = useState('');
   const [relationship, setRelationship] = useState('');
   const [yearsOfResidency, setYearsOfResidency] = useState('');
   const [bcnNo, setBcnNo] = useState('');
@@ -175,7 +176,7 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
     if (purpose === 'others' && !customPurpose.trim()) { toast.error('Please specify your purpose.'); return false; }
     if (type === 'barangay-clearance' && (!purok.trim() || !ctcNo.trim() || !ctcDateIssued || !ctcPlaceIssued.trim())) { toast.error('Please fill in all required fields.'); return false; }
     if (type === 'business-clearance' && (!businessName.trim() || !purok.trim())) { toast.error('Please fill in all required fields.'); return false; }
-    if (type === 'certification-of-death' && (!deceasedName.trim() || !deceasedAge.trim() || !dateOfDeath || !placeOfDeath.trim() || !relationship.trim())) { toast.error('Please fill in all deceased person details.'); return false; }
+    if (type === 'certification-of-death' && (!deceasedName.trim() || !deceasedAge.trim() || !dateOfDeath || !placeOfDeath.trim() || !deceasedAddress.trim() || !relationship.trim())) { toast.error('Please fill in all deceased person details.'); return false; }
     if (type === 'job-seeker' && (!purok.trim() || !yearsOfResidency.trim() || !bcnNo.trim())) { toast.error('Please fill in all required fields.'); return false; }
     if (type === 'oath-of-undertaking' && (!purok.trim() || !yearsOfResidency.trim())) { toast.error('Please fill in all required fields.'); return false; }
     return true;
@@ -201,7 +202,7 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
           status: 'pending',
           ...(type === 'barangay-clearance' && { purok, ctc_no: ctcNo, ctc_date_issued: ctcDateIssued, ctc_place_issued: ctcPlaceIssued }),
           ...(type === 'business-clearance' && { business_name: businessName, purok }),
-          ...(type === 'certification-of-death' && { deceased_name: deceasedName, deceased_age: deceasedAge, date_of_death: dateOfDeath, place_of_death: placeOfDeath, relationship_to_deceased: relationship }),
+          ...(type === 'certification-of-death' && { deceased_name: deceasedName, deceased_age: deceasedAge, date_of_death: dateOfDeath, place_of_death: placeOfDeath, deceased_address: deceasedAddress, relationship_to_deceased: relationship }),
           ...(type === 'job-seeker' && { purok, years_of_residency: yearsOfResidency, bcn_no: bcnNo }),
           ...(type === 'oath-of-undertaking' && { purok, years_of_residency: yearsOfResidency }),
         }),
@@ -318,6 +319,7 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
                 {/* FloatDateInput: calendar picker, hides dd/mm/yyyy mask when empty + unfocused */}
                 <FloatDateInput label="Date of Death" value={dateOfDeath} onChange={setDateOfDeath} required />
                 <FloatInput label="Place of Death" value={placeOfDeath} onChange={setPlaceOfDeath} required />
+                <FloatInput label="Deceased's Home Address" value={deceasedAddress} onChange={setDeceasedAddress} required />
                 <FloatInput label="Your Relationship to Deceased" value={relationship} onChange={setRelationship} required />
               </CardContent>
             </Card>
