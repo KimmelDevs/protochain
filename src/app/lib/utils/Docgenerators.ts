@@ -21,7 +21,7 @@
  *  certification-of-death
  *    Profile : firstName, lastName          (requestor / survivor filing the cert)
  *    Request : deceased_name, deceased_age, date_of_death, place_of_death,
- *              relationship_to_deceased
+ *              deceased_address, relationship_to_deceased
  *
  *  job-seeker  (Barangay Certification – RA 11261)
  *    Profile : firstName, lastName
@@ -140,9 +140,9 @@ function getCurrentDateParts() {
   const now    = new Date();
   const day    = String(now.getDate());
   const suffix = day === '1' ? 'st' : day === '2' ? 'nd' : day === '3' ? 'rd' : 'th';
-  const SUFFIX = suffix.toUpperCase();        // templates use 'TH', 'ST', etc.
-  const month  = now.toLocaleString('en-PH', { month: 'long' }); // 'January'
-  const MONTH  = month.toUpperCase();         // 'JANUARY'
+  const SUFFIX = suffix.toUpperCase();
+  const month  = now.toLocaleString('en-PH', { month: 'long' });
+  const MONTH  = month.toUpperCase();
   const year   = String(now.getFullYear());
   return { day, suffix, SUFFIX, month, MONTH, year };
 }
@@ -586,26 +586,6 @@ async function injectDigitalSealIntoZip(zip: any, sealDataUrl: string): Promise<
 // ─── Per-document injectors ───────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/**
- * BARANGAY CLEARANCE
- *
- * Fields injected:
- *   Profile  : firstName + lastName → name header + identity block
- *   Profile  : age, sex, civilStatus → identity block sentence
- *   Request  : purok → "permanent resident of <PUROK>, BRGY. GUIN-ON"
- *   Request  : purpose / custom_purpose → purpose clause appended to "Further certifies…"
- *   Request  : ctc_no, ctc_date_issued, ctc_place_issued → CTC fields at bottom
- *   Date     : today → "Issued this ___ day of JANUARY, 2024 …"
- *
- * Template structure (both copies — template is duplicated for double-column layout):
- *   Para A: "APPLICANT NAME PLACEHOLDER"
- *   Para B: " THIS IS TO CERTIFY that, " | "_____________________ of legal age, male/female…"
- *   Para C: "Issued this ___ day of " | "JANUARY," | " 2024 at Brgy. Guin-on…"
- *   Para D: "Further certifies that he/ she has no derogatory record … in connected. "
- *   Para E: "CTC #: __________________ "
- *   Para F: "Date Issued: ______________ "
- *   Para G: "Place Issued: ______________"
- */
 async function injectBarangayClearance(zip: any, req: RequestDetail, profile: Profile): Promise<void> {
   const name        = `${profile.firstName} ${profile.lastName}`.toUpperCase();
   const age         = profile.age         ?? '___';
@@ -622,10 +602,6 @@ async function injectBarangayClearance(zip: any, req: RequestDetail, profile: Pr
   const { day, suffix, MONTH, year } = getCurrentDateParts();
 
   await patchXml(zip, 'word/document.xml', xml => {
-
-    // ── Normalize split placeholders ──────────────────────────────────────────
-    // Word splits {placeholder} across 3 runs with <w:proofErr> spell-check tags.
-    // All BRGY runs share rsidR="00E96396". Collapse each to a single complete run.
     const R = 'w:rsidR="00E96396"';
     xml = xml.replace(
       `<w:r ${R}><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r ${R}><w:t>fullname</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r ${R}><w:t>}</w:t></w:r>`,
@@ -643,13 +619,11 @@ async function injectBarangayClearance(zip: any, req: RequestDetail, profile: Pr
       `<w:r ${R}><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r ${R}><w:t>ctc_date_issued</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r ${R}><w:t>}</w:t></w:r>`,
       `<w:r ${R}><w:t>{ctc_date_issued}</w:t></w:r>`,
     );
-    // ctc_place_issued: opening run has xml:space="preserve" and a leading space " {"
     xml = xml.replace(
       `<w:r ${R}><w:t xml:space="preserve"> {</w:t></w:r><w:proofErr w:type="spellStart"/><w:r ${R}><w:t>ctc_place_issued</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r ${R}><w:t>}</w:t></w:r>`,
       `<w:r ${R}><w:t xml:space="preserve"> {ctc_place_issued}</w:t></w:r>`,
     );
 
-    // ── Replace placeholders with real values ─────────────────────────────────
     xml = xml.replace(/APPLICANT NAME PLACEHOLDER/g,  xmlEscape(name));
     xml = xml.replace(/\{fullname\}/g,                xmlEscape(name));
     xml = xml.replace(/\{this_day\}/g,                xmlEscape(day + suffix));
@@ -659,7 +633,6 @@ async function injectBarangayClearance(zip: any, req: RequestDetail, profile: Pr
     xml = xml.replace(/\{ctc_date_issued\}/g,         xmlEscape(ctcDate));
     xml = xml.replace(/ ?\{ctc_place_issued\}/g,      xmlEscape(ctcPlace));
 
-    // ── Legacy hardcoded replacements (fallback for old template text) ────────
     xml = xml.replace(
       /_____________________ of legal age, male\/female, single\/married\/widow\/ widower, Filipino citizen, whose name and signature\/right thumb mark appears below is a BONAFIDE and permanent resident of BRGY\. GUIN-ON, Calbayog City, /g,
       `${xmlEscape(name)}, ${xmlEscape(age)} years old, ${xmlEscape(sex)}, ` +
@@ -686,69 +659,42 @@ async function injectBarangayClearance(zip: any, req: RequestDetail, profile: Pr
   });
 }
 
-/**
- * BUSINESS CLEARANCE
- *
- * Fields injected:
- *   Profile  : firstName + lastName → name header + owner in body text
- *   Request  : business_name → "owner of <BUSINESS_NAME>"
- *   Request  : purok → "located at <PUROK>"
- *   Date     : today → "Issued this 04th day of DECEMBER 2025 …"
- *
- * Template structure (both copies):
- *   Para A : "APPLICANT NAME PLACEHOLDER"
- *   Para B : "      BUSINESS CLEARANCE is Grante GREGORIO"   ← owner name (line 1)
- *   Para C : "      BALDOMARO GOMEZ, and owner of AGRICULTURAL "  ← owner name (line 2) + business
- *   Para D : "      PRODUCTS located  at" | " PUROK-1 " | "Brgy" | ". Guin-On, Calbayog, "
- *   Para E : "                      Issued this 04th   day of DECEMBER 2025 at " | "Brgy" | ". Guin-on"
- */
 async function injectBusinessClearance(zip: any, req: RequestDetail, profile: Profile): Promise<void> {
   const owner    = `${profile.firstName} ${profile.lastName}`.toUpperCase();
-  const business = req.business_name   ?? '___________';
-  const location = req.purok           ?? '___________'; // document-specific field (purok/address of business)
-  const ctcNo    = req.ctc_no          ?? '___________';
+  const business = req.business_name    ?? '___________';
+  const location = req.purok            ?? '___________';
+  const ctcNo    = req.ctc_no           ?? '___________';
   const ctcDate  = req.ctc_date_issued  ?? '___________';
   const ctcPlace = req.ctc_place_issued ?? '___________';
   const { day, suffix, MONTH, year } = getCurrentDateParts();
 
   await patchXml(zip, 'word/document.xml', xml => {
-
-    // ── Normalize split placeholders ──────────────────────────────────────────
-    // Word splits each {placeholder} across 3 runs with <w:proofErr> spell-check tags.
-    // Each placeholder has its own unique rsidR and rPr formatting — must match exactly.
-
-    // {fullname} — rsidR="0005616E", sz=24
     xml = xml.replace(
       '<w:r w:rsidR="0005616E" w:rsidRPr="0005616E"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="0005616E" w:rsidRPr="0005616E"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>fullname</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="0005616E" w:rsidRPr="0005616E"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>}</w:t></w:r>',
       '<w:r w:rsidR="0005616E" w:rsidRPr="0005616E"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>{fullname}</w:t></w:r>',
     );
-    // {business_name} — rsidR="00F7455D", sz=24, closing } has xml:space="preserve" and trailing space
     xml = xml.replace(
       '<w:r w:rsidR="00F7455D"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="00F7455D"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>business_name</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="00F7455D"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">} </w:t></w:r>',
       '<w:r w:rsidR="00F7455D"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">{business_name} </w:t></w:r>',
     );
-    // {this_day} — rsidR="00464B19", sz=24
     xml = xml.replace(
       '<w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>this_day</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>}</w:t></w:r>',
       '<w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>{this_day}</w:t></w:r>',
     );
-    // {ctc_date_issued} — rsidR="00464B19", spacing=-1, kern=0
     xml = xml.replace(
       '<w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:spacing w:val="-1"/><w:kern w:val="0"/></w:rPr><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:spacing w:val="-1"/><w:kern w:val="0"/></w:rPr><w:t>ctc_date_issued</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:spacing w:val="-1"/><w:kern w:val="0"/></w:rPr><w:t>}</w:t></w:r>',
       '<w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:spacing w:val="-1"/><w:kern w:val="0"/></w:rPr><w:t>{ctc_date_issued}</w:t></w:r>',
     );
-    // {ctc_place_issued} — rsidR="00464B19", w:w=102, kern=0
     xml = xml.replace(
       '<w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:w w:val="102"/><w:kern w:val="0"/></w:rPr><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:w w:val="102"/><w:kern w:val="0"/></w:rPr><w:t>ctc_place_issued</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:w w:val="102"/><w:kern w:val="0"/></w:rPr><w:t>}</w:t></w:r>',
       '<w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:w w:val="102"/><w:kern w:val="0"/></w:rPr><w:t>{ctc_place_issued}</w:t></w:r>',
     );
 
-    // ── Replace placeholders with real values ─────────────────────────────────
     xml = xml.replace(/APPLICANT NAME PLACEHOLDER/g, xmlEscape(owner));
     xml = xml.replace(/\{fullname\}/g,               xmlEscape(owner));
-    xml = xml.replace(/\{business_name\} /g,         xmlEscape(business) + ' '); // preserve trailing space
+    xml = xml.replace(/\{business_name\} /g,         xmlEscape(business) + ' ');
     xml = xml.replace(/\{business_name\}/g,          xmlEscape(business));
-    xml = xml.replace(/\{purok\/location\}/g,        xmlEscape(location)); // req.purok — document field
+    xml = xml.replace(/\{purok\/location\}/g,        xmlEscape(location));
     xml = xml.replace(/\{this_day\}/g,               xmlEscape(day + suffix));
     xml = xml.replace(/\{month\}/g,                  xmlEscape(MONTH));
     xml = xml.replace(/\{year\}/g,                   xmlEscape(year));
@@ -756,7 +702,6 @@ async function injectBusinessClearance(zip: any, req: RequestDetail, profile: Pr
     xml = xml.replace(/\{ctc_place_issued\}/g,       xmlEscape(ctcPlace));
     xml = xml.replace(/\{ctc_no\}/g,                 xmlEscape(ctcNo));
 
-    // ── Legacy hardcoded replacements (fallback for old template text) ────────
     xml = xml.replace(
       /BUSINESS CLEARANCE is Grante GREGORIO/g,
       `BUSINESS CLEARANCE is Granted to ${xmlEscape(owner)}`,
@@ -775,51 +720,33 @@ async function injectBusinessClearance(zip: any, req: RequestDetail, profile: Pr
   });
 }
 
-
-
 /**
  * CERTIFICATION OF DEATH
  *
  * Fields injected:
  *   Profile  : firstName + lastName → requestor (person filing, not the deceased)
- *   Request  : deceased_name  → replaces "ERNESTO VALENZUELA" (split across two runs)
- *   Request  : deceased_age   → replaces "72"
- *   Request  : date_of_death  → replaces "MAY 8 2025"
- *   Request  : place_of_death → replaces "PUROK 5 BRGY. GUIN- ON CALBAYOG CITY"
+ *   Request  : deceased_name        → replaces "ERNESTO VALENZUELA" (split across two runs)
+ *   Request  : deceased_age         → replaces "72"
+ *   Request  : date_of_death        → replaces "MAY 8 2025"
+ *   Request  : place_of_death       → replaces "PUROK 5 BRGY. GUIN- ON CALBAYOG CITY"
+ *   Request  : deceased_address     → replaces {deceased_address} placeholder  ← NEW
  *   Request  : relationship_to_deceased → replaces "(son)"
- *   Date     : today → "Given this 14th day of MAY, 2025 …"
- *
- * Template paragraph run breakdown (from XML inspection):
- *
- *   Body para:
- *     "This is to certify that " | "ERNESTO " | "VALENZUELA ," | " 72 " |
- *     "years of age, Filipino was a bonifide resident of " |
- *     "Purok 5, Brgy. Guin- on, Calbayog City" |
- *     ". The said aforementioned name died on MAY 8 2025" | " " |
- *     "at " | "PUROK 5 BRGY. GUIN- " | "ON  CALBAYOG" | " CITY."
- *
- *   Requestor para:
- *     "This " | "certificatiom" | " is issued upon the request of" |
- *     " ISAGANI ROJAS CANETE" | " (son) of the deceased, …"
- *
- *   Date para:
- *     "Given this " | "14" | "th" | " day of " | "MAY," | " 2025 " |
- *     "at the office of Sangguniang Barangay, Barangay GUIN- ON Calbayog City Samar Philippines."
+ *   Date     : today                → "Given this 14th day of MAY, 2025 …"
  */
 async function injectCertificationOfDeath(zip: any, req: RequestDetail, profile: Profile): Promise<void> {
-  const requestor    = `${profile.firstName} ${profile.lastName}`.toUpperCase();
-  const deceasedFull = (req.deceased_name ?? '___________').toUpperCase().trim();
-  const deceasedAge  = req.deceased_age            ?? '___';
-  const dateOfDeath  = req.date_of_death           ?? '___________';
-  const placeRaw     = (req.place_of_death         ?? '___________').toUpperCase();
-  const relationship = req.relationship_to_deceased ?? '___________';
+  const requestor       = `${profile.firstName} ${profile.lastName}`.toUpperCase();
+  const deceasedFull    = (req.deceased_name ?? '___________').toUpperCase().trim();
+  const deceasedAge     = req.deceased_age             ?? '___';
+  const dateOfDeath     = req.date_of_death            ?? '___________';
+  const placeRaw        = (req.place_of_death          ?? '___________').toUpperCase();
+  const deceasedAddress = (req.deceased_address        ?? '___________').toUpperCase(); // ← NEW
+  const relationship    = req.relationship_to_deceased ?? '___________';
   const { day, suffix, MONTH, year } = getCurrentDateParts();
 
   await patchXml(zip, 'word/document.xml', xml => {
 
     // ── Normalize split placeholders ──────────────────────────────────────────
     // {deceased_name} is split across 5 runs by Word (word-breaks on underscores).
-    // Collapse all 5 runs into one clean run preserving the Arial bold underline formatting.
     xml = xml.replace(
       '<w:r w:rsidR="00F450AD"><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:u w:val="single"/></w:rPr><w:t>{d</w:t></w:r>' +
       '<w:r w:rsidR="00F450AD" w:rsidRPr="00F450AD"><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:u w:val="single"/></w:rPr><w:t>eceased</w:t></w:r>' +
@@ -830,16 +757,16 @@ async function injectCertificationOfDeath(zip: any, req: RequestDetail, profile:
     );
 
     // ── Replace placeholders with real values ─────────────────────────────────
-    xml = xml.replace(/\{deceased_name\}/g, xmlEscape(deceasedFull));
-    xml = xml.replace(/\{age_at_death\}/g,  xmlEscape(deceasedAge));
-    xml = xml.replace(/\{place_of_death\}/g,xmlEscape(placeRaw));
-    xml = xml.replace(/\{fullname\}/g,      xmlEscape(requestor));
-    xml = xml.replace(/\{this_day\}/g,      xmlEscape(day + suffix));
-    xml = xml.replace(/\{month\}/g,         xmlEscape(MONTH));
-    xml = xml.replace(/\{year\}/g,          xmlEscape(year));
+    xml = xml.replace(/\{deceased_name\}/g,    xmlEscape(deceasedFull));
+    xml = xml.replace(/\{age_at_death\}/g,     xmlEscape(deceasedAge));
+    xml = xml.replace(/\{place_of_death\}/g,   xmlEscape(placeRaw));
+    xml = xml.replace(/\{deceased_address\}/g, xmlEscape(deceasedAddress)); // ← NEW
+    xml = xml.replace(/\{fullname\}/g,         xmlEscape(requestor));
+    xml = xml.replace(/\{this_day\}/g,         xmlEscape(day + suffix));
+    xml = xml.replace(/\{month\}/g,            xmlEscape(MONTH));
+    xml = xml.replace(/\{year\}/g,             xmlEscape(year));
 
     // ── Legacy hardcoded replacements (fallback) ──────────────────────────────
-    // Split deceased name for old two-run structure: "FIRSTNAME/MIDDLE " | "LASTNAME ,"
     const dParts = deceasedFull.split(/\s+/);
     const dFirst = dParts.length > 1 ? dParts.slice(0, -1).join(' ') : deceasedFull;
     const dLast  = dParts.length > 1 ? dParts[dParts.length - 1] : '';
@@ -869,26 +796,6 @@ async function injectCertificationOfDeath(zip: any, req: RequestDetail, profile:
   });
 }
 
-/**
- * JOB SEEKER CERTIFICATION  (RA 11261 – Barangay Certification)
- *
- * Fields injected:
- *   Profile  : firstName + lastName → applicant name
- *   Request  : bcn_no              → "BCN NO.: 09" → "BCN NO.: <BCN>"
- *   Request  : purok               → "Purok 4" → "<PUROK>"
- *   Request  : years_of_residency  → "5 years/month"
- *   Date     : today               → "Signed this 06TH day of OCTOBER 2025…"
- *                                    footer dates "OCTOBER 06, 2025"
- *
- * Template paragraph run breakdown (from XML inspection):
- *
- *   BCN line  : "  …spaces…  " | " BCN NO.: 09"
- *   Body para : "   " | "   This is to certify that " | "Mr" | "/" | "Ms.MAIKA" |
- *               " DELA CRUZ MERILLES a resident of Purok 4, Barangay Guin-on,
- *                Calbayog City, Samar, for 5 years/month, is a qualified availee …"
- *   Date para : "           Signed this 06" | "TH" | "   day of OCTOBER 2025, …"
- *   Footer    : "            " | "OCTOBER 06, " | "2025" | " " | "…OCTOBER 06, 2025"
- */
 async function injectJobSeekerCert(zip: any, req: RequestDetail, profile: Profile): Promise<void> {
   const firstName = profile.firstName.toUpperCase();
   const lastName  = profile.lastName.toUpperCase();
@@ -901,9 +808,6 @@ async function injectJobSeekerCert(zip: any, req: RequestDetail, profile: Profil
   const footerDate = `${MONTH} ${dayPadded}, ${year}`;
 
   await patchXml(zip, 'word/document.xml', xml => {
-
-    // ── Normalize split placeholders ──────────────────────────────────────────
-    // {purok/location} is split across 3 runs with rsidR="0073151E"
     xml = xml.replace(
       '<w:r w:rsidR="0073151E"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>{</w:t></w:r>' +
       '<w:r w:rsidR="0073151E" w:rsidRPr="0073151E"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>purok/location</w:t></w:r>' +
@@ -911,14 +815,12 @@ async function injectJobSeekerCert(zip: any, req: RequestDetail, profile: Profil
       '<w:r w:rsidR="0073151E" w:rsidRPr="0073151E"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>{purok/location}</w:t></w:r>',
     );
 
-    // ── Replace placeholders with real values ─────────────────────────────────
     xml = xml.replace(/\{fullname\}/g,        xmlEscape(fullName));
     xml = xml.replace(/\{purok\/location\}/g, xmlEscape(purok));
     xml = xml.replace(/\{this_day\}/g,        xmlEscape(day + suffix));
     xml = xml.replace(/\{month\}/g,           xmlEscape(MONTH));
     xml = xml.replace(/\{year\}/g,            xmlEscape(year));
 
-    // ── Legacy hardcoded replacements (fallback) ──────────────────────────────
     xml = xml.replace(/ BCN NO\.: 09/g, ` BCN NO.: ${xmlEscape(bcnNo)}`);
     xml = xml.replace(/Ms\.MAIKA/g, `Mr/Ms.${xmlEscape(firstName)}`);
     xml = xml.replace(
@@ -944,44 +846,16 @@ async function injectJobSeekerCert(zip: any, req: RequestDetail, profile: Profil
   });
 }
 
-/**
- * OATH OF UNDERTAKING  (First-Time Jobseeker – RA 11261)
- *
- * Fields injected:
- *   Profile  : firstName + lastName → applicant name (intro + signatory line)
- *   Profile  : age                  → "23 years of age"
- *   Request  : purok                → "Purok 2"
- *   Request  : years_of_residency   → "5 years"
- *   Date     : today                → "Signed, this 2nd day of SEPTEMBER 2024 …"
- *
- * Template paragraph run breakdown (from XML inspection):
- *
- *   Intro para:
- *     "I, EGBERT KIA DELA " | "CRUZ ," | "  23 " | "years of age, " | "is" |
- *     " a resident of Purok 2, Brgy. Guin-on, Calbayog City, Samar for 5 years,
- *      availing the benefits of Republic Act 11261, …"
- *
- *   Signatory line (bottom):
- *     "EGBERT KIA DELA CRUZ" | "           " | "BENJAMIN O. JAROPOJOP"
- *
- *   Date line:
- *     "Signed, this 2" | "nd" | "  day" | " " | "of  SEPTEMBER" | "  2024, in Barangay Guin-on…"
- */
 async function injectOathOfUndertaking(zip: any, req: RequestDetail, profile: Profile): Promise<void> {
   const firstName = profile.firstName.toUpperCase();
   const lastName  = profile.lastName.toUpperCase();
   const fullName  = `${firstName} ${lastName}`;
-
   const age    = profile.age            ?? '___';
   const purok  = req.purok              ?? '___';
   const years  = req.years_of_residency ?? '___';
   const { day, suffix, MONTH, year } = getCurrentDateParts();
 
   await patchXml(zip, 'word/document.xml', xml => {
-
-    // ── Normalize split placeholders ──────────────────────────────────────────
-    // {fullname} — rsidR="00CC4651", bold, sz=24
-    // Word splits this as: "{" | spellStart | "fullname" | spellEnd | gramStart | "}"
     xml = xml.replace(
       '<w:r w:rsidR="00CC4651"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>{</w:t></w:r>' +
       '<w:proofErr w:type="spellStart"/>' +
@@ -991,16 +865,12 @@ async function injectOathOfUndertaking(zip: any, req: RequestDetail, profile: Pr
       '<w:r w:rsidR="00CC4651"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>}</w:t></w:r>',
       '<w:r w:rsidR="00CC4651"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>{fullname}</w:t></w:r>',
     );
-    // {year} — rsidR="00CC4651", no bold, sz=24
-    // Word splits this as: "{" | gramEnd | "year}"
     xml = xml.replace(
       '<w:r w:rsidR="00CC4651"><w:rPr><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>{</w:t></w:r>' +
       '<w:proofErr w:type="gramEnd"/>' +
       '<w:r w:rsidR="00CC4651"><w:rPr><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>year}</w:t></w:r>',
       '<w:r w:rsidR="00CC4651"><w:rPr><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>{year}</w:t></w:r>',
     );
-    // {this_day} — rsidR="00CC4651", no bold, sz=24
-    // Word splits this across 4 runs: "{" | "this_" | "day" | "}" with proofErr tags interspersed
     xml = xml.replace(
       '<w:r w:rsidR="00CC4651"><w:rPr><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>{</w:t></w:r>' +
       '<w:proofErr w:type="spellStart"/>' +
@@ -1012,16 +882,13 @@ async function injectOathOfUndertaking(zip: any, req: RequestDetail, profile: Pr
       '<w:r w:rsidR="00CC4651"><w:rPr><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>{this_day}</w:t></w:r>',
     );
 
-    // ── Replace placeholders with real values ─────────────────────────────────
     xml = xml.replace(/\{fullname\}/g,  xmlEscape(fullName));
     xml = xml.replace(/\{age\}/g,       xmlEscape(age));
-    // {this_day} renders as e.g. "2nd" — the template already has "  day of {month}" after it
     xml = xml.replace(/\{this_day\}/g,  xmlEscape(day + suffix));
     xml = xml.replace(/\{purok\}/g,     xmlEscape(purok));
     xml = xml.replace(/\{month\}/g,     xmlEscape(MONTH));
     xml = xml.replace(/\{year\}/g,      xmlEscape(year));
 
-    // ── Legacy hardcoded replacements (fallback) ──────────────────────────────
     xml = xml.replace(/I, EGBERT KIA DELA CRUZ ,/g, `I, ${xmlEscape(fullName)} ,`);
     xml = xml.replace(/EGBERT KIA DELA CRUZ(?=<\/w:t>)/g, xmlEscape(fullName));
     xml = xml.replace(/  23 /g,                `  ${xmlEscape(age)} `);
@@ -1054,10 +921,8 @@ export async function generateDocument(
 ): Promise<{ blob: Blob; fileName: string }> {
   const docType = req.document_type ?? req.type ?? '';
 
-  // 1. Load template
   const { zip } = await loadTemplate(docType);
 
-  // 2. Inject text data (all user-supplied fields)
   switch (docType) {
     case 'barangay-clearance':     await injectBarangayClearance(zip, req, profile);    break;
     case 'business-clearance':     await injectBusinessClearance(zip, req, profile);    break;
@@ -1068,20 +933,15 @@ export async function generateDocument(
       console.warn(`No text injector for document type: ${docType}`);
   }
 
-  // 3. Fetch signatures from admin_signatures table
   const sigs = await fetchSignatureImages();
 
-  // 4. Secretary signature (alt text: "Secretary Signature")
   if (sigs.secretary) {
     await injectSignatureIntoZip(zip, 'Secretary Signature', sigs.secretary, 'sig_secretary.png', 'rId_sec');
   }
-
-  // 5. Captain / Punong Barangay signature (alt text: "Captain Signature")
   if (sigs.captain) {
     await injectSignatureIntoZip(zip, 'Captain Signature', sigs.captain, 'sig_captain.png', 'rId_cap');
   }
 
-  // 6. QR code (Reed-Solomon encoded verification URL)
   const qrDataUrl = await generateQRDataUrl(req.id, req.file_hash ?? null);
   if (qrDataUrl) {
     await injectQRIntoZip(zip, qrDataUrl);
@@ -1089,7 +949,6 @@ export async function generateDocument(
     console.warn('QR generation failed — placeholder image left unchanged.');
   }
 
-  // 7. Digital Seal (barangay-clearance & business-clearance only)
   if (['barangay-clearance', 'business-clearance'].includes(docType)) {
     const sealDataUrl = await generateDigitalSealDataUrl(
       req.chain_tx_hash ?? null,
@@ -1098,7 +957,6 @@ export async function generateDocument(
     await injectDigitalSealIntoZip(zip, sealDataUrl);
   }
 
-  // 8. Build output blob
   const outBuffer = await zip.generateAsync({ type: 'arraybuffer' });
   const blob = new Blob([outBuffer], {
     type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -1110,24 +968,11 @@ export async function generateDocument(
 
   return { blob, fileName };
 }
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // ─── Payload hash helpers ─────────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/**
- * Builds a canonical, deterministic string that encodes all fields that should
- * be locked into the blockchain record.  The string is:
- *
- *   <document_type>|<fullname>|<purpose>|<field1_key>=<field1_val>|…|<issued_at>
- *
- * Rules:
- *  - Keys are sorted alphabetically so the order never changes.
- *  - Values are trimmed and lowercased for case-insensitive comparison.
- *  - Empty / undefined values are written as "" so missing fields still produce
- *    a stable position in the string.
- *  - The file bytes are NOT included here — the caller should hash the file
- *    separately and append it before hashing (see buildPayloadString).
- */
 export function buildRequestPayload(req: RequestDetail, profile: Profile): string {
   const docType  = (req.document_type ?? req.type ?? '').trim().toLowerCase();
   const fullName = `${profile.firstName} ${profile.lastName}`.trim().toLowerCase();
@@ -1135,7 +980,6 @@ export function buildRequestPayload(req: RequestDetail, profile: Profile): strin
     ? req.custom_purpose
     : req.purpose ?? '').trim().toLowerCase();
 
-  // Type-specific fields — include every relevant column, sorted by key
   const typeFields: Record<string, string | undefined> = {};
 
   switch (docType) {
@@ -1153,21 +997,22 @@ export function buildRequestPayload(req: RequestDetail, profile: Profile): strin
       typeFields['purok']            = req.purok;
       break;
     case 'certification-of-death':
-      typeFields['date_of_death']           = req.date_of_death;
-      typeFields['deceased_age']            = req.deceased_age;
-      typeFields['deceased_name']           = req.deceased_name;
-      typeFields['place_of_death']          = req.place_of_death;
-      typeFields['relationship_to_deceased']= req.relationship_to_deceased;
+      typeFields['date_of_death']            = req.date_of_death;
+      typeFields['deceased_address']         = req.deceased_address; // ← NEW
+      typeFields['deceased_age']             = req.deceased_age;
+      typeFields['deceased_name']            = req.deceased_name;
+      typeFields['place_of_death']           = req.place_of_death;
+      typeFields['relationship_to_deceased'] = req.relationship_to_deceased;
       break;
     case 'job-seeker':
-      typeFields['bcn_no']            = req.bcn_no;
-      typeFields['purok']             = req.purok;
-      typeFields['years_of_residency']= req.years_of_residency;
+      typeFields['bcn_no']             = req.bcn_no;
+      typeFields['purok']              = req.purok;
+      typeFields['years_of_residency'] = req.years_of_residency;
       break;
     case 'oath-of-undertaking':
-      typeFields['age']               = profile.age;      // from profile, not req
-      typeFields['purok']             = req.purok;
-      typeFields['years_of_residency']= req.years_of_residency;
+      typeFields['age']                = profile.age;
+      typeFields['purok']              = req.purok;
+      typeFields['years_of_residency'] = req.years_of_residency;
       break;
   }
 
@@ -1177,28 +1022,13 @@ export function buildRequestPayload(req: RequestDetail, profile: Profile): strin
 
   const issuedAt = (req.created_at ?? '').trim();
 
-  const parts = [
-    docType,
-    fullName,
-    purpose,
-    ...fieldParts,
-    issuedAt,
-  ];
-
-  return parts.join('|');
+  return [docType, fullName, purpose, ...fieldParts, issuedAt].join('|');
 }
 
-/**
- * Hashes the combined payload:  file bytes  +  canonical metadata string.
- *
- * Concatenates the raw file ArrayBuffer with the UTF-8 encoded payload string
- * so a single SHA-256 digest covers both.  This is what gets recorded on-chain
- * and stored in payload_hash.
- */
 export async function hashPayload(fileBlob: Blob, payloadString: string): Promise<string> {
-  const fileBytes    = await fileBlob.arrayBuffer();
-  const metaBytes    = new TextEncoder().encode(payloadString);
-  const combined     = new Uint8Array(fileBytes.byteLength + metaBytes.byteLength);
+  const fileBytes = await fileBlob.arrayBuffer();
+  const metaBytes = new TextEncoder().encode(payloadString);
+  const combined  = new Uint8Array(fileBytes.byteLength + metaBytes.byteLength);
   combined.set(new Uint8Array(fileBytes), 0);
   combined.set(metaBytes, fileBytes.byteLength);
   const digest = await crypto.subtle.digest('SHA-256', combined);
