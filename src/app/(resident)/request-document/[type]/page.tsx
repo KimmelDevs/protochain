@@ -175,7 +175,7 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
     if (!purpose) { toast.error('Please select a purpose.'); return false; }
     if (purpose === 'others' && !customPurpose.trim()) { toast.error('Please specify your purpose.'); return false; }
     if (type === 'barangay-clearance' && (!purok.trim() || !ctcNo.trim() || !ctcDateIssued || !ctcPlaceIssued.trim())) { toast.error('Please fill in all required fields.'); return false; }
-    if (type === 'business-clearance' && (!businessName.trim() || !purok.trim())) { toast.error('Please fill in all required fields.'); return false; }
+    if (type === 'business-clearance' && (!businessName.trim() || !purok.trim() || !ctcNo.trim() || !ctcDateIssued || !ctcPlaceIssued.trim())) { toast.error('Please fill in all required fields.'); return false; }
     if (type === 'certification-of-death' && (!deceasedName.trim() || !deceasedAge.trim() || !dateOfDeath || !placeOfDeath.trim() || !deceasedAddress.trim() || !relationship.trim())) { toast.error('Please fill in all deceased person details.'); return false; }
     if (type === 'job-seeker' && (!purok.trim() || !yearsOfResidency.trim() || !bcnNo.trim())) { toast.error('Please fill in all required fields.'); return false; }
     if (type === 'oath-of-undertaking' && (!purok.trim() || !yearsOfResidency.trim())) { toast.error('Please fill in all required fields.'); return false; }
@@ -201,7 +201,7 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
           additional_info: additionalInfo || null,
           status: 'pending',
           ...(type === 'barangay-clearance' && { purok, ctc_no: ctcNo, ctc_date_issued: ctcDateIssued, ctc_place_issued: ctcPlaceIssued }),
-          ...(type === 'business-clearance' && { business_name: businessName, purok }),
+          ...(type === 'business-clearance' && { business_name: businessName, purok, ctc_no: ctcNo, ctc_date_issued: ctcDateIssued, ctc_place_issued: ctcPlaceIssued }),
           ...(type === 'certification-of-death' && { deceased_name: deceasedName, deceased_age: deceasedAge, date_of_death: dateOfDeath, place_of_death: placeOfDeath, deceased_address: deceasedAddress, relationship_to_deceased: relationship }),
           ...(type === 'job-seeker' && { purok, years_of_residency: yearsOfResidency, bcn_no: bcnNo }),
           ...(type === 'oath-of-undertaking' && { purok, years_of_residency: yearsOfResidency }),
@@ -306,6 +306,9 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
               <CardContent className="space-y-4">
                 <FloatInput label="Business Name" value={businessName} onChange={setBusinessName} required />
                 <FloatInput label="Business Location / Purok" value={purok} onChange={setPurok} required />
+                <FloatInput label="CTC Number" value={ctcNo} onChange={setCtcNo} required />
+                <FloatDateInput label="CTC Date Issued" value={ctcDateIssued} onChange={setCtcDateIssued} required />
+                <FloatInput label="CTC Place Issued" value={ctcPlaceIssued} onChange={setCtcPlaceIssued} required />
               </CardContent>
             </Card>
           )}
