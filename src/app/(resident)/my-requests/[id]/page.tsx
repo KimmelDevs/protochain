@@ -312,6 +312,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   const [loading,  setLoading]  = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
+  const [showResubmitModal, setShowResubmitModal] = useState(false);
   const [resubmitting, setResubmitting] = useState(false);
 
   useEffect(() => {
@@ -640,7 +641,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                       variant="orange"
                       className="w-full gap-2"
                       disabled={resubmitting}
-                      onClick={handleResubmit}
+                      onClick={() => setShowResubmitModal(true)}
                     >
                       {resubmitting
                         ? <><Loader2 className="w-4 h-4 animate-spin" /> Resubmitting…</>
@@ -686,6 +687,79 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
       <div>
         
       </div>
+
+      {/* Resubmit Confirmation Modal */}
+      {showResubmitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 12 }}
+            transition={{ duration: 0.25, ease: EASE }}
+            className="w-full max-w-md bg-white dark:bg-[#1a1a20] rounded-xl border border-[#dedad4] dark:border-[#2a2a32] shadow-2xl overflow-hidden"
+            style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#dedad4] dark:border-[#2a2a32]">
+              <h2 className="text-[14px] font-semibold text-[#1a1917] dark:text-[#f0eee8]">
+                Confirm Resubmission
+              </h2>
+              <button
+                onClick={() => setShowResubmitModal(false)}
+                className="p-1 rounded text-[#a09e98] hover:text-[#3d3b36] dark:hover:text-[#f0eee8] transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="px-5 py-5 space-y-3">
+              <p className="text-[14px] text-[#1a1917] dark:text-[#f0eee8] leading-relaxed">
+                Are you sure you want to resubmit this request? Please make sure you have already corrected the necessary details and double-checked everything before proceeding.
+              </p>
+              <p className="text-[12px] text-[#7a7870] dark:text-[#7e7b75] leading-relaxed">
+                Use the <strong className="text-[#1a1917] dark:text-[#f0eee8]">Edit Request</strong> button to update your information first if you haven't done so yet.
+              </p>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-[#dedad4] dark:border-[#2a2a32]">
+              <button
+                onClick={() => setShowResubmitModal(false)}
+                className="px-4 py-2 text-[13px] rounded border border-[#dedad4] dark:border-[#2a2a32]
+                  text-[#7a7870] dark:text-[#7e7b75]
+                  hover:bg-[#f0eee8] dark:hover:bg-[#1e1e24]
+                  transition-colors duration-150"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { setShowResubmitModal(false); setShowEdit(true); }}
+                className="px-4 py-2 text-[13px] rounded border border-orange-300 dark:border-orange-700
+                  text-orange-600 dark:text-orange-400
+                  bg-orange-50 dark:bg-orange-950/30
+                  hover:bg-orange-100 dark:hover:bg-orange-950/50
+                  transition-colors duration-150 flex items-center gap-1.5"
+              >
+                <Pencil className="w-3.5 h-3.5" /> Edit Request
+              </button>
+              <button
+                onClick={() => { setShowResubmitModal(false); handleResubmit(); }}
+                disabled={resubmitting}
+                className="flex items-center gap-2 px-4 py-2 text-[13px] rounded
+                  bg-orange-500 text-white hover:bg-orange-600
+                  disabled:opacity-60 disabled:cursor-not-allowed
+                  transition-colors duration-150"
+              >
+                {resubmitting
+                  ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Resubmitting…</>
+                  : 'Resubmit'
+                }
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Edit Modal */}
       {showEdit && profile && (
