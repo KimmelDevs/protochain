@@ -963,8 +963,15 @@ export async function generateDocument(
   });
 
   const safeName = `${profile.firstName}_${profile.lastName}`.replace(/\s+/g, '_');
-  const docLabel = docType.replace(/-/g, '_').toUpperCase();
-  const fileName = `${docLabel}_${safeName}_${Date.now()}.docx`;
+  const docLabelMap: Record<string, string> = {
+    'barangay-clearance':     'Brgy_Clearance',
+    'business-clearance':     'Bus_Clearance',
+    'certification-of-death': 'Cert_of_Death',
+    'job-seeker':             'Jobseeker_Cert',
+    'oath-of-undertaking':    'Oath_Undertaking',
+  };
+  const docLabel = docLabelMap[docType] ?? docType.replace(/-/g, '_');
+  const fileName = `${docLabel}_${safeName}.docx`;
 
   return { blob, fileName };
 }

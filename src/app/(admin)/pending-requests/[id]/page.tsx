@@ -80,9 +80,9 @@ const ActionBtn = ({ label, icon: Icon, onClick, disabled, variant = 'default', 
     danger:  'bg-transparent text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 border-red-400 dark:border-red-700',
   }[variant];
   return (
-    <button onClick={onClick} disabled={disabled || loading} className={`flex items-center justify-center gap-2 w-full px-4 py-2.5 border rounded-xl text-[12px] font-semibold transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed ${cls}`}>
-      {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Icon className="w-4 h-4" />}
-      {loading ? 'Processing...' : label}
+    <button onClick={onClick} disabled={disabled || loading} className={`flex items-center justify-center gap-2 w-full px-4 py-2.5 border rounded-xl text-[12px] font-semibold transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed overflow-hidden ${cls}`}>
+      <span className="flex-shrink-0">{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Icon className="w-4 h-4" />}</span>
+      <span className="truncate">{loading ? 'Processing...' : label}</span>
     </button>
   );
 };
@@ -719,7 +719,7 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
                   )}
                   <ActionBtn label={request.file_url ? 'Re-generate Document' : 'Step 1: Generate .docx'} icon={Wand2} onClick={handleGenerate} loading={generating} disabled={generating || uploading} />
                   {generatedBlob && (
-                    <ActionBtn label={`Step 2: Upload "${generatedFileName}"`} icon={Upload} onClick={() => uploadFile(generatedBlob, generatedFileName)} loading={uploading} disabled={uploading} />
+                    <ActionBtn label={`Step 2: Upload Document`} icon={Upload} onClick={() => uploadFile(generatedBlob, generatedFileName)} loading={uploading} disabled={uploading} />
                   )}
                   <div className="flex items-center gap-3 py-1">
                     <div className="flex-1 h-px bg-[#E8E6E1] dark:bg-[#2C2C32]" />

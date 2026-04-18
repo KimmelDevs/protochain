@@ -113,10 +113,10 @@ const OutlineBtn = ({
   <button
     onClick={onClick}
     disabled={disabled || loading}
-    className="flex items-center justify-center gap-2 w-full px-4 py-2.5 border border-[#E8E6E1] dark:border-[#2C2C32] text-[12px] font-semibold text-[#3A3A3E] dark:text-[#BABABC] hover:border-[#1a1917] dark:hover:border-[#f0eee8] hover:text-[#1A1A1C] dark:hover:text-[#f0eee8] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+    className="flex items-center justify-center gap-2 w-full px-4 py-2.5 border border-[#E8E6E1] dark:border-[#2C2C32] text-[12px] font-semibold text-[#3A3A3E] dark:text-[#BABABC] hover:border-[#1a1917] dark:hover:border-[#f0eee8] hover:text-[#1A1A1C] dark:hover:text-[#f0eee8] transition-colors disabled:opacity-40 disabled:cursor-not-allowed overflow-hidden"
   >
-    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Icon className="w-4 h-4" />}
-    {loading ? 'Processing…' : label}
+    <span className="flex-shrink-0">{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Icon className="w-4 h-4" />}</span>
+    <span className="truncate">{loading ? 'Processing…' : label}</span>
   </button>
 );
 
@@ -126,10 +126,10 @@ const FillBtn = ({
   <button
     onClick={onClick}
     disabled={disabled || loading}
-    className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-[#1a1917] dark:bg-[#f0eee8] text-white dark:text-[#1A1A1C] text-[12px] font-semibold hover:bg-[#3d3b36] dark:hover:bg-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+    className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-[#1a1917] dark:bg-[#f0eee8] text-white dark:text-[#1A1A1C] text-[12px] font-semibold hover:bg-[#3d3b36] dark:hover:bg-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed overflow-hidden"
   >
-    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Icon className="w-4 h-4" />}
-    {loading ? 'Processing…' : label}
+    <span className="flex-shrink-0">{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Icon className="w-4 h-4" />}</span>
+    <span className="truncate">{loading ? 'Processing…' : label}</span>
   </button>
 );
 
@@ -553,7 +553,7 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
 
                   {generatedBlob && (
                     <OutlineBtn
-                      label={`Step 2: Upload "${generatedFileName}"`}
+                      label={`Step 2: Upload Document`}
                       icon={Upload}
                       onClick={() => uploadFile(generatedBlob, generatedFileName)}
                       loading={uploading}
