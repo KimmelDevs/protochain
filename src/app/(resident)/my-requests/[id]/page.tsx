@@ -623,6 +623,16 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                 <Card>
                   <CardHeader><CardTitle>Resubmit Request</CardTitle></CardHeader>
                   <CardContent className="space-y-3">
+                    {request.notes && (
+                      <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-red-500 dark:text-red-400 mb-1">
+                          Reason of Rejection
+                        </p>
+                        <p className="text-[13px] text-red-700 dark:text-red-300 leading-snug">
+                          {request.notes}
+                        </p>
+                      </div>
+                    )}
                     <p className="text-[#60646c] dark:text-[#b0b4ba] text-sm">
                       Fix your details using the <strong>Edit Request</strong> button, then resubmit for admin review.
                     </p>
