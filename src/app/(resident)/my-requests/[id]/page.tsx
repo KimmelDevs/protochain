@@ -23,7 +23,7 @@ interface RequestDetail {
   purok: string | null; ctc_no: string | null; ctc_date_issued: string | null;
   ctc_place_issued: string | null; business_name: string | null;
   deceased_name: string | null; deceased_age: string | null;
-  date_of_death: string | null; place_of_death: string | null;
+  date_of_death: string | null; place_of_death: string | null; deceased_address: string | null;
   relationship_to_deceased: string | null; years_of_residency: string | null;
   bcn_no: string | null; user_id: string;
 }
@@ -183,7 +183,7 @@ function EditModal({
         {/* Fields */}
         <div className="px-5 py-4 space-y-4 max-h-[60vh] overflow-y-auto">
           <p className="text-[12px] text-[#7a7870] dark:text-[#7e7b75]">
-            You can only edit pending requests. Changes are logged and visible to admins.
+            You can edit pending or rejected requests. Changes are logged and visible to admins.
           </p>
           {fields.map(f => (
             <div key={f.key}>
@@ -312,6 +312,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   const [loading,  setLoading]  = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
+  const [resubmitting, setResubmitting] = useState(false);
 
   useEffect(() => {
     if (localStorage.getItem('theme') === 'dark') {
@@ -357,6 +358,26 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
       }
     })();
   }, [id, router]);
+
+  const handleResubmit = async () => {
+    if (!request) return;
+    setResubmitting(true);
+    try {
+      const res = await fetch(`/api/requests?id=${request.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'pending', notes: null }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? 'Resubmit failed');
+      setRequest(prev => prev ? { ...prev, status: 'pending', notes: null } : prev);
+      toast.success('Request resubmitted successfully!');
+    } catch (err: any) {
+      toast.error(err.message ?? 'Something went wrong.');
+    } finally {
+      setResubmitting(false);
+    }
+  };
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
@@ -425,7 +446,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
     request.status === 'rejected' ? 'Your request was rejected.'      :
                                     'Waiting for admin review.';
 
-  const canEdit = request.status === 'pending' || request.status === 'secretary_approved';
+  const canEdit = request.status === 'pending' || request.status === 'secretary_approved' || request.status === 'rejected';
 
   return (
     <div className="min-h-screen bg-[#f8f9fa] dark:bg-[#111113] p-4 lg:p-8">
@@ -499,7 +520,10 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                     )}
                     {request.notes && (
                       <motion.div variants={staggerItem} className="col-span-2">
-                        <DetailRow label="Admin Notes" value={request.notes} />
+                        <DetailRow
+                          label={request.status === 'rejected' ? 'Reason of Rejection' : 'Admin Notes'}
+                          value={request.notes}
+                        />
                       </motion.div>
                     )}
                   </motion.div>
@@ -592,6 +616,31 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                 </CardContent>
               </Card>
             </motion.div>
+
+            {/* Resubmit card — shown when rejected */}
+            {request.status === 'rejected' && (
+              <motion.div {...slideInRight(0.26)}>
+                <Card>
+                  <CardHeader><CardTitle>Resubmit Request</CardTitle></CardHeader>
+                  <CardContent className="space-y-3">
+                    <p className="text-[#60646c] dark:text-[#b0b4ba] text-sm">
+                      Fix your details using the <strong>Edit Request</strong> button, then resubmit for admin review.
+                    </p>
+                    <Button
+                      variant="orange"
+                      className="w-full gap-2"
+                      disabled={resubmitting}
+                      onClick={handleResubmit}
+                    >
+                      {resubmitting
+                        ? <><Loader2 className="w-4 h-4 animate-spin" /> Resubmitting…</>
+                        : 'Resubmit Request'
+                      }
+                    </Button>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
 
             {/* Download card */}
             {request.status === 'approved' && request.file_url && (
