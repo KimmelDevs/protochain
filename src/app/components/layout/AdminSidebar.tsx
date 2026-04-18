@@ -145,6 +145,21 @@ export default function AdminSidebar() {
           --sb-silver:  #55555F;
           --sb-orange-pale: rgba(232,80,10,0.12);
         }
+
+        /* dark mode scrollbar */
+        .dark .pjs nav::-webkit-scrollbar {
+          width: 4px;
+        }
+        .dark .pjs nav::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .dark .pjs nav::-webkit-scrollbar-thumb {
+          background: #2C2C32;
+          border-radius: 999px;
+        }
+        .dark .pjs nav::-webkit-scrollbar-thumb:hover {
+          background: #3C3C44;
+        }
       `}</style>
 
       <aside
