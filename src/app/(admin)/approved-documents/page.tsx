@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Search, Eye, FileText, Download, AlertCircle,
+  Search, Eye, FileText, Download, AlertCircle, Bell,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -29,6 +29,8 @@ interface Request {
   notes: string | null;
   user_id: string;
   profiles: Profile | null;
+  follow_up_requested: boolean | null;
+  follow_up_requested_at: string | null;
 }
 
 /* ─────────────────────────── helpers ───────────────────────────────────── */
@@ -261,6 +263,7 @@ export default function ApprovedDocumentsPage() {
                     ? `${req.profiles.firstName} ${req.profiles.lastName}`
                     : 'Unknown';
                   const approvedDate = req.processed_at ?? req.created_at;
+                  const isFollowUp = !!req.follow_up_requested && !req.file_url;
 
                   return (
                     <motion.div
@@ -268,13 +271,27 @@ export default function ApprovedDocumentsPage() {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: 0.025 * i }}
-                      className="group grid grid-cols-[1fr_160px_100px_110px_52px_52px] items-center py-3.5 border-b border-[#E8E6E1] dark:border-[#2C2C32] last:border-0 hover:bg-[#F6F5F3] dark:hover:bg-[#1C1C1F] -mx-2 px-2 transition-colors duration-100"
+                      className={`group grid grid-cols-[1fr_160px_100px_110px_52px_52px] items-center py-3.5 border-b last:border-0 -mx-2 px-2 transition-colors duration-100
+                        ${isFollowUp
+                          ? 'border-orange-200 dark:border-orange-900/50 bg-orange-50/60 dark:bg-orange-950/20 hover:bg-orange-50 dark:hover:bg-orange-950/30'
+                          : 'border-[#E8E6E1] dark:border-[#2C2C32] hover:bg-[#F6F5F3] dark:hover:bg-[#1C1C1F]'
+                        }`}
                     >
                       {/* resident */}
                       <div className="min-w-0 pr-4">
-                        <p className="text-[14px] font-medium text-[#1A1A1C] dark:text-[#EAEAEC] truncate leading-none">
-                          {name}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-[14px] font-medium text-[#1A1A1C] dark:text-[#EAEAEC] truncate leading-none">
+                            {name}
+                          </p>
+                          {isFollowUp && (
+                            <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-orange-100 dark:bg-orange-900/40 border border-orange-300 dark:border-orange-700 flex-shrink-0">
+                              <Bell className="w-2.5 h-2.5 text-orange-500 dark:text-orange-400" />
+                              <span className="mono text-[9px] font-bold tracking-[0.12em] uppercase text-orange-600 dark:text-orange-400">
+                                Follow-up
+                              </span>
+                            </span>
+                          )}
+                        </div>
                         <p className="mono text-[11px] text-[#6C6C74] dark:text-[#9090A0] mt-1.5 truncate">
                           {req.id.slice(0, 8).toUpperCase()}
                         </p>
@@ -305,14 +322,15 @@ export default function ApprovedDocumentsPage() {
                           </a>
                         ) : (
                           <span className="flex items-center justify-center w-7 h-7">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#c8c6c0] dark:bg-[#3a3845]" />
+                            <span className={`w-1.5 h-1.5 rounded-full ${isFollowUp ? 'bg-orange-400 dark:bg-orange-500' : 'bg-[#c8c6c0] dark:bg-[#3a3845]'}`} />
                           </span>
                         )}
                       </div>
 
                       {/* view */}
                       <Link href={`/approved-documents/${req.id}`} className="flex justify-end">
-                        <span className="flex items-center justify-center w-7 h-7 border border-[#E8E6E1] dark:border-[#2C2C32] hover:bg-orange-600 hover:border-orange-600 group/btn transition-colors duration-150">
+                        <span className={`flex items-center justify-center w-7 h-7 border hover:bg-orange-600 hover:border-orange-600 group/btn transition-colors duration-150
+                          ${isFollowUp ? 'border-orange-300 dark:border-orange-700' : 'border-[#E8E6E1] dark:border-[#2C2C32]'}`}>
                           <Eye className="w-3.5 h-3.5 text-[#6C6C74] dark:text-[#9090A0] group-hover/btn:text-white transition-colors" />
                         </span>
                       </Link>

@@ -69,6 +69,8 @@ export interface RequestDetail {
   relationship_to_deceased?: string;
   bcn_no?:                   string;
   years_of_residency?:       string;
+  follow_up_requested?:      boolean | null;
+  follow_up_requested_at?:   string | null;
 }
 
 export interface Profile {

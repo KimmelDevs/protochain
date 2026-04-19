@@ -9,7 +9,7 @@ import Button from '@/app/components/ui/Button';
 import {
   ArrowLeft, User, MapPin, Phone, Mail,
   CheckCircle, Clock, XCircle, Download, Loader2,
-  Pencil, X, Save, History,
+  Pencil, X, Save, History, Bell, BellOff,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -26,6 +26,8 @@ interface RequestDetail {
   date_of_death: string | null; place_of_death: string | null; deceased_address: string | null;
   relationship_to_deceased: string | null; years_of_residency: string | null;
   bcn_no: string | null; user_id: string;
+  follow_up_requested: boolean | null;
+  follow_up_requested_at: string | null;
 }
 
 interface Profile {
@@ -314,6 +316,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   const [showEdit, setShowEdit] = useState(false);
   const [showResubmitModal, setShowResubmitModal] = useState(false);
   const [resubmitting, setResubmitting] = useState(false);
+  const [followingUp, setFollowingUp] = useState(false);
 
   useEffect(() => {
     if (localStorage.getItem('theme') === 'dark') {
@@ -360,8 +363,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
     })();
   }, [id, router]);
 
-  const handleResubmit = async () => {
-    if (!request) return;
+  const handleResubmit = async () => {    if (!request) return;
     setResubmitting(true);
     try {
       const res = await fetch(`/api/requests?id=${request.id}`, {
@@ -377,6 +379,33 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
       toast.error(err.message ?? 'Something went wrong.');
     } finally {
       setResubmitting(false);
+    }
+  };
+
+  const handleFollowUp = async () => {
+    if (!request) return;
+    setFollowingUp(true);
+    try {
+      const res = await fetch(`/api/requests?id=${request.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          follow_up_requested: true,
+          follow_up_requested_at: new Date().toISOString(),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? 'Follow-up failed');
+      setRequest(prev => prev ? {
+        ...prev,
+        follow_up_requested: true,
+        follow_up_requested_at: new Date().toISOString(),
+      } : prev);
+      toast.success('Follow-up sent! The barangay has been notified.');
+    } catch (err: any) {
+      toast.error(err.message ?? 'Something went wrong.');
+    } finally {
+      setFollowingUp(false);
     }
   };
 
@@ -670,17 +699,61 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
               </motion.div>
             )}
 
-            {request.status === 'approved' && !request.file_url && (
-              <motion.div {...slideInRight(0.26)}>
-                <Card>
-                  <CardContent className="p-4">
-                    <p className="text-[#60646c] dark:text-[#b0b4ba] text-sm text-center">
-                      Your request is approved. Please visit the barangay office to claim your document.
-                    </p>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
+            {request.status === 'approved' && !request.file_url && (() => {
+              const approvedAt = request.processed_at ? new Date(request.processed_at) : null;
+              const oneDayPassed = approvedAt
+                ? (Date.now() - approvedAt.getTime()) >= 24 * 60 * 60 * 1000
+                : false;
+              const alreadyRequested = !!request.follow_up_requested;
+              const canFollowUp = oneDayPassed && !alreadyRequested;
+
+              return (
+                <motion.div {...slideInRight(0.26)}>
+                  <Card>
+                    <CardHeader><CardTitle>Your Document</CardTitle></CardHeader>
+                    <CardContent className="space-y-4">
+                      <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.3 }}
+                        className="text-sm text-[#60646c] dark:text-[#b0b4ba] text-center py-2"
+                      >
+                        The barangay hasn't uploaded your document file yet. Please check back later.
+                      </motion.p>
+
+                      <div className="border-t border-[#e8e6e0] dark:border-[#2a2a32] pt-4 space-y-2">
+                        <p className="text-[11px] text-[#a09e98] dark:text-[#7e7b75] text-center">
+                          {alreadyRequested
+                            ? 'You have already sent a follow-up for this document.'
+                            : oneDayPassed
+                            ? 'Your request has been approved for over a day. You may send a follow-up.'
+                            : 'You can send a follow-up after 1 day from approval.'}
+                        </p>
+                        <button
+                          onClick={canFollowUp ? handleFollowUp : undefined}
+                          disabled={!canFollowUp || followingUp}
+                          className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded text-[13px] font-medium transition-colors duration-150
+                            ${alreadyRequested
+                              ? 'bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 text-green-600 dark:text-green-400 cursor-default'
+                              : canFollowUp
+                              ? 'bg-orange-500 text-white hover:bg-orange-600 cursor-pointer'
+                              : 'bg-[#f0eee8] dark:bg-[#1e1e24] border border-[#dedad4] dark:border-[#2a2a32] text-[#b0aea8] dark:text-[#55555f] cursor-not-allowed'
+                            }`}
+                        >
+                          {followingUp ? (
+                            <><Loader2 className="w-4 h-4 animate-spin" /> Sending…</>
+                          ) : alreadyRequested ? (
+                            <><CheckCircle className="w-4 h-4" /> Follow-up Sent</>
+                          ) : (
+                            <><Bell className="w-4 h-4" /> Follow Up</>
+                          )}
+                        </button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              );
+            })()}
           </div>
         </div>
       </div>

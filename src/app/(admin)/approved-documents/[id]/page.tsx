@@ -4,7 +4,7 @@ import { use, useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   CheckCircle, User, Mail, Phone, MapPin,
-  Loader2, Download, Upload, Wand2, ShieldCheck, ShieldOff,
+  Loader2, Download, Upload, Wand2, ShieldCheck, ShieldOff, Bell,
 } from 'lucide-react';
 import Link from 'next/link';
 import { supabase } from '@/app/lib/supabase';
@@ -496,6 +496,24 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
                     {new Date(approvedDate).toLocaleString('en-PH')}
                   </p>
                 </div>
+                {request.follow_up_requested && !request.file_url && (
+                  <div className="mt-4 flex items-start gap-2.5 px-3 py-2.5 rounded border border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-950/30">
+                    <Bell className="w-3.5 h-3.5 text-orange-500 dark:text-orange-400 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="mono text-[10px] font-bold tracking-[0.12em] uppercase text-orange-600 dark:text-orange-400 mb-0.5">
+                        Resident Follow-Up
+                      </p>
+                      <p className="text-[11px] text-orange-700 dark:text-orange-300 leading-snug">
+                        The resident has requested a follow-up on their document upload.
+                      </p>
+                      {request.follow_up_requested_at && (
+                        <p className="mono text-[10px] text-orange-500/70 dark:text-orange-400/60 mt-1">
+                          Sent {new Date(request.follow_up_requested_at).toLocaleString('en-PH')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Document */}
