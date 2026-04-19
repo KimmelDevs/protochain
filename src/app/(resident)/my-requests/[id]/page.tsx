@@ -702,7 +702,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
             {request.status === 'approved' && !request.file_url && (() => {
               const approvedAt = request.processed_at ? new Date(request.processed_at) : null;
               const oneDayPassed = approvedAt
-                ? (Date.now() - approvedAt.getTime()) >= 0
+                ? (Date.now() - approvedAt.getTime()) >= 24 * 60 * 60 * 1000
                 : false;
               const alreadyRequested = !!request.follow_up_requested;
               const canFollowUp = oneDayPassed && !alreadyRequested;

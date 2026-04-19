@@ -61,11 +61,12 @@ const isThisYear = (d: string) =>
 /* ─────────────────────────── page ──────────────────────────────────────── */
 export default function ApprovedDocumentsPage() {
   const router = useRouter();
-  const [requests,   setRequests]   = useState<Request[]>([]);
-  const [loading,    setLoading]    = useState(true);
-  const [search,     setSearch]     = useState('');
-  const [typeFilter, setTypeFilter] = useState('all');
-  const [dateFilter, setDateFilter] = useState('all');
+  const [requests,       setRequests]       = useState<Request[]>([]);
+  const [loading,        setLoading]        = useState(true);
+  const [search,         setSearch]         = useState('');
+  const [typeFilter,     setTypeFilter]     = useState('all');
+  const [dateFilter,     setDateFilter]     = useState('all');
+  const [followUpFilter, setFollowUpFilter] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -104,6 +105,8 @@ export default function ApprovedDocumentsPage() {
 
   const uniqueTypes = ['all', ...Array.from(new Set(requests.map(r => r.type).filter(Boolean)))];
 
+  const followUpCount = requests.filter(r => !!r.follow_up_requested && !r.file_url).length;
+
   const filtered = requests.filter(r => {
     const name = r.profiles ? `${r.profiles.firstName} ${r.profiles.lastName}` : '';
     const q = search.toLowerCase();
@@ -118,7 +121,8 @@ export default function ApprovedDocumentsPage() {
       (dateFilter === 'week'  && isThisWeek(ref))  ||
       (dateFilter === 'month' && isThisMonth(ref)) ||
       (dateFilter === 'year'  && isThisYear(ref));
-    return matchSearch && matchType && matchDate;
+    const matchFollowUp = !followUpFilter || (!!r.follow_up_requested && !r.file_url);
+    return matchSearch && matchType && matchDate && matchFollowUp;
   });
 
   const stats = [
@@ -225,6 +229,28 @@ export default function ApprovedDocumentsPage() {
                 <option key={v} value={v}>{l}</option>
               ))}
             </select>
+
+            {/* ── Follow-Up Filter Toggle ─────────────────────────────── */}
+            <button
+              onClick={() => setFollowUpFilter(f => !f)}
+              className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-[12px] font-medium transition-colors mono whitespace-nowrap
+                ${followUpFilter
+                  ? 'bg-orange-500 border-orange-500 text-white'
+                  : 'bg-white dark:bg-[#1C1C1F] border-[#E8E6E1] dark:border-[#2C2C32] text-[#6C6C74] dark:text-[#9090A0] hover:border-orange-400 dark:hover:border-orange-600'
+                }`}
+            >
+              <Bell className={`w-3.5 h-3.5 ${followUpFilter ? 'text-white' : 'text-orange-500'}`} />
+              Follow-Up
+              {followUpCount > 0 && (
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold
+                  ${followUpFilter
+                    ? 'bg-white/20 text-white'
+                    : 'bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400'
+                  }`}>
+                  {followUpCount}
+                </span>
+              )}
+            </button>
           </motion.div>
 
           {/* ── TABLE ──────────────────────────────────────────────────── */}
@@ -251,10 +277,21 @@ export default function ApprovedDocumentsPage() {
               </div>
             ) : filtered.length === 0 ? (
               <div className="py-20 flex flex-col items-center gap-3">
-                <Search className="w-6 h-6 text-[#c8c6c0] dark:text-[#3a3845]" />
-                <p className="mono text-[12px] tracking-widest uppercase text-[#6C6C74] dark:text-[#9090A0]">
-                  No results match
-                </p>
+                {followUpFilter ? (
+                  <>
+                    <Bell className="w-6 h-6 text-[#c8c6c0] dark:text-[#3a3845]" />
+                    <p className="mono text-[12px] tracking-widest uppercase text-[#6C6C74] dark:text-[#9090A0]">
+                      No follow-up requests
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <Search className="w-6 h-6 text-[#c8c6c0] dark:text-[#3a3845]" />
+                    <p className="mono text-[12px] tracking-widest uppercase text-[#6C6C74] dark:text-[#9090A0]">
+                      No results match
+                    </p>
+                  </>
+                )}
               </div>
             ) : (
               <AnimatePresence>
@@ -342,7 +379,10 @@ export default function ApprovedDocumentsPage() {
 
             {filtered.length > 0 && (
               <p className="mono text-[11px] text-[#6C6C74] dark:text-[#9090A0] mt-3">
-                Showing {filtered.length} of {requests.length} approved document{requests.length !== 1 ? 's' : ''}
+                {followUpFilter
+                  ? `Showing ${filtered.length} follow-up request${filtered.length !== 1 ? 's' : ''}`
+                  : `Showing ${filtered.length} of ${requests.length} approved document${requests.length !== 1 ? 's' : ''}`
+                }
               </p>
             )}
           </motion.div>
