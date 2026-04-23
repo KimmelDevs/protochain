@@ -287,7 +287,8 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
   const [uploading,         setUploading]         = useState(false);
   const [generatedBlob,     setGeneratedBlob]     = useState<Blob | null>(null);
   const [generatedFileName, setGeneratedFileName] = useState('');
-  const [uploadedHash,      setUploadedHash]      = useState<string | null>(null);
+  const [uploadedHash,        setUploadedHash]        = useState<string | null>(null);
+  const [uploadedPayloadHash, setUploadedPayloadHash] = useState<string | null>(null);
   const [chainTxHash,       setChainTxHash]       = useState<string | null>(null);
   const [chainRecording,    setChainRecording]    = useState(false);
   const [chainError,        setChainError]        = useState('');
@@ -327,7 +328,8 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
         if (!j.data?.[0]) { setNotFound(true); return; }
         const rd: RequestDetail = j.data[0];
         setRequest(rd);
-        if (rd.file_hash) setUploadedHash(rd.file_hash);
+        if (rd.file_hash)    setUploadedHash(rd.file_hash);
+        if (rd.payload_hash) setUploadedPayloadHash(rd.payload_hash);
         if (rd.chain_tx_hash) setChainTxHash(rd.chain_tx_hash);
 
         // Load resident profile
@@ -439,14 +441,15 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
       const j = await res.json();
       if (!res.ok) throw new Error(j.error ?? 'Failed.');
       setRequest(p => p ? { ...p, file_url: urlData.publicUrl, file_hash: fileHash } : p);
-      setUploadedHash(fileHash);   // 🟦 fileHash — matches what verify page computes
+      setUploadedHash(fileHash);   // 🟦 fileHash stored — verify page sends this to /api/payload-snapshot to resolve payloadHash
+      setUploadedPayloadHash(payloadHash); // 🟧 payloadHash stored — this is what goes on-chain
       setSuccess('Document uploaded. Recording hash on blockchain…');
 
-      // ── Record on-chain (combined payload hash) ─────────────────────────
+      // ── Record on-chain (payload hash 🟧 — what the verify page resolves to) ──
       setChainRecording(true);
       try {
         const docType = request?.document_type ?? request?.type ?? 'barangay-document';
-        const txHash  = await recordDocumentOnChain(fileHash, docType);
+        const txHash  = await recordDocumentOnChain(payloadHash, docType);
         setChainTxHash(txHash);
         setRequest(p => p ? { ...p, chain_tx_hash: txHash } : p);
         await fetch(`/api/requests?id=${id}`, {
@@ -463,11 +466,11 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
   };
 
   const handleRecordOnChain = async () => {
-    if (!uploadedHash || !request) return;
+    if (!uploadedPayloadHash || !request) return;
     setChainError(''); setChainRecording(true);
     try {
       const docType = request.document_type ?? request.type ?? 'barangay-document';
-      const txHash  = await recordDocumentOnChain(uploadedHash, docType);
+      const txHash  = await recordDocumentOnChain(uploadedPayloadHash, docType);
       setChainTxHash(txHash);
       setRequest(p => p ? { ...p, chain_tx_hash: txHash } : p);
       await fetch(`/api/requests?id=${id}`, {

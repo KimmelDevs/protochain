@@ -52,6 +52,8 @@ export interface RequestDetail {
   additional_info?:          string;
   file_url?:                 string;
   file_hash?:                string;
+  payload_hash?:             string;
+  payload_snapshot?:         string;
   chain_tx_hash?:            string;
   created_at:                string;
   processed_at?:             string;

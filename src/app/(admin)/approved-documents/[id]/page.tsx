@@ -191,7 +191,8 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
   const [uploading,         setUploading]         = useState(false);
   const [generatedBlob,     setGeneratedBlob]     = useState<Blob | null>(null);
   const [generatedFileName, setGeneratedFileName] = useState('');
-  const [uploadedHash,      setUploadedHash]      = useState<string | null>(null);
+  const [uploadedHash,        setUploadedHash]        = useState<string | null>(null);
+  const [uploadedPayloadHash, setUploadedPayloadHash] = useState<string | null>(null);
   const [chainTxHash,       setChainTxHash]       = useState<string | null>(null);
   const [chainRecording,    setChainRecording]    = useState(false);
   const [revoking,          setRevoking]          = useState(false);
@@ -209,7 +210,8 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
         if (!j.data?.[0]) { setNotFound(true); return; }
         const rd: RequestDetail = j.data[0];
         setRequest(rd);
-        if (rd.file_hash) setUploadedHash(rd.file_hash);
+        if (rd.file_hash)    setUploadedHash(rd.file_hash);
+        if (rd.payload_hash) setUploadedPayloadHash(rd.payload_hash);
         if (rd.chain_tx_hash) setChainTxHash(rd.chain_tx_hash);
 
         const pr = await fetch(`/api/profile?id=${rd.user_id}`);
@@ -220,11 +222,11 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
   }, [id]);
 
   const handleRevoke = async () => {
-    if (!uploadedHash) return;
+    if (!uploadedPayloadHash) return;
     if (!confirm('Are you sure you want to revoke this document on-chain? This action cannot be undone.')) return;
     setRevoking(true); setRevokeError(''); setRevokeSuccess('');
     try {
-      const txHash = await revokeDocumentOnChain(uploadedHash);
+      const txHash = await revokeDocumentOnChain(uploadedPayloadHash);
       // Update status in DB so it appears in the Revoked Documents list
       await fetch(`/api/requests?id=${id}`, {
         method: 'PATCH',
@@ -289,14 +291,15 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
       const j = await res.json();
       if (!res.ok) throw new Error(j.error ?? 'Failed to update.');
       setRequest(p => p ? { ...p, file_url: urlData.publicUrl, file_hash: fileHash } : p);
-      setUploadedHash(fileHash);
+      setUploadedHash(fileHash);          // 🟦 fileHash — verify page sends this to /api/payload-snapshot
+      setUploadedPayloadHash(payloadHash); // 🟧 payloadHash — what goes on-chain & what revoke needs
       setSuccess('Document uploaded. Recording hash on blockchain…');
 
-      // ── Record on-chain (combined payload hash) ─────────────────────────
+      // ── Record on-chain (payload hash 🟧 — what the verify page resolves to) ──
       setChainRecording(true);
       try {
         const docType = request?.document_type ?? request?.type ?? 'barangay-document';
-        const txHash  = await recordDocumentOnChain(fileHash, docType);
+        const txHash  = await recordDocumentOnChain(payloadHash, docType);
         setChainTxHash(txHash);
         await fetch(`/api/requests?id=${id}`, {
           method: 'PATCH',
