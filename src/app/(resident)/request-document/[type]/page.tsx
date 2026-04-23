@@ -291,7 +291,7 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
             <Card className="bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-white/10">
               <CardHeader><CardTitle className="text-black dark:text-white">Additional Details</CardTitle></CardHeader>
               <CardContent className="space-y-4">
-                <FloatInput label="Purok / Zone" value={purok} onChange={setPurok} required />
+                <FloatInput label="Purok" value={purok} onChange={setPurok} required />
                 <FloatInput label="CTC Number" value={ctcNo} onChange={setCtcNo} required />
                 {/* FloatDateInput: calendar picker, hides dd/mm/yyyy mask when empty + unfocused */}
                 <FloatDateInput label="CTC Date Issued" value={ctcDateIssued} onChange={setCtcDateIssued} required />
@@ -305,7 +305,7 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
               <CardHeader><CardTitle className="text-black dark:text-white">Business Details</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <FloatInput label="Business Name" value={businessName} onChange={setBusinessName} required />
-                <FloatInput label="Business Location / Purok" value={purok} onChange={setPurok} required />
+                <FloatInput label="Purok" value={purok} onChange={setPurok} required />
                 <FloatInput label="CTC Number" value={ctcNo} onChange={setCtcNo} required />
                 <FloatDateInput label="CTC Date Issued" value={ctcDateIssued} onChange={setCtcDateIssued} required />
                 <FloatInput label="CTC Place Issued" value={ctcPlaceIssued} onChange={setCtcPlaceIssued} required />
@@ -333,7 +333,7 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
               <CardHeader><CardTitle className="text-black dark:text-white">Additional Details</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <FloatInput label="BCN Number" value={bcnNo} onChange={setBcnNo} required />
-                <FloatInput label="Purok / Zone" value={purok} onChange={setPurok} required />
+                <FloatInput label="Purok" value={purok} onChange={setPurok} required />
                 <FloatInput label="Years of Residency in Barangay" value={yearsOfResidency} onChange={setYearsOfResidency} required />
               </CardContent>
             </Card>
@@ -343,7 +343,7 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
             <Card className="bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-white/10">
               <CardHeader><CardTitle className="text-black dark:text-white">Additional Details</CardTitle></CardHeader>
               <CardContent className="space-y-4">
-                <FloatInput label="Purok / Zone" value={purok} onChange={setPurok} required />
+                <FloatInput label="Purok" value={purok} onChange={setPurok} required />
                 <FloatInput label="Years of Residency in Barangay" value={yearsOfResidency} onChange={setYearsOfResidency} required />
               </CardContent>
             </Card>
