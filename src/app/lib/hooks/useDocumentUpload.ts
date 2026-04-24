@@ -140,7 +140,10 @@ export function useDocumentUpload({
       onSuccess?.(urlData.publicUrl, fileHash);
 
       // 5. Record on-chain (non-blocking — errors surfaced via chainError)
-      await _recordOnChain(fileHash);
+      // Must use payloadHash (combined file+metadata hash) not fileHash,
+      // because verifyDocumentOnChain looks up payload_hash from the DB
+      // and checks THAT against the blockchain.
+      await _recordOnChain(payloadHash);
     } catch (err: unknown) {
       setUploadError(err instanceof Error ? err.message : 'Upload failed.');
     } finally {
