@@ -338,7 +338,7 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
         // Load resident profile
         const pr = await fetch(`/api/profile?id=${rd.user_id}`);
         if (pr.ok) { const pj = await pr.json(); setProfile(normaliseProfile(pj.data)); }
-      } catch (err) { console.error('[pending-requests/id] load error:', err); setNotFound(true); }
+      } catch { setNotFound(true); }
       finally  { setLoading(false); }
     })();
   }, [id]);
