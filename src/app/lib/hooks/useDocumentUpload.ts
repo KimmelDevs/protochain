@@ -12,7 +12,7 @@
 
 import { useState } from 'react';
 import { supabase } from '@/app/lib/supabase';
-import { recordDocumentOnChain } from '@/app/lib/blockchain';
+import { recordDocumentOnChain, revokeDocumentOnChain } from '@/app/lib/blockchain';
 import {
   type RequestDetail,
   type Profile,
@@ -120,6 +120,17 @@ export function useDocumentUpload({
         .from('documents')
         .getPublicUrl(storagePath);
 
+      // 3b. If a previous payload_hash exists on-chain, revoke it before re-recording.
+      //     This prevents the old record from showing as "REVOKED" after a re-upload.
+      const existingPayloadHash: string | null = request?.payload_hash ?? null;
+      if (existingPayloadHash && existingPayloadHash !== payloadHash) {
+        try {
+          await revokeDocumentOnChain(existingPayloadHash);
+        } catch {
+          // Non-fatal: old record may not exist on-chain yet — continue with new upload.
+        }
+      }
+
       // 4. Persist hashes + snapshot to the request row
       const patchBody = {
         file_url:         urlData.publicUrl,
@@ -136,8 +147,9 @@ export function useDocumentUpload({
       const j = await res.json();
       if (!res.ok) throw new Error(j.error ?? 'Failed to update request.');
 
-      setUploadedHash(fileHash);
-      onSuccess?.(urlData.publicUrl, fileHash);
+      // Show the payload hash (what's recorded on-chain), not the raw file hash.
+      setUploadedHash(payloadHash);
+      onSuccess?.(urlData.publicUrl, payloadHash);
 
       // 5. Record on-chain (non-blocking — errors surfaced via chainError)
       // Must use payloadHash (combined file+metadata hash) not fileHash,
