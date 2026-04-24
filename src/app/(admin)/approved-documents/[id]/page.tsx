@@ -171,6 +171,29 @@ function buildExtraDetails(req: RequestDetail) {
         { label: 'Purok / Zone',       value: req.purok },
         { label: 'Years of Residency', value: req.years_of_residency },
       ];
+    case 'certificate-of-indigency':
+      return [
+        { label: 'Purok / Zone',      value: req.purok },
+        { label: 'CTC Number',        value: req.ctc_no },
+        { label: 'CTC Date Issued',   value: req.ctc_date_issued },
+        { label: 'CTC Place Issued',  value: req.ctc_place_issued },
+      ];
+    case 'certificate-of-residency':
+      return [
+        { label: 'Purok / Zone',      value: req.purok },
+        { label: 'CTC Number',        value: req.ctc_no },
+        { label: 'CTC Date Issued',   value: req.ctc_date_issued },
+        { label: 'CTC Place Issued',  value: req.ctc_place_issued },
+        { label: 'Years Lived',       value: req.years_lived },
+        { label: 'Months Lived',      value: req.months_lived },
+      ];
+    case 'barangay-certification':
+      return [
+        { label: 'Purok / Zone',      value: req.purok },
+        { label: 'CTC Number',        value: req.ctc_no },
+        { label: 'CTC Date Issued',   value: req.ctc_date_issued },
+        { label: 'CTC Place Issued',  value: req.ctc_place_issued },
+      ];
     default:
       return [];
   }

@@ -19,6 +19,7 @@ interface RequestDetail {
   date_of_death: string | null; place_of_death: string | null; deceased_address: string | null;
   relationship_to_deceased: string | null; years_of_residency: string | null;
   bcn_no: string | null; user_id: string;
+  years_lived: string | null; months_lived: string | null;
 }
 
 interface Profile {
@@ -133,6 +134,26 @@ export default function RejectedRequestDetailPage({ params }: { params: Promise<
   if (request.document_type === 'oath-of-undertaking') extraDetails.push(
     { label: 'Purok / Zone',       value: request.purok },
     { label: 'Years of Residency', value: request.years_of_residency },
+  );
+  if (request.document_type === 'certificate-of-indigency') extraDetails.push(
+    { label: 'Purok / Zone',      value: request.purok },
+    { label: 'CTC Number',        value: request.ctc_no },
+    { label: 'CTC Date Issued',   value: request.ctc_date_issued },
+    { label: 'CTC Place Issued',  value: request.ctc_place_issued },
+  );
+  if (request.document_type === 'certificate-of-residency') extraDetails.push(
+    { label: 'Purok / Zone',      value: request.purok },
+    { label: 'CTC Number',        value: request.ctc_no },
+    { label: 'CTC Date Issued',   value: request.ctc_date_issued },
+    { label: 'CTC Place Issued',  value: request.ctc_place_issued },
+    { label: 'Years Lived',       value: request.years_lived },
+    { label: 'Months Lived',      value: request.months_lived },
+  );
+  if (request.document_type === 'barangay-certification') extraDetails.push(
+    { label: 'Purok / Zone',      value: request.purok },
+    { label: 'CTC Number',        value: request.ctc_no },
+    { label: 'CTC Date Issued',   value: request.ctc_date_issued },
+    { label: 'CTC Place Issued',  value: request.ctc_place_issued },
   );
 
   return (
