@@ -51,6 +51,33 @@ const documentTypes = [
     processingTime: '1 day',
     purposes: ['Job Application'],
   },
+  {
+    id: 'certificate-of-indigency',
+    title: 'Certificate of Indigency',
+    description: 'Certifies that a resident belongs to a low-income family in the barangay.',
+    icon: ScrollText,
+    color: 'from-[#d97706] to-[#b45309]',
+    processingTime: '1-2 days',
+    purposes: ['Financial Assistance', 'Medical Assistance', 'Legal Purpose', 'Government Transaction', 'Others'],
+  },
+  {
+    id: 'certificate-of-residency',
+    title: 'Certificate of Residency',
+    description: 'Official certification of a resident\'s length of stay in the barangay.',
+    icon: Users,
+    color: 'from-[#0891b2] to-[#0e7490]',
+    processingTime: '1-2 days',
+    purposes: ['Employment', 'Legal Purpose', 'Government Transaction', 'Scholarship', 'Others'],
+  },
+  {
+    id: 'barangay-certification',
+    title: 'Barangay Certification',
+    description: 'General-purpose certification of good moral character and barangay residency.',
+    icon: FileText,
+    color: 'from-[#16a34a] to-[#15803d]',
+    processingTime: '1-2 days',
+    purposes: ['Employment', 'Legal Purpose', 'Government Transaction', 'Others'],
+  },
 ];
 
 export default function RequestDocumentPage() {

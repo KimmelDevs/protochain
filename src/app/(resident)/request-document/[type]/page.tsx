@@ -57,6 +57,38 @@ const documentConfig: Record<string, {
     description: 'Oath of undertaking for first-time job seekers under RA 11261.',
     purposes: [{ value: 'job-application', label: 'Job Application' }],
   },
+  'certificate-of-indigency': {
+    title: 'Certificate of Indigency',
+    description: 'Certifies that a resident belongs to a low-income family in the barangay.',
+    purposes: [
+      { value: 'financial-assistance', label: 'Financial Assistance' },
+      { value: 'medical-assistance', label: 'Medical Assistance' },
+      { value: 'legal', label: 'Legal Purpose' },
+      { value: 'government', label: 'Government Transaction' },
+      { value: 'others', label: 'Others' },
+    ],
+  },
+  'certificate-of-residency': {
+    title: 'Certificate of Residency',
+    description: "Official certification of a resident's length of stay in the barangay.",
+    purposes: [
+      { value: 'employment', label: 'Employment' },
+      { value: 'legal', label: 'Legal Purpose' },
+      { value: 'government', label: 'Government Transaction' },
+      { value: 'scholarship', label: 'Scholarship' },
+      { value: 'others', label: 'Others' },
+    ],
+  },
+  'barangay-certification': {
+    title: 'Barangay Certification',
+    description: 'General-purpose certification of good moral character and barangay residency.',
+    purposes: [
+      { value: 'employment', label: 'Employment' },
+      { value: 'legal', label: 'Legal Purpose' },
+      { value: 'government', label: 'Government Transaction' },
+      { value: 'others', label: 'Others' },
+    ],
+  },
 };
 
 function FloatInput({ label, value, onChange, type = 'text', required = false }: {
@@ -148,6 +180,20 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
   const [relationship, setRelationship] = useState('');
   const [yearsOfResidency, setYearsOfResidency] = useState('');
   const [bcnNo, setBcnNo] = useState('');
+  const [purokIndigency, setPurokIndigency] = useState('');
+  const [ctcNoIndigency, setCtcNoIndigency] = useState('');
+  const [ctcDateIssuedIndigency, setCtcDateIssuedIndigency] = useState('');
+  const [ctcPlaceIssuedIndigency, setCtcPlaceIssuedIndigency] = useState('');
+  const [purokResidency, setPurokResidency] = useState('');
+  const [ctcNoResidency, setCtcNoResidency] = useState('');
+  const [ctcDateIssuedResidency, setCtcDateIssuedResidency] = useState('');
+  const [ctcPlaceIssuedResidency, setCtcPlaceIssuedResidency] = useState('');
+  const [yearsLived, setYearsLived] = useState('');
+  const [monthsLived, setMonthsLived] = useState('');
+  const [purokCertification, setPurokCertification] = useState('');
+  const [ctcNoCertification, setCtcNoCertification] = useState('');
+  const [ctcDateIssuedCertification, setCtcDateIssuedCertification] = useState('');
+  const [ctcPlaceIssuedCertification, setCtcPlaceIssuedCertification] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -179,6 +225,9 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
     if (type === 'certification-of-death' && (!deceasedName.trim() || !deceasedAge.trim() || !dateOfDeath || !placeOfDeath.trim() || !deceasedAddress.trim() || !relationship.trim())) { toast.error('Please fill in all deceased person details.'); return false; }
     if (type === 'job-seeker' && (!purok.trim() || !yearsOfResidency.trim() || !bcnNo.trim())) { toast.error('Please fill in all required fields.'); return false; }
     if (type === 'oath-of-undertaking' && (!purok.trim() || !yearsOfResidency.trim())) { toast.error('Please fill in all required fields.'); return false; }
+    if (type === 'certificate-of-indigency' && (!purokIndigency.trim() || !ctcNoIndigency.trim() || !ctcDateIssuedIndigency || !ctcPlaceIssuedIndigency.trim())) { toast.error('Please fill in all required fields.'); return false; }
+    if (type === 'certificate-of-residency' && (!purokResidency.trim() || !ctcNoResidency.trim() || !ctcDateIssuedResidency || !ctcPlaceIssuedResidency.trim() || !yearsLived.trim() || !monthsLived.trim())) { toast.error('Please fill in all required fields.'); return false; }
+    if (type === 'barangay-certification' && (!purokCertification.trim() || !ctcNoCertification.trim() || !ctcDateIssuedCertification || !ctcPlaceIssuedCertification.trim())) { toast.error('Please fill in all required fields.'); return false; }
     return true;
   };
 
@@ -205,6 +254,9 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
           ...(type === 'certification-of-death' && { deceased_name: deceasedName, deceased_age: deceasedAge, date_of_death: dateOfDeath, place_of_death: placeOfDeath, deceased_address: deceasedAddress, relationship_to_deceased: relationship }),
           ...(type === 'job-seeker' && { purok, years_of_residency: yearsOfResidency, bcn_no: bcnNo }),
           ...(type === 'oath-of-undertaking' && { purok, years_of_residency: yearsOfResidency }),
+          ...(type === 'certificate-of-indigency' && { purok: purokIndigency, ctc_no: ctcNoIndigency, ctc_date_issued: ctcDateIssuedIndigency, ctc_place_issued: ctcPlaceIssuedIndigency }),
+          ...(type === 'certificate-of-residency' && { purok: purokResidency, ctc_no: ctcNoResidency, ctc_date_issued: ctcDateIssuedResidency, ctc_place_issued: ctcPlaceIssuedResidency, years_lived: yearsLived, months_lived: monthsLived }),
+          ...(type === 'barangay-certification' && { purok: purokCertification, ctc_no: ctcNoCertification, ctc_date_issued: ctcDateIssuedCertification, ctc_place_issued: ctcPlaceIssuedCertification }),
         }),
       });
       const json = await res.json();
@@ -345,6 +397,46 @@ export default function RequestDocumentFormPage({ params }: { params: Promise<{ 
               <CardContent className="space-y-4">
                 <FloatInput label="Purok" value={purok} onChange={setPurok} required />
                 <FloatInput label="Years of Residency in Barangay" value={yearsOfResidency} onChange={setYearsOfResidency} required />
+              </CardContent>
+            </Card>
+          )}
+
+          {type === 'certificate-of-indigency' && (
+            <Card className="bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-white/10">
+              <CardHeader><CardTitle className="text-black dark:text-white">Additional Details</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <FloatInput label="Purok" value={purokIndigency} onChange={setPurokIndigency} required />
+                <FloatInput label="CTC Number" value={ctcNoIndigency} onChange={setCtcNoIndigency} required />
+                <FloatDateInput label="CTC Date Issued" value={ctcDateIssuedIndigency} onChange={setCtcDateIssuedIndigency} required />
+                <FloatInput label="CTC Place Issued" value={ctcPlaceIssuedIndigency} onChange={setCtcPlaceIssuedIndigency} required />
+              </CardContent>
+            </Card>
+          )}
+
+          {type === 'certificate-of-residency' && (
+            <Card className="bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-white/10">
+              <CardHeader><CardTitle className="text-black dark:text-white">Residency Details</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <FloatInput label="Purok" value={purokResidency} onChange={setPurokResidency} required />
+                <FloatInput label="CTC Number" value={ctcNoResidency} onChange={setCtcNoResidency} required />
+                <FloatDateInput label="CTC Date Issued" value={ctcDateIssuedResidency} onChange={setCtcDateIssuedResidency} required />
+                <FloatInput label="CTC Place Issued" value={ctcPlaceIssuedResidency} onChange={setCtcPlaceIssuedResidency} required />
+                <div className="grid grid-cols-2 gap-4">
+                  <FloatInput label="Years Lived in Barangay" value={yearsLived} onChange={setYearsLived} type="number" required />
+                  <FloatInput label="Months Lived in Barangay" value={monthsLived} onChange={setMonthsLived} type="number" required />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {type === 'barangay-certification' && (
+            <Card className="bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-white/10">
+              <CardHeader><CardTitle className="text-black dark:text-white">Additional Details</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <FloatInput label="Purok" value={purokCertification} onChange={setPurokCertification} required />
+                <FloatInput label="CTC Number" value={ctcNoCertification} onChange={setCtcNoCertification} required />
+                <FloatDateInput label="CTC Date Issued" value={ctcDateIssuedCertification} onChange={setCtcDateIssuedCertification} required />
+                <FloatInput label="CTC Place Issued" value={ctcPlaceIssuedCertification} onChange={setCtcPlaceIssuedCertification} required />
               </CardContent>
             </Card>
           )}

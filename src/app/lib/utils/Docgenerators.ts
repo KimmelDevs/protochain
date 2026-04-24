@@ -71,6 +71,8 @@ export interface RequestDetail {
   relationship_to_deceased?: string;
   bcn_no?:                   string;
   years_of_residency?:       string;
+  years_lived?:              string;
+  months_lived?:             string;
   follow_up_requested?:      boolean | null;
   follow_up_requested_at?:   string | null;
 }
@@ -170,11 +172,14 @@ async function loadJSZip(): Promise<any> {
 // ─── Template loader ──────────────────────────────────────────────────────────
 
 const TEMPLATE_MAP: Record<string, string> = {
-  'barangay-clearance':     '/files/BRGY-CLEARANCE-TEMPLATE.docx',
-  'business-clearance':     '/files/BUSINESS-CLEARANCE.docx',
-  'certification-of-death': '/files/CERTIFICATION-OF-DEATH.docx',
-  'job-seeker':             '/files/Certification.docx',
-  'oath-of-undertaking':    '/files/Oath-of-Undertaking-for-First-Time-Jobseeker.docx',
+  'barangay-clearance':       '/files/BRGY-CLEARANCE-TEMPLATE.docx',
+  'business-clearance':       '/files/BUSINESS-CLEARANCE.docx',
+  'certification-of-death':   '/files/CERTIFICATION-OF-DEATH.docx',
+  'job-seeker':               '/files/Certification.docx',
+  'oath-of-undertaking':      '/files/Oath-of-Undertaking-for-First-Time-Jobseeker.docx',
+  'certificate-of-indigency': '/files/CERTIFICATE-OF-INDIGENCY.docx',
+  'certificate-of-residency': '/files/CERTIFICATE-OF-RESIDENCY.docx',
+  'barangay-certification':   '/files/BARANGAY-CERTIFICATION.docx',
 };
 
 async function loadTemplate(documentType: string): Promise<{ JSZip: any; zip: any }> {
@@ -915,6 +920,214 @@ async function injectOathOfUndertaking(zip: any, req: RequestDetail, profile: Pr
   });
 }
 
+/**
+ * CERTIFICATE OF INDIGENCY
+ *
+ * Placeholders shared with barangay-clearance:
+ *   {fullname}, {this_day}, {month}, {year}
+ *   {ctc_no}, {ctc_date_issued}, {ctc_place_issued}
+ *   APPLICANT NAME PLACEHOLDER (floating header)
+ *
+ * rsidR for split runs: 00084929
+ */
+async function injectCertificateOfIndigency(zip: any, req: RequestDetail, profile: Profile): Promise<void> {
+  const name     = `${profile.firstName} ${profile.lastName}`.toUpperCase();
+  const ctcNo    = req.ctc_no           ?? '__________________';
+  const ctcDate  = req.ctc_date_issued  ?? '______________';
+  const ctcPlace = req.ctc_place_issued ?? '______________';
+  const { day, suffix, MONTH, year } = getCurrentDateParts();
+  const R = '00084929';
+
+  await patchXml(zip, 'word/document.xml', xml => {
+    // Normalize split {this_day} runs
+    xml = xml.replace(
+      `<w:r w:rsidR="${R}"><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="${R}"><w:t>this_day</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="${R}"><w:t>}</w:t></w:r>`,
+      `<w:r w:rsidR="${R}"><w:t>{this_day}</w:t></w:r>`,
+    );
+    // Normalize split {fullname} runs
+    xml = xml.replace(
+      `<w:r w:rsidR="${R}"><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="${R}"><w:t>fullname</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="${R}"><w:t>}</w:t></w:r>`,
+      `<w:r w:rsidR="${R}"><w:t>{fullname}</w:t></w:r>`,
+    );
+    // Normalize split {ctc_no} runs (no rsidR attr)
+    xml = xml.replace(
+      `<w:r><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r><w:t>ctc_no</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r><w:t xml:space="preserve">} </w:t></w:r>`,
+      `<w:r><w:t xml:space="preserve">{ctc_no} </w:t></w:r>`,
+    );
+    xml = xml.replace(
+      `<w:r><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r><w:t>ctc_date_issued</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r><w:t xml:space="preserve">} </w:t></w:r>`,
+      `<w:r><w:t xml:space="preserve">{ctc_date_issued} </w:t></w:r>`,
+    );
+    xml = xml.replace(
+      `<w:r><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r><w:t>ctc_place_issued</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r><w:t>}</w:t></w:r>`,
+      `<w:r><w:t>{ctc_place_issued}</w:t></w:r>`,
+    );
+
+    xml = xml.replace(/APPLICANT NAME PLACEHOLDER/g, xmlEscape(name));
+    xml = xml.replace(/\{fullname\}/g,               xmlEscape(name));
+    xml = xml.replace(/\{this_day\}/g,               xmlEscape(day + suffix));
+    xml = xml.replace(/\{month\}/g,                  xmlEscape(MONTH));
+    xml = xml.replace(/\{year\}/g,                   xmlEscape(year));
+    xml = xml.replace(/\{ctc_no\} /g,               xmlEscape(ctcNo) + ' ');
+    xml = xml.replace(/\{ctc_no\}/g,                xmlEscape(ctcNo));
+    xml = xml.replace(/\{ctc_date_issued\} /g,      xmlEscape(ctcDate) + ' ');
+    xml = xml.replace(/\{ctc_date_issued\}/g,       xmlEscape(ctcDate));
+    xml = xml.replace(/\{ctc_place_issued\}/g,      xmlEscape(ctcPlace));
+
+    return xml;
+  });
+}
+
+/**
+ * CERTIFICATE OF RESIDENCY
+ *
+ * Placeholders shared with barangay-clearance:
+ *   {fullname}, {this_day}, {month}, {year}
+ *   {ctc_no}, {ctc_date_issued}, {ctc_place_issued}
+ *   APPLICANT NAME PLACEHOLDER (floating header)
+ *
+ * Additional placeholders (new):
+ *   {years_lived}   — split: rsidR 006B711C
+ *   {months_lived}  — split across two runs: "months_live" (006B711C) + "d" (007A7286)
+ *
+ * rsidR for split {this_day}/{fullname} runs: 00B57F13
+ */
+async function injectCertificateOfResidency(zip: any, req: RequestDetail, profile: Profile): Promise<void> {
+  const name       = `${profile.firstName} ${profile.lastName}`.toUpperCase();
+  const ctcNo      = req.ctc_no           ?? '__________________';
+  const ctcDate    = req.ctc_date_issued  ?? '______________';
+  const ctcPlace   = req.ctc_place_issued ?? '______________';
+  const yearsLived  = req.years_lived     ?? '___';
+  const monthsLived = req.months_lived    ?? '___';
+  const { day, suffix, MONTH, year } = getCurrentDateParts();
+  const R  = '00B57F13';
+  const RY = '006B711C';
+  const RM = '007A7286';
+
+  // Formatting props shared by years_lived / months_lived runs in the template
+  const rPrResidency = '<w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr>';
+
+  await patchXml(zip, 'word/document.xml', xml => {
+    // Normalize split {this_day}
+    xml = xml.replace(
+      `<w:r w:rsidR="${R}"><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="${R}"><w:t>this_day</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="${R}"><w:t>}</w:t></w:r>`,
+      `<w:r w:rsidR="${R}"><w:t>{this_day}</w:t></w:r>`,
+    );
+    // Normalize split {fullname}
+    xml = xml.replace(
+      `<w:r w:rsidR="${R}"><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="${R}"><w:t>fullname</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="${R}"><w:t>}</w:t></w:r>`,
+      `<w:r w:rsidR="${R}"><w:t>{fullname}</w:t></w:r>`,
+    );
+    // Normalize split {years_lived}
+    xml = xml.replace(
+      `<w:r w:rsidR="${RY}"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>{</w:t></w:r>` +
+      `<w:proofErr w:type="spellStart"/>` +
+      `<w:r w:rsidR="${RY}">${rPrResidency}<w:t>years_lived</w:t></w:r>` +
+      `<w:proofErr w:type="spellEnd"/>` +
+      `<w:r w:rsidR="${RY}">${rPrResidency}<w:t xml:space="preserve">} </w:t></w:r>`,
+      `<w:r w:rsidR="${RY}">${rPrResidency}<w:t xml:space="preserve">{years_lived} </w:t></w:r>`,
+    );
+    // Normalize split {months_lived} — "months_live" (RY) + "d" (RM) split across two runs
+    xml = xml.replace(
+      `<w:r w:rsidR="${RY}"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>{</w:t></w:r>` +
+      `<w:proofErr w:type="spellStart"/>` +
+      `<w:r w:rsidR="${RY}">${rPrResidency}<w:t>months_live</w:t></w:r>` +
+      `<w:r w:rsidR="${RM}">${rPrResidency}<w:t>d</w:t></w:r>` +
+      `<w:proofErr w:type="spellEnd"/>` +
+      `<w:r w:rsidR="${RY}">${rPrResidency}<w:t xml:space="preserve">} </w:t></w:r>`,
+      `<w:r w:rsidR="${RY}">${rPrResidency}<w:t xml:space="preserve">{months_lived} </w:t></w:r>`,
+    );
+    // Normalize split ctc runs (no rsidR attr)
+    xml = xml.replace(
+      `<w:r><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r><w:t>ctc_no</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r><w:t xml:space="preserve">} </w:t></w:r>`,
+      `<w:r><w:t xml:space="preserve">{ctc_no} </w:t></w:r>`,
+    );
+    xml = xml.replace(
+      `<w:r><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r><w:t>ctc_date_issued</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r><w:t xml:space="preserve">} </w:t></w:r>`,
+      `<w:r><w:t xml:space="preserve">{ctc_date_issued} </w:t></w:r>`,
+    );
+    xml = xml.replace(
+      `<w:r><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r><w:t>ctc_place_issued</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r><w:t>}</w:t></w:r>`,
+      `<w:r><w:t>{ctc_place_issued}</w:t></w:r>`,
+    );
+
+    xml = xml.replace(/APPLICANT NAME PLACEHOLDER/g, xmlEscape(name));
+    xml = xml.replace(/\{fullname\}/g,               xmlEscape(name));
+    xml = xml.replace(/\{this_day\}/g,               xmlEscape(day + suffix));
+    xml = xml.replace(/\{month\}/g,                  xmlEscape(MONTH));
+    xml = xml.replace(/\{year\}/g,                   xmlEscape(year));
+    xml = xml.replace(/\{years_lived\} /g,           xmlEscape(yearsLived) + ' ');
+    xml = xml.replace(/\{years_lived\}/g,            xmlEscape(yearsLived));
+    xml = xml.replace(/\{months_lived\} /g,          xmlEscape(monthsLived) + ' ');
+    xml = xml.replace(/\{months_lived\}/g,           xmlEscape(monthsLived));
+    xml = xml.replace(/\{ctc_no\} /g,               xmlEscape(ctcNo) + ' ');
+    xml = xml.replace(/\{ctc_no\}/g,                xmlEscape(ctcNo));
+    xml = xml.replace(/\{ctc_date_issued\} /g,      xmlEscape(ctcDate) + ' ');
+    xml = xml.replace(/\{ctc_date_issued\}/g,       xmlEscape(ctcDate));
+    xml = xml.replace(/\{ctc_place_issued\}/g,      xmlEscape(ctcPlace));
+
+    return xml;
+  });
+}
+
+/**
+ * BARANGAY CERTIFICATION
+ *
+ * Placeholders shared with barangay-clearance:
+ *   {fullname}, {this_day}, {month}, {year}
+ *   {ctc_no}, {ctc_date_issued}, {ctc_place_issued}
+ *   APPLICANT NAME PLACEHOLDER (floating header)
+ *
+ * rsidR for split runs: 00993485
+ */
+async function injectBarangayCertification(zip: any, req: RequestDetail, profile: Profile): Promise<void> {
+  const name     = `${profile.firstName} ${profile.lastName}`.toUpperCase();
+  const ctcNo    = req.ctc_no           ?? '__________________';
+  const ctcDate  = req.ctc_date_issued  ?? '______________';
+  const ctcPlace = req.ctc_place_issued ?? '______________';
+  const { day, suffix, MONTH, year } = getCurrentDateParts();
+  const R = '00993485';
+
+  await patchXml(zip, 'word/document.xml', xml => {
+    // Normalize split {this_day}
+    xml = xml.replace(
+      `<w:r w:rsidR="${R}"><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="${R}"><w:t>this_day</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="${R}"><w:t>}</w:t></w:r>`,
+      `<w:r w:rsidR="${R}"><w:t>{this_day}</w:t></w:r>`,
+    );
+    // Normalize split {fullname}
+    xml = xml.replace(
+      `<w:r w:rsidR="${R}"><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="${R}"><w:t>fullname</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="${R}"><w:t>}</w:t></w:r>`,
+      `<w:r w:rsidR="${R}"><w:t>{fullname}</w:t></w:r>`,
+    );
+    // Normalize split ctc runs (no rsidR attr)
+    xml = xml.replace(
+      `<w:r><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r><w:t>ctc_no</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r><w:t xml:space="preserve">} </w:t></w:r>`,
+      `<w:r><w:t xml:space="preserve">{ctc_no} </w:t></w:r>`,
+    );
+    xml = xml.replace(
+      `<w:r><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r><w:t>ctc_date_issued</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r><w:t xml:space="preserve">} </w:t></w:r>`,
+      `<w:r><w:t xml:space="preserve">{ctc_date_issued} </w:t></w:r>`,
+    );
+    xml = xml.replace(
+      `<w:r><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r><w:t>ctc_place_issued</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r><w:t>}</w:t></w:r>`,
+      `<w:r><w:t>{ctc_place_issued}</w:t></w:r>`,
+    );
+
+    xml = xml.replace(/APPLICANT NAME PLACEHOLDER/g, xmlEscape(name));
+    xml = xml.replace(/\{fullname\}/g,               xmlEscape(name));
+    xml = xml.replace(/\{this_day\}/g,               xmlEscape(day + suffix));
+    xml = xml.replace(/\{month\}/g,                  xmlEscape(MONTH));
+    xml = xml.replace(/\{year\}/g,                   xmlEscape(year));
+    xml = xml.replace(/\{ctc_no\} /g,               xmlEscape(ctcNo) + ' ');
+    xml = xml.replace(/\{ctc_no\}/g,                xmlEscape(ctcNo));
+    xml = xml.replace(/\{ctc_date_issued\} /g,      xmlEscape(ctcDate) + ' ');
+    xml = xml.replace(/\{ctc_date_issued\}/g,       xmlEscape(ctcDate));
+    xml = xml.replace(/\{ctc_place_issued\}/g,      xmlEscape(ctcPlace));
+
+    return xml;
+  });
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // ─── Main export ──────────────────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -928,11 +1141,14 @@ export async function generateDocument(
   const { zip } = await loadTemplate(docType);
 
   switch (docType) {
-    case 'barangay-clearance':     await injectBarangayClearance(zip, req, profile);    break;
-    case 'business-clearance':     await injectBusinessClearance(zip, req, profile);    break;
-    case 'certification-of-death': await injectCertificationOfDeath(zip, req, profile); break;
-    case 'job-seeker':             await injectJobSeekerCert(zip, req, profile);         break;
-    case 'oath-of-undertaking':    await injectOathOfUndertaking(zip, req, profile);     break;
+    case 'barangay-clearance':       await injectBarangayClearance(zip, req, profile);       break;
+    case 'business-clearance':       await injectBusinessClearance(zip, req, profile);       break;
+    case 'certification-of-death':   await injectCertificationOfDeath(zip, req, profile);    break;
+    case 'job-seeker':               await injectJobSeekerCert(zip, req, profile);            break;
+    case 'oath-of-undertaking':      await injectOathOfUndertaking(zip, req, profile);        break;
+    case 'certificate-of-indigency': await injectCertificateOfIndigency(zip, req, profile);  break;
+    case 'certificate-of-residency': await injectCertificateOfResidency(zip, req, profile);  break;
+    case 'barangay-certification':   await injectBarangayCertification(zip, req, profile);   break;
     default:
       console.warn(`No text injector for document type: ${docType}`);
   }
@@ -968,11 +1184,14 @@ export async function generateDocument(
 
   const safeName = `${profile.firstName}_${profile.lastName}`.replace(/\s+/g, '_');
   const docLabelMap: Record<string, string> = {
-    'barangay-clearance':     'Brgy_Clearance',
-    'business-clearance':     'Bus_Clearance',
-    'certification-of-death': 'Cert_of_Death',
-    'job-seeker':             'Jobseeker_Cert',
-    'oath-of-undertaking':    'Oath_Undertaking',
+    'barangay-clearance':       'Brgy_Clearance',
+    'business-clearance':       'Bus_Clearance',
+    'certification-of-death':   'Cert_of_Death',
+    'job-seeker':               'Jobseeker_Cert',
+    'oath-of-undertaking':      'Oath_Undertaking',
+    'certificate-of-indigency': 'Cert_of_Indigency',
+    'certificate-of-residency': 'Cert_of_Residency',
+    'barangay-certification':   'Brgy_Certification',
   };
   const docLabel = docLabelMap[docType] ?? docType.replace(/-/g, '_');
   const fileName = `${docLabel}_${safeName}.docx`;
@@ -1024,6 +1243,26 @@ export function buildRequestPayload(req: RequestDetail, profile: Profile): strin
       typeFields['age']                = profile.age;
       typeFields['purok']              = req.purok;
       typeFields['years_of_residency'] = req.years_of_residency;
+      break;
+    case 'certificate-of-indigency':
+      typeFields['ctc_date_issued']  = req.ctc_date_issued;
+      typeFields['ctc_no']           = req.ctc_no;
+      typeFields['ctc_place_issued'] = req.ctc_place_issued;
+      typeFields['purok']            = req.purok;
+      break;
+    case 'certificate-of-residency':
+      typeFields['ctc_date_issued']  = req.ctc_date_issued;
+      typeFields['ctc_no']           = req.ctc_no;
+      typeFields['ctc_place_issued'] = req.ctc_place_issued;
+      typeFields['months_lived']     = req.months_lived;
+      typeFields['purok']            = req.purok;
+      typeFields['years_lived']      = req.years_lived;
+      break;
+    case 'barangay-certification':
+      typeFields['ctc_date_issued']  = req.ctc_date_issued;
+      typeFields['ctc_no']           = req.ctc_no;
+      typeFields['ctc_place_issued'] = req.ctc_place_issued;
+      typeFields['purok']            = req.purok;
       break;
   }
 
