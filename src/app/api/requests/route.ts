@@ -13,6 +13,7 @@ const SENSITIVE_FIELDS = [
   'business_name',
   'deceased_name', 'deceased_age', 'date_of_death', 'place_of_death', 'relationship_to_deceased',
   'bcn_no', 'years_of_residency',
+  'years_lived', 'months_lived',  
   'notes',
 ] as const;
 
@@ -22,6 +23,7 @@ const RESIDENT_EDITABLE_FIELDS = [
   'business_name',
   'deceased_name', 'deceased_age', 'date_of_death', 'place_of_death', 'relationship_to_deceased',
   'years_of_residency', 'bcn_no',
+  'years_lived', 'months_lived',  
 ] as const;
 
 export async function POST(req: NextRequest) {
