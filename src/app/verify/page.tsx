@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ShieldCheck, ShieldX, ShieldAlert, Loader2, Search,
@@ -25,6 +26,15 @@ const fmtDocType = (s: string) =>
    .join(' ');
 
 export default function VerifyPage() {
+  return (
+    <Suspense>
+      <VerifyPageInner />
+    </Suspense>
+  );
+}
+
+function VerifyPageInner() {
+  const searchParams = useSearchParams();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [hash,       setHash]       = useState('');
@@ -36,6 +46,15 @@ export default function VerifyPage() {
   const [copied,     setCopied]     = useState(false);
   const [activeTab,  setActiveTab]  = useState<'file' | 'hash' | 'scan'>('file');
   const [showWebcam, setShowWebcam] = useState(false);
+
+  // Read ?hash= from URL (e.g. from QR code scan) and auto-populate + switch to hash tab
+  useEffect(() => {
+    const h = searchParams.get('hash');
+    if (h && /^[0-9a-f]{64}$/i.test(h)) {
+      setHash(h);
+      setActiveTab('hash');
+    }
+  }, [searchParams]);
 
   const handleFile = async (file: File) => {
     setHashing(true); setError(''); setResult(null);

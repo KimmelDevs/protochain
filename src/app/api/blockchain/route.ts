@@ -16,6 +16,7 @@ import { ethers } from 'ethers';
 const ABI = [
   'function recordDocument(bytes32 docHash, string calldata documentType) external',
   'function revokeDocument(bytes32 docHash) external',
+  'function verifyDocument(bytes32 docHash) external view returns (bool exists, address recordedBy, uint256 timestamp, string memory documentType, bool isRevoked)',
 ];
 
 function hexToBytes32(hexHash: string): string {
@@ -53,7 +54,25 @@ export async function POST(req: NextRequest) {
 
     const contract    = getSignerAndContract();
     const bytes32Hash = hexToBytes32(hexHash);
-    const tx          = await contract.recordDocument(bytes32Hash, documentType);
+
+    // ── Idempotency guard ────────────────────────────────────────────────────
+    // Calling recordDocument on a hash that already exists on-chain can cause
+    // the contract to toggle isRevoked=true (depending on implementation).
+    // Pre-check: if the hash is already recorded and NOT revoked, skip the tx
+    // and return a sentinel so the caller knows it's already on-chain.
+    try {
+      const existing = await contract.verifyDocument(bytes32Hash);
+      const alreadyExists  = Boolean(existing[0] ?? existing.exists);
+      const alreadyRevoked = Boolean(existing[4] ?? existing.isRevoked);
+      if (alreadyExists && !alreadyRevoked) {
+        // Already recorded and healthy — do not call recordDocument again.
+        return NextResponse.json({ txHash: 'already-recorded', alreadyRecorded: true });
+      }
+    } catch {
+      // verifyDocument failed (e.g. network hiccup) — proceed with recording anyway.
+    }
+
+    const tx = await contract.recordDocument(bytes32Hash, documentType);
     await tx.wait();
 
     return NextResponse.json({ txHash: tx.hash });
