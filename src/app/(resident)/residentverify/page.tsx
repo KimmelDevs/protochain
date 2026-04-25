@@ -75,12 +75,15 @@ export default function VerifyPage() {
     toast.success('Hash captured from scan!');
   };
 
-  const isAuthentic = result?.exists && !result?.isRevoked;
-  const isRevoked   = result?.exists && result?.isRevoked;
-  const isNotFound  = result && !result.exists;
+  const isAuthentic  = result?.exists && !result?.isRevoked && !result?.isExpired;
+  const isExpiredDoc = result?.exists && !result?.isRevoked && result?.isExpired;
+  const isRevoked    = result?.exists && result?.isRevoked;
+  const isNotFound   = result && !result.exists;
 
   const resultBorderClass = isAuthentic
     ? 'border-emerald-400 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/20'
+    : isExpiredDoc
+    ? 'border-red-400 dark:border-red-700 bg-red-50 dark:bg-red-950/20'
     : isRevoked
     ? 'border-amber-400 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/20'
     : 'border-red-400 dark:border-red-700 bg-red-50 dark:bg-red-950/20';
@@ -259,6 +262,25 @@ export default function VerifyPage() {
                         <p className="mono text-[10px] font-bold tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">Recorded By (Wallet)</p>
                         <p className="mono text-[11px] text-[#3d3b36] dark:text-[#c9c6be] break-all">{result.recordedBy || '—'}</p>
                       </div>
+                      <div>
+                        <p className="mono text-[10px] font-bold tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">Valid Until</p>
+                        <p className={`text-[13px] font-semibold ${result.isExpired ? 'text-red-600 dark:text-red-400' : 'text-[#1a1917] dark:text-[#f0eee8]'}`}>
+                          {result.expiresAt ? new Date(result.expiresAt * 1000).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' }) : '—'}
+                        </p>
+                        {result.isExpired && (
+                          <span className="mono text-[10px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wide">⚠ Expired</span>
+                        )}
+                      </div>
+                      <div>
+                        <p className="mono text-[10px] font-bold tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">Status</p>
+                        <span className={`inline-flex items-center gap-1 mono text-[10px] font-bold tracking-[0.1em] uppercase px-2 py-1 border ${
+                          result.isExpired
+                            ? 'border-red-400 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400'
+                            : 'border-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400'
+                        }`}>
+                          {result.isExpired ? '⚠ Expired' : '✓ Valid'}
+                        </span>
+                      </div>
                       <div className="sm:col-span-2">
                         <p className="mono text-[10px] font-bold tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">Payload Hash (on-chain)</p>
                         <p className="mono text-[10px] text-[#3d3b36] dark:text-[#c9c6be] break-all">{hash}</p>
@@ -297,6 +319,43 @@ export default function VerifyPage() {
                       className="inline-flex items-center gap-2 mono text-[11px] font-bold tracking-[0.1em] uppercase text-emerald-700 dark:text-emerald-400 hover:underline">
                       <ExternalLink className="w-3.5 h-3.5" /> View Recorder on Etherscan
                     </a>
+                  </>
+                )}
+
+                {isExpiredDoc && (
+                  <>
+                    <div className="flex items-center gap-3 mb-4">
+                      <ShieldAlert className="w-7 h-7 text-red-600 dark:text-red-400 shrink-0" />
+                      <div>
+                        <p className="mono text-[14px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wide">Document Expired</p>
+                        <p className="text-[12px] text-red-500/80 dark:text-red-400/70 mt-0.5">This document was genuine but has passed its validity date.</p>
+                      </div>
+                    </div>
+                    <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 border-l-4 border-red-500">
+                      <p className="mono text-[11px] font-bold text-red-700 dark:text-red-400">⚠ THIS DOCUMENT HAS EXPIRED — DO NOT ACCEPT AS VALID</p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                      <div>
+                        <p className="mono text-[10px] font-bold tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">Document Type</p>
+                        <p className="text-[13px] font-semibold text-[#1a1917] dark:text-[#f0eee8]">{result.documentType ? fmtDocType(result.documentType) : '—'}</p>
+                      </div>
+                      <div>
+                        <p className="mono text-[10px] font-bold tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">Originally Recorded</p>
+                        <p className="text-[13px] font-semibold text-[#1a1917] dark:text-[#f0eee8]">
+                          {result.timestamp ? new Date(result.timestamp * 1000).toLocaleString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' }) : '—'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="mono text-[10px] font-bold tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">Expired On</p>
+                        <p className="text-[13px] font-semibold text-red-600 dark:text-red-400">
+                          {result.expiresAt ? new Date(result.expiresAt * 1000).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' }) : '—'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="mono text-[10px] font-bold tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">Document Hash</p>
+                        <p className="mono text-[10px] text-[#3d3b36] dark:text-[#c9c6be] break-all">{hash}</p>
+                      </div>
+                    </div>
                   </>
                 )}
 

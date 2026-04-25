@@ -87,7 +87,8 @@ function VerifyPageInner() {
     setActiveTab('file');
   };
 
-  const isAuthentic = result?.exists && !result?.isRevoked;
+  const isAuthentic = result?.exists && !result?.isRevoked && !result?.isExpired;
+  const isExpiredDoc = result?.exists && !result?.isRevoked && result?.isExpired;
   const isRevoked   = result?.exists && result?.isRevoked;
   const isNotFound  = result && !result.exists;
 
@@ -238,13 +239,13 @@ function VerifyPageInner() {
             {result && (
               <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                 className={`rounded-xl border-2 p-6 backdrop-blur-sm ${
-                  isAuthentic ? 'border-emerald-500/50 bg-emerald-500/10'
-                  : isRevoked ? 'border-amber-500/50 bg-amber-500/10'
+                  isAuthentic  ? 'border-emerald-500/50 bg-emerald-500/10'
+                  : isExpiredDoc ? 'border-red-500/50 bg-red-500/10'
+                  : isRevoked  ? 'border-amber-500/50 bg-amber-500/10'
                   : 'border-red-500/50 bg-red-500/10'
                 }`}>
 
-                {isAuthentic && (
-                  <>
+                {isAuthentic && (                  <>
                     <div className="flex items-center gap-3 mb-6">
                       <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
                         <ShieldCheck className="w-5 h-5 text-emerald-400" />
@@ -267,6 +268,21 @@ function VerifyPageInner() {
                       <div className="sm:col-span-2 bg-white/5 rounded-lg p-3">
                         <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#b0b4ba] mb-1">Recorded By (Wallet)</p>
                         <p className="font-mono text-[11px] text-[#b0b4ba] break-all">{result.recordedBy || '—'}</p>
+                      </div>
+                      <div className={`rounded-lg p-3 ${result.isExpired ? 'bg-red-500/10 border border-red-500/30' : 'bg-white/5'}`}>
+                        <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#b0b4ba] mb-1">Valid Until</p>
+                        <p className={`text-[13px] font-semibold ${result.isExpired ? 'text-red-400' : 'text-white'}`}>
+                          {result.expiresAt ? new Date(result.expiresAt * 1000).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' }) : '—'}
+                        </p>
+                        {result.isExpired && (
+                          <span className="text-[10px] font-bold text-red-400 uppercase tracking-wide">⚠ Expired</span>
+                        )}
+                      </div>
+                      <div className={`rounded-lg p-3 ${result.isExpired ? 'bg-red-500/10 border border-red-500/30' : 'bg-emerald-500/10 border border-emerald-500/20'}`}>
+                        <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#b0b4ba] mb-1">Validity Status</p>
+                        <span className={`inline-flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wide ${result.isExpired ? 'text-red-400' : 'text-emerald-400'}`}>
+                          {result.isExpired ? '⚠ Document Expired' : '✓ Currently Valid'}
+                        </span>
                       </div>
                       <div className="sm:col-span-2 bg-white/5 rounded-lg p-3">
                         <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#b0b4ba] mb-1">Payload Hash (on-chain)</p>
@@ -306,6 +322,45 @@ function VerifyPageInner() {
                       className="inline-flex items-center gap-2 text-[11px] font-bold tracking-wide uppercase text-emerald-400 hover:text-emerald-300 transition-colors">
                       <ExternalLink className="w-3.5 h-3.5" /> View on Etherscan
                     </a>
+                  </>
+                )}
+
+                {isExpiredDoc && (
+                  <>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                        <ShieldAlert className="w-5 h-5 text-red-400" />
+                      </div>
+                      <div>
+                        <p className="text-[14px] font-bold text-red-400 uppercase tracking-wide">Document Expired</p>
+                        <p className="text-[12px] text-red-400/70 mt-0.5">This document was genuine but has passed its validity date.</p>
+                      </div>
+                    </div>
+                    <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+                      <p className="text-[11px] font-bold text-red-400">⚠ THIS DOCUMENT HAS EXPIRED — DO NOT ACCEPT AS VALID</p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="bg-white/5 rounded-lg p-3">
+                        <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#b0b4ba] mb-1">Document Type</p>
+                        <p className="text-[13px] font-semibold text-white">{result.documentType ? fmtDocType(result.documentType) : '—'}</p>
+                      </div>
+                      <div className="bg-white/5 rounded-lg p-3">
+                        <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#b0b4ba] mb-1">Originally Recorded</p>
+                        <p className="text-[13px] font-semibold text-white">
+                          {result.timestamp ? new Date(result.timestamp * 1000).toLocaleString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' }) : '—'}
+                        </p>
+                      </div>
+                      <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
+                        <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#b0b4ba] mb-1">Expired On</p>
+                        <p className="text-[13px] font-semibold text-red-400">
+                          {result.expiresAt ? new Date(result.expiresAt * 1000).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' }) : '—'}
+                        </p>
+                      </div>
+                      <div className="bg-white/5 rounded-lg p-3">
+                        <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#b0b4ba] mb-1">Hash</p>
+                        <p className="font-mono text-[10px] text-[#b0b4ba] break-all">{hash}</p>
+                      </div>
+                    </div>
                   </>
                 )}
 

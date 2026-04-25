@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import {
   CheckCircle, XCircle, User, Mail, Phone,
   MapPin, Loader2, Download, Upload, Wand2,
-  ShieldCheck, AlertTriangle, Clock, Lock, History,
+  ShieldCheck, AlertTriangle, Clock, Lock, History, CalendarDays,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -282,6 +282,11 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectReason,    setRejectReason]    = useState('');
   const [approvalNotes,   setApprovalNotes]   = useState('');
+  // Expiry date: defaults to 1 month from today, admin can override in Captain modal
+  const [expiryDate,      setExpiryDate]      = useState<string>(() => {
+    const d = new Date(); d.setMonth(d.getMonth() + 1);
+    return d.toISOString().split('T')[0];
+  });
   const [processing,      setProcessing]      = useState(false);
   const [error,           setError]           = useState('');
   const [success,         setSuccess]         = useState('');
@@ -451,8 +456,9 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
       // ── Record on-chain (payload hash 🟧 — what the verify page resolves to) ──
       setChainRecording(true);
       try {
-        const docType = request?.document_type ?? request?.type ?? 'barangay-document';
-        const txHash  = await recordDocumentOnChain(payloadHash, docType);
+        const docType  = request?.document_type ?? request?.type ?? 'barangay-document';
+        const expUnix  = expiryDate ? Math.floor(new Date(expiryDate).getTime() / 1000) : undefined;
+        const txHash   = await recordDocumentOnChain(payloadHash, docType, expUnix);
         setChainTxHash(txHash);
         setRequest(p => p ? { ...p, chain_tx_hash: txHash } : p);
         await fetch(`/api/requests?id=${id}`, {
@@ -473,7 +479,8 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
     setChainError(''); setChainRecording(true);
     try {
       const docType = request.document_type ?? request.type ?? 'barangay-document';
-      const txHash  = await recordDocumentOnChain(uploadedPayloadHash, docType);
+      const expUnix = expiryDate ? Math.floor(new Date(expiryDate).getTime() / 1000) : undefined;
+      const txHash  = await recordDocumentOnChain(uploadedPayloadHash, docType, expUnix);
       setChainTxHash(txHash);
       setRequest(p => p ? { ...p, chain_tx_hash: txHash } : p);
       await fetch(`/api/requests?id=${id}`, {
@@ -773,6 +780,22 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
           <div>
             <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-2">Approval Notes (Optional)</p>
             <textarea value={approvalNotes} onChange={e => setApprovalNotes(e.target.value)} rows={3} placeholder="Add approval notes..." className="w-full px-3 py-2.5 text-[13px] bg-white dark:bg-[#16161a] border border-[#E8E6E1] dark:border-[#2C2C32] text-[#1A1A1C] dark:text-[#EAEAEC] placeholder-[#7a7870] dark:placeholder-[#7e7b75] focus:outline-none focus:border-[#E8500A] resize-none transition-colors" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <CalendarDays className="w-3.5 h-3.5 text-[#E8500A]" />
+              <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#6C6C74] dark:text-[#9090A0]">Document Expiry Date</p>
+            </div>
+            <input
+              type="date"
+              value={expiryDate}
+              min={new Date().toISOString().split('T')[0]}
+              onChange={e => setExpiryDate(e.target.value)}
+              className="w-full px-3 py-2.5 text-[13px] bg-white dark:bg-[#16161a] border border-[#E8E6E1] dark:border-[#2C2C32] text-[#1A1A1C] dark:text-[#EAEAEC] focus:outline-none focus:border-[#E8500A] transition-colors"
+            />
+            <p className="mono text-[10px] text-[#6C6C74] dark:text-[#9090A0] mt-1.5">
+              This date will be recorded on-chain as the document's expiry. Defaults to 1 month from today.
+            </p>
           </div>
           <div className="flex gap-3 pt-1">
             <button onClick={() => setShowCapModal(false)} disabled={processing} className="flex-1 py-2.5 text-[12px] font-semibold border border-[#E8E6E1] dark:border-[#2C2C32] text-[#6C6C74] dark:text-[#9090A0] hover:border-[#1a1917] dark:hover:border-[#f0eee8] hover:text-[#1a1917] dark:hover:text-[#f0eee8] transition-colors disabled:opacity-40">Cancel</button>

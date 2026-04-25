@@ -17,9 +17,9 @@ declare global {
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS!;
 
 const ABI = [
-  'function recordDocument(bytes32 docHash, string calldata documentType) external',
+  'function recordDocument(bytes32 docHash, string calldata documentType, uint256 expiresAt) external',
   'function revokeDocument(bytes32 docHash) external',
-  'function verifyDocument(bytes32 docHash) external view returns (bool exists, address recordedBy, uint256 timestamp, string memory documentType, bool isRevoked)',
+  'function verifyDocument(bytes32 docHash) external view returns (bool exists, address recordedBy, uint256 timestamp, string memory documentType, bool isRevoked, uint256 expiresAt, bool isExpired)',
 ];
 
 function hexToBytes32(hexHash: string): string {
@@ -32,11 +32,14 @@ function hexToBytes32(hexHash: string): string {
 export async function recordDocumentOnChain(
   hexHash: string,
   documentType: string,
+  expiresAt?: number,
 ): Promise<string> {
+  // Default: 1 month from now if not provided
+  const expiry = expiresAt ?? Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
   const res = await fetch('/api/blockchain', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ hexHash, documentType }),
+    body: JSON.stringify({ hexHash, documentType, expiresAt: expiry }),
   });
   const json = await res.json();
   if (!res.ok) throw new Error(json.error ?? 'Blockchain recording failed.');
@@ -64,6 +67,8 @@ export interface VerifyResult {
   timestamp:        number;
   documentType:     string;
   isRevoked:        boolean;
+  expiresAt:        number;
+  isExpired:        boolean;
   /** The canonical payload string that was hashed into this record, if available. */
   payloadSnapshot?: string;
 }
@@ -107,6 +112,8 @@ export async function verifyDocumentOnChain(hexHash: string): Promise<VerifyResu
   const timestamp    = Number(r[2]  ?? r.timestamp    ?? 0);
   const documentType = String(r[3]  ?? r.documentType ?? '');
   const isRevoked    = Boolean(r[4] ?? r.isRevoked    ?? false);
+  const expiresAt    = Number(r[5]  ?? r.expiresAt    ?? 0);
+  const isExpired    = Boolean(r[6] ?? r.isExpired    ?? false);
 
-  return { exists, recordedBy, timestamp, documentType, isRevoked, payloadSnapshot };
+  return { exists, recordedBy, timestamp, documentType, isRevoked, expiresAt, isExpired, payloadSnapshot };
 }
