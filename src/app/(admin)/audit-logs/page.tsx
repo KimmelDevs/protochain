@@ -19,6 +19,7 @@ interface AuditLog {
   performer_email: string | null;
   performer_name:  string | null;
   notes:           string | null;
+  batch_id:        string | null;
   created_at:      string;
   document_type:   string | null;
   resident_name:   string | null;
@@ -28,6 +29,7 @@ interface AuditLog {
 interface KillSwitchBatch {
   kind:            'kill_switch';
   batchKey:        string;
+  batch_id:        string | null;
   created_at:      string;
   performer_name:  string | null;
   performer_email: string | null;
@@ -66,57 +68,97 @@ function extractKillSwitchReason(notes: string | null): string {
 }
 
 /**
- * Group consecutive kill-switch logs that share the same performer + reason
- * into KillSwitchBatch objects. Non-kill-switch logs remain as SingleLogRow.
- * Batching window: same performer_id + same reason text (within the same
- * "session" — we don't impose a time cap since the kill-switch fires in a
- * tight sequential loop anyway).
+ * Group kill-switch logs into batches using two-tier strategy:
+ * 1. PRIMARY  — group by batch_id UUID (reliable, from new kill-switch code)
+ * 2. FALLBACK — group consecutive kill-switch logs sharing same performer + reason
+ *               (handles legacy rows written before batch_id existed)
+ * Non-kill-switch logs pass through as SingleLogRow.
  */
 function buildDisplayRows(logs: AuditLog[]): DisplayRow[] {
-  const rows: DisplayRow[] = [];
-  let i = 0;
+  // Pass 1: collect all logs that belong to a real batch_id
+  const batchMap = new Map<string, AuditLog[]>();
+  const inBatch  = new Set<string>(); // log ids already claimed by a batch_id
 
+  for (const log of logs) {
+    if (log.batch_id && isKillSwitchLog(log)) {
+      if (!batchMap.has(log.batch_id)) batchMap.set(log.batch_id, []);
+      batchMap.get(log.batch_id)!.push(log);
+      inBatch.add(log.id);
+    }
+  }
+
+  // Pass 2: walk the log list in order, emit rows
+  const rows: DisplayRow[] = [];
+  const emittedBatches = new Set<string>();
+
+  let i = 0;
   while (i < logs.length) {
     const log = logs[i];
 
-    if (!isKillSwitchLog(log)) {
-      rows.push({ kind: 'single', log });
+    // Already consumed by a batch_id group
+    if (inBatch.has(log.id)) {
+      if (log.batch_id && !emittedBatches.has(log.batch_id)) {
+        emittedBatches.add(log.batch_id);
+        const batchLogs = [...batchMap.get(log.batch_id)!].sort(
+          (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+        rows.push({
+          kind:            'kill_switch',
+          batchKey:        `batch-${log.batch_id}`,
+          batch_id:        log.batch_id,
+          created_at:      log.created_at,
+          performer_name:  log.performer_name,
+          performer_email: log.performer_email,
+          reason:          extractKillSwitchReason(log.notes),
+          resident_name:   log.resident_name,
+          logs:            batchLogs,
+        });
+      }
       i++;
       continue;
     }
 
-    // Start a new batch
-    const reason    = extractKillSwitchReason(log.notes);
-    const performer = log.performed_by;
-    const batchLogs: AuditLog[] = [log];
-    let j = i + 1;
+    // Legacy kill-switch log with no batch_id → fallback consecutive grouping
+    if (isKillSwitchLog(log) && !log.batch_id) {
+      const reason    = extractKillSwitchReason(log.notes);
+      const performer = log.performed_by;
+      const batchLogs: AuditLog[] = [log];
+      let j = i + 1;
 
-    while (j < logs.length) {
-      const next = logs[j];
-      if (
-        isKillSwitchLog(next) &&
-        next.performed_by === performer &&
-        extractKillSwitchReason(next.notes) === reason
-      ) {
-        batchLogs.push(next);
-        j++;
-      } else {
-        break;
+      while (j < logs.length) {
+        const next = logs[j];
+        if (
+          isKillSwitchLog(next) &&
+          !next.batch_id &&
+          next.performed_by === performer &&
+          extractKillSwitchReason(next.notes) === reason
+        ) {
+          batchLogs.push(next);
+          j++;
+        } else {
+          break;
+        }
       }
+
+      rows.push({
+        kind:            'kill_switch',
+        batchKey:        `ks-legacy-${log.id}`,
+        batch_id:        null,
+        created_at:      log.created_at,
+        performer_name:  log.performer_name,
+        performer_email: log.performer_email,
+        reason,
+        resident_name:   log.resident_name,
+        logs:            batchLogs,
+      });
+
+      i = j;
+      continue;
     }
 
-    rows.push({
-      kind:           'kill_switch',
-      batchKey:       `ks-${log.id}`,
-      created_at:     log.created_at,          // earliest = first in desc list
-      performer_name:  log.performer_name,
-      performer_email: log.performer_email,
-      reason,
-      resident_name:  log.resident_name,
-      logs:           batchLogs,
-    });
-
-    i = j;
+    // Regular single log
+    rows.push({ kind: 'single', log });
+    i++;
   }
 
   return rows;
@@ -183,6 +225,7 @@ const ActionBadge = ({ action }: { action: AuditLog['action'] }) => {
 /* ─── Kill-Switch Batch Row ─────────────────────────────────────────────── */
 function KillSwitchRow({ batch }: { batch: KillSwitchBatch }) {
   const [expanded, setExpanded] = useState(false);
+  const isLegacy = batch.batch_id === null;
 
   return (
     <>
@@ -233,6 +276,12 @@ function KillSwitchRow({ batch }: { batch: KillSwitchBatch }) {
           <p className="mono text-[10px] text-[#6C6C74] dark:text-[#9090A0] mt-1.5">
             {batch.logs.length} document{batch.logs.length !== 1 ? 's' : ''} revoked
           </p>
+          <p className="mono text-[9px] text-[#9090A0] dark:text-[#6C6C74] mt-1 truncate" title={batch.batch_id ?? 'legacy'}>
+            {isLegacy
+              ? <span className="text-amber-500/70">legacy batch</span>
+              : `Batch ${batch.batch_id!.slice(0, 8).toUpperCase()}`
+            }
+          </p>
         </div>
 
         {/* reason */}
@@ -265,6 +314,16 @@ function KillSwitchRow({ batch }: { batch: KillSwitchBatch }) {
             transition={{ duration: 0.18 }}
             className="overflow-hidden"
           >
+            {/* batch_id reference bar */}
+            {batch.batch_id && (
+              <div className="px-5 py-2 border-b border-orange-200/60 dark:border-orange-900/40 bg-orange-50/40 dark:bg-orange-950/5 flex items-center gap-3">
+                <ShieldOff className="w-3 h-3 text-orange-400 flex-shrink-0" />
+                <p className="mono text-[10px] text-orange-600/80 dark:text-orange-400/70 tracking-[0.1em]">
+                  BATCH ID: <span className="font-bold text-orange-700 dark:text-orange-400">{batch.batch_id}</span>
+                </p>
+              </div>
+            )}
+
             {/* Sub-header */}
             <div className="grid grid-cols-[2fr_1.6fr_1fr_1fr] gap-4 px-5 py-2 border-b border-[#E8E6E1] dark:border-[#2C2C32] bg-orange-50/30 dark:bg-orange-950/5">
               {['Document Type', 'Resident', 'Time', 'Links'].map(h => (
@@ -343,7 +402,7 @@ export default function AuditLogsPage() {
 
       const { data: rawLogs, error } = await supabase
         .from('audit_logs')
-        .select(`id, request_id, action, performed_by, performer_email, performer_name, notes, created_at, requests ( document_type, type, user_id )`)
+        .select(`id, request_id, action, performed_by, performer_email, performer_name, notes, batch_id, created_at, requests ( document_type, type, user_id )`)
         .order('created_at', { ascending: false })
         .limit(500);
 
@@ -369,6 +428,7 @@ export default function AuditLogsPage() {
         performer_email: l.performer_email,
         performer_name:  l.performer_name ?? null,
         notes:           l.notes,
+        batch_id:        l.batch_id ?? null,
         created_at:      l.created_at,
         document_type:   l.requests?.type ?? l.requests?.document_type ?? null,
         resident_name:   l.requests?.user_id ? (profileMap[l.requests.user_id] ?? null) : null,
@@ -390,6 +450,7 @@ export default function AuditLogsPage() {
       (l.resident_name   ?? '').toLowerCase().includes(q) ||
       (l.document_type   ?? '').toLowerCase().includes(q) ||
       (l.request_id ?? '').toLowerCase().includes(q) ||
+      (l.batch_id   ?? '').toLowerCase().includes(q) ||
       (l.notes ?? '').toLowerCase().includes(q);
     const matchAction = actionFilter === 'all' || l.action === actionFilter;
     const matchDate   = dateFilter === 'all' ? true : dateFilter === 'today' ? isToday(l.created_at) : dateFilter === 'week' ? isWeek(l.created_at) : isMonth(l.created_at);
@@ -400,8 +461,10 @@ export default function AuditLogsPage() {
   const displayRows: DisplayRow[] = buildDisplayRows(filtered);
 
   const countAction = (a: AuditLog['action']) => logs.filter(l => l.action === a).length;
-  const killSwitchBatchCount = displayRows.filter(r => r.kind === 'kill_switch').length;
+  const killSwitchBatches   = displayRows.filter(r => r.kind === 'kill_switch') as KillSwitchBatch[];
+  const killSwitchBatchCount = killSwitchBatches.length;
   const killSwitchDocCount   = logs.filter(isKillSwitchLog).length;
+  const legacyBatchCount     = killSwitchBatches.filter(b => b.batch_id === null).length;
 
   /* ── export handler ─────────────────────────────────────────────────────── */
   const handleExport = () => {
@@ -452,6 +515,18 @@ export default function AuditLogsPage() {
           </motion.div>
 
           {/* ── FILTERS + EXPORT ───────────────────────────────────────── */}
+          {/* legacy batch notice — only shown if old-format rows exist */}
+          {legacyBatchCount > 0 && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.08 }}
+              className="mb-6 flex items-start gap-3 border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 px-4 py-3">
+              <ShieldOff className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+              <p className="text-[12px] text-amber-800 dark:text-amber-300 leading-snug">
+                <strong>{legacyBatchCount} legacy kill-switch batch{legacyBatchCount !== 1 ? 'es' : ''}</strong> detected — these were created before
+                the <code className="mono text-[11px]">batch_id</code> column existed and are grouped by notes-string matching.
+                New batches are grouped reliably by UUID.
+              </p>
+            </motion.div>
+          )}
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mb-8">
             <div className="flex items-center justify-between mb-4">
               <SectionLabel label="Filters" />

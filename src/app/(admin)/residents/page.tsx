@@ -290,11 +290,11 @@ export default function ResidentsPage() {
         const { data: pd, error } = await supabase
           .from('profiles')
           .select('id, firstName, lastName, email, role, avatar_base64, created_at')
-          .eq('role', 'resident')
+          .not('role', 'in', '("admin","super_admin")')
           .order('created_at', { ascending: false });
 
         if (error) throw error;
-        if (!pd?.length) { setResidents([]); return; }
+        if (!pd?.length) { setResidents([]); setLoading(false); return; }
 
         const ids = pd.map((p: any) => p.id);
 
@@ -319,10 +319,15 @@ export default function ResidentsPage() {
             const res = await fetch(`/api/profile?id=${p.id}`);
             if (res.ok) {
               const j = await res.json();
+              const d = j.data ?? {};
               return {
                 ...p,
-                phone:         j.data?.phone   ?? '',
-                address:       j.data?.address ?? '',
+                // Use decrypted values from API — raw Supabase rows have encrypted names/email
+                firstName:     d.firstName  ?? p.firstName  ?? '',
+                lastName:      d.lastName   ?? p.lastName   ?? '',
+                email:         d.email      ?? p.email      ?? '',
+                phone:         d.phone      ?? '',
+                address:       d.address    ?? '',
                 totalRequests: totalMap[p.id]    ?? 0,
                 approvedCount: approvedMap[p.id] ?? 0,
                 revokedCount:  revokedMap[p.id]  ?? 0,
