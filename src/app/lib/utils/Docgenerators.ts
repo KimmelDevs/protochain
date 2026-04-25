@@ -540,22 +540,11 @@ async function injectDigitalSealIntoZip(zip: any, sealDataUrl: string): Promise<
   const docFile = zip.file('word/document.xml');
   if (!docFile) return;
   let xml: string = await docFile.async('string');
-  const descrPos = xml.indexOf(`descr="${SEAL_ALT}"`);
-  if (descrPos === -1) { console.warn('Digital Seal placeholder not found'); return; }
-  const anchorStart = xml.slice(0, descrPos).lastIndexOf('<wp:anchor');
-  if (anchorStart === -1) return;
-  const fromAnchor = xml.slice(anchorStart);
-  const anchorEnd  = anchorStart + fromAnchor.indexOf('</wp:anchor>') + '</wp:anchor>'.length;
-  const oldAnchor  = xml.slice(anchorStart, anchorEnd);
-  const cx        = oldAnchor.match(/<wp:extent cx="(\d+)"/)?.[1]                               ?? '1057910';
-  const cy        = oldAnchor.match(/<wp:extent[^>]*cy="(\d+)"/)?.[1]                           ?? '1059180';
-  const posH      = oldAnchor.match(/<wp:positionH[^>]*>[\s\S]*?<wp:posOffset>(\d+)/)?.[1]      ?? '5334000';
-  const posV      = oldAnchor.match(/<wp:positionV[^>]*>[\s\S]*?<wp:posOffset>(\d+)/)?.[1]      ?? '8580120';
-  const relH      = oldAnchor.match(/<wp:positionH relativeFrom="([^"]+)"/)?.[1]                ?? 'column';
-  const relV      = oldAnchor.match(/<wp:positionV relativeFrom="([^"]+)"/)?.[1]                ?? 'paragraph';
-  const relHeight = oldAnchor.match(/relativeHeight="(\d+)"/)?.[1]                              ?? '251699200';
+
   const base64 = sealDataUrl.split(',')[1];
   if (!base64) return;
+
+  // ── Write the seal image and register its relationship ────────────────────
   zip.file(`word/media/${SEAL_FILE}`, base64, { base64: true });
   const relsFile = zip.file('word/_rels/document.xml.rels');
   if (!relsFile) return;
@@ -568,7 +557,14 @@ async function injectDigitalSealIntoZip(zip: any, sealDataUrl: string): Promise<
     );
     zip.file('word/_rels/document.xml.rels', relsXml);
   }
-  const newAnchor =
+
+  // ── Helper: build the floating anchor XML ────────────────────────────────
+  const buildSealAnchor = (
+    cx: string, cy: string,
+    posH: string, posV: string,
+    relH: string, relV: string,
+    relHeight: string,
+  ): string =>
     `<wp:anchor distT="0" distB="0" distL="114300" distR="114300" simplePos="0" ` +
     `relativeHeight="${relHeight}" behindDoc="0" locked="0" layoutInCell="1" allowOverlap="1" ` +
     `xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">` +
@@ -587,9 +583,82 @@ async function injectDigitalSealIntoZip(zip: any, sealDataUrl: string): Promise<
     `<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm>` +
     `<a:prstGeom prst="ellipse"><a:avLst/></a:prstGeom></pic:spPr>` +
     `</pic:pic></a:graphicData></a:graphic></wp:anchor>`;
-  xml = xml.slice(0, anchorStart) + newAnchor + xml.slice(anchorEnd);
+
+  const descrPos = xml.indexOf(`descr="${SEAL_ALT}"`);
+
+  if (descrPos !== -1) {
+    // ── Path A: template already has a Digital Seal placeholder anchor ────────
+    // Replace the existing anchor in-place (original behaviour).
+    const anchorStart = xml.slice(0, descrPos).lastIndexOf('<wp:anchor');
+    if (anchorStart === -1) return;
+    const fromAnchor = xml.slice(anchorStart);
+    const anchorEnd  = anchorStart + fromAnchor.indexOf('</wp:anchor>') + '</wp:anchor>'.length;
+    const oldAnchor  = xml.slice(anchorStart, anchorEnd);
+    const cx        = oldAnchor.match(/<wp:extent cx="(\d+)"/)?.[1]                          ?? '1057910';
+    const cy        = oldAnchor.match(/<wp:extent[^>]*cy="(\d+)"/)?.[1]                      ?? '1059180';
+    const posH      = oldAnchor.match(/<wp:positionH[^>]*>[\s\S]*?<wp:posOffset>(\d+)/)?.[1] ?? '5334000';
+    const posV      = oldAnchor.match(/<wp:positionV[^>]*>[\s\S]*?<wp:posOffset>(\d+)/)?.[1] ?? '8580120';
+    const relH      = oldAnchor.match(/<wp:positionH relativeFrom="([^"]+)"/)?.[1]           ?? 'column';
+    const relV      = oldAnchor.match(/<wp:positionV relativeFrom="([^"]+)"/)?.[1]           ?? 'paragraph';
+    const relHeight = oldAnchor.match(/relativeHeight="(\d+)"/)?.[1]                         ?? '251699200';
+    const newAnchor = buildSealAnchor(cx, cy, posH, posV, relH, relV, relHeight);
+    xml = xml.slice(0, anchorStart) + newAnchor + xml.slice(anchorEnd);
+    console.log(`Digital Seal replaced (H=${posH} V=${posV})`);
+  } else {
+    // ── Path B: no placeholder — append a new floating anchor ─────────────────
+    // Used by Certificate of Indigency, Certificate of Residency, and
+    // Barangay Certification whose templates have no pre-existing seal shape.
+    //
+    // Position: bottom-right signature area, page-relative.
+    // Legal paper: 12242 × 19165 twips → 7,773,670 × 12,169,775 EMU
+    // Seal size matches clearance template: 1,057,910 × 1,059,180 EMU (~1.16 in)
+    //
+    // Try to derive posH/posV from the Captain Signature anchor so the seal
+    // lands in the same horizontal band regardless of per-doc layout.
+    const cx = '1057910';
+    const cy = '1059180';
+    const relHeight = '251699200';
+
+    let posH = '5601360';  // fallback: right-side, page-relative
+    let posV = '8762238';  // fallback: ~72 % down the page, page-relative
+    let relH = 'page';
+    let relV = 'page';
+
+    // Derive from Captain Signature anchor if present
+    const capIdx = xml.indexOf('Captain Signature');
+    if (capIdx !== -1) {
+      const capAnchorStart = xml.slice(0, capIdx).lastIndexOf('<wp:anchor');
+      if (capAnchorStart !== -1) {
+        const capAnchorSnippet = xml.slice(capAnchorStart, capAnchorStart + 800);
+        const capH    = capAnchorSnippet.match(/<wp:positionH relativeFrom="([^"]+)">[\s\S]*?<wp:posOffset>(\d+)/);
+        const capV    = capAnchorSnippet.match(/<wp:positionV relativeFrom="([^"]+)">[\s\S]*?<wp:posOffset>(\d+)/);
+        const capRelH = capH?.[1] ?? relH;
+        const capRelV = capV?.[1] ?? relV;
+        const capPosH = capH ? parseInt(capH[2]) : null;
+        const capPosV = capV ? parseInt(capV[2]) : null;
+        if (capPosH !== null && capPosV !== null) {
+          // Place seal slightly left of captain sig, same vertical band
+          posH = String(capPosH - 200000);
+          posV = String(capPosV + 400000);
+          relH = capRelH;
+          relV = capRelV;
+        }
+      }
+    }
+
+    // Inject as a drawing inside a new paragraph just before </w:body>
+    const bodyEnd = xml.lastIndexOf('</w:body>');
+    if (bodyEnd === -1) return;
+    const sealPara =
+      `<w:p><w:pPr><w:spacing w:before="0" w:after="0"/></w:pPr>` +
+      `<w:r><w:drawing>` +
+      buildSealAnchor(cx, cy, posH, posV, relH, relV, relHeight) +
+      `</w:drawing></w:r></w:p>`;
+    xml = xml.slice(0, bodyEnd) + sealPara + xml.slice(bodyEnd);
+    console.log(`Digital Seal appended (H=${posH} V=${posV} relH=${relH} relV=${relV})`);
+  }
+
   zip.file('word/document.xml', xml);
-  console.log(`Digital Seal injected (H=${posH} V=${posV})`);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -975,7 +1044,24 @@ async function injectCertificateOfIndigency(zip: any, req: RequestDetail, profil
       `<w:r w:rsidR="${R}"><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="${R}"><w:t>fullname</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="${R}"><w:t>}</w:t></w:r>`,
       `<w:r w:rsidR="${R}"><w:t>{fullname}</w:t></w:r>`,
     );
-    // Normalize split {ctc_no} runs (no rsidR attr)
+
+    // ── Text-box CTC normalizers (prefix-merged pattern) ──────────────────────
+    // In these templates the '{' is merged into the label run:
+    // <w:r><w:t>CTC #: {</w:t></w:r><w:proofErr/><w:r><w:t>ctc_no</w:t></w:r><w:proofErr/><w:r><w:t xml:space="preserve">} </w:t></w:r>
+    xml = xml.replace(
+      `<w:r><w:t>CTC #: {</w:t></w:r><w:proofErr w:type="spellStart"/><w:r><w:t>ctc_no</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r><w:t xml:space="preserve">} </w:t></w:r>`,
+      `<w:r><w:t xml:space="preserve">CTC #: {ctc_no} </w:t></w:r>`,
+    );
+    xml = xml.replace(
+      `<w:r><w:t>Date Issued: {</w:t></w:r><w:proofErr w:type="spellStart"/><w:r><w:t>ctc_date_issued</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r><w:t xml:space="preserve">} </w:t></w:r>`,
+      `<w:r><w:t xml:space="preserve">Date Issued: {ctc_date_issued} </w:t></w:r>`,
+    );
+    xml = xml.replace(
+      `<w:r><w:t>Place Issued: {</w:t></w:r><w:proofErr w:type="spellStart"/><w:r><w:t>ctc_place_issued</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r><w:t>}</w:t></w:r>`,
+      `<w:r><w:t>Place Issued: {ctc_place_issued}</w:t></w:r>`,
+    );
+
+    // ── Fallback: standalone split runs (no rsidR attr) ───────────────────────
     xml = xml.replace(
       `<w:r><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r><w:t>ctc_no</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r><w:t xml:space="preserve">} </w:t></w:r>`,
       `<w:r><w:t xml:space="preserve">{ctc_no} </w:t></w:r>`,
@@ -994,6 +1080,9 @@ async function injectCertificateOfIndigency(zip: any, req: RequestDetail, profil
     xml = xml.replace(/\{this_day\}/g,               xmlEscape(day + suffix));
     xml = xml.replace(/\{month\}/g,                  xmlEscape(MONTH));
     xml = xml.replace(/\{year\}/g,                   xmlEscape(year));
+    xml = xml.replace(/CTC #: \{ctc_no\} /g,        `CTC #: ${xmlEscape(ctcNo)} `);
+    xml = xml.replace(/Date Issued: \{ctc_date_issued\} /g, `Date Issued: ${xmlEscape(ctcDate)} `);
+    xml = xml.replace(/Place Issued: \{ctc_place_issued\}/g, `Place Issued: ${xmlEscape(ctcPlace)}`);
     xml = xml.replace(/\{ctc_no\} /g,               xmlEscape(ctcNo) + ' ');
     xml = xml.replace(/\{ctc_no\}/g,                xmlEscape(ctcNo));
     xml = xml.replace(/\{ctc_date_issued\} /g,      xmlEscape(ctcDate) + ' ');
@@ -1067,7 +1156,23 @@ async function injectCertificateOfResidency(zip: any, req: RequestDetail, profil
       `<w:r w:rsidR="${RY}">${rPrResidency}<w:t xml:space="preserve">} </w:t></w:r>`,
       `<w:r w:rsidR="${RY}">${rPrResidency}<w:t xml:space="preserve">{months_lived} </w:t></w:r>`,
     );
-    // Normalize split ctc runs (no rsidR attr)
+    // ── Text-box CTC normalizers (prefix-merged pattern) ──────────────────────
+    // In these templates the '{' is merged into the label run:
+    // <w:r><w:t>CTC #: {</w:t></w:r><w:proofErr/><w:r><w:t>ctc_no</w:t></w:r><w:proofErr/><w:r><w:t xml:space="preserve">} </w:t></w:r>
+    xml = xml.replace(
+      `<w:r><w:t>CTC #: {</w:t></w:r><w:proofErr w:type="spellStart"/><w:r><w:t>ctc_no</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r><w:t xml:space="preserve">} </w:t></w:r>`,
+      `<w:r><w:t xml:space="preserve">CTC #: {ctc_no} </w:t></w:r>`,
+    );
+    xml = xml.replace(
+      `<w:r><w:t>Date Issued: {</w:t></w:r><w:proofErr w:type="spellStart"/><w:r><w:t>ctc_date_issued</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r><w:t xml:space="preserve">} </w:t></w:r>`,
+      `<w:r><w:t xml:space="preserve">Date Issued: {ctc_date_issued} </w:t></w:r>`,
+    );
+    xml = xml.replace(
+      `<w:r><w:t>Place Issued: {</w:t></w:r><w:proofErr w:type="spellStart"/><w:r><w:t>ctc_place_issued</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r><w:t>}</w:t></w:r>`,
+      `<w:r><w:t>Place Issued: {ctc_place_issued}</w:t></w:r>`,
+    );
+
+    // ── Fallback: standalone split runs (no rsidR attr) ───────────────────────
     xml = xml.replace(
       `<w:r><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r><w:t>ctc_no</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r><w:t xml:space="preserve">} </w:t></w:r>`,
       `<w:r><w:t xml:space="preserve">{ctc_no} </w:t></w:r>`,
@@ -1090,6 +1195,9 @@ async function injectCertificateOfResidency(zip: any, req: RequestDetail, profil
     xml = xml.replace(/\{years_lived\}/g,            xmlEscape(yearsLived));
     xml = xml.replace(/\{months_lived\} /g,          xmlEscape(monthsLived) + ' ');
     xml = xml.replace(/\{months_lived\}/g,           xmlEscape(monthsLived));
+    xml = xml.replace(/CTC #: \{ctc_no\} /g,        `CTC #: ${xmlEscape(ctcNo)} `);
+    xml = xml.replace(/Date Issued: \{ctc_date_issued\} /g, `Date Issued: ${xmlEscape(ctcDate)} `);
+    xml = xml.replace(/Place Issued: \{ctc_place_issued\}/g, `Place Issued: ${xmlEscape(ctcPlace)}`);
     xml = xml.replace(/\{ctc_no\} /g,               xmlEscape(ctcNo) + ' ');
     xml = xml.replace(/\{ctc_no\}/g,                xmlEscape(ctcNo));
     xml = xml.replace(/\{ctc_date_issued\} /g,      xmlEscape(ctcDate) + ' ');
@@ -1133,18 +1241,20 @@ async function injectBarangayCertification(zip: any, req: RequestDetail, profile
       `<w:r w:rsidR="${R}"><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="${R}"><w:t>fullname</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="${R}"><w:t>}</w:t></w:r>`,
       `<w:r w:rsidR="${R}"><w:t>{fullname}</w:t></w:r>`,
     );
-    // Normalize split ctc runs (no rsidR attr)
+    // ── Text-box CTC normalizers (prefix-merged pattern) ──────────────────────
+    // In these templates the '{' is merged into the label run:
+    // <w:r><w:t>CTC #: {</w:t></w:r><w:proofErr/><w:r><w:t>ctc_no</w:t></w:r><w:proofErr/><w:r><w:t xml:space="preserve">} </w:t></w:r>
     xml = xml.replace(
-      `<w:r><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r><w:t>ctc_no</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r><w:t xml:space="preserve">} </w:t></w:r>`,
-      `<w:r><w:t xml:space="preserve">{ctc_no} </w:t></w:r>`,
+      `<w:r><w:t>CTC #: {</w:t></w:r><w:proofErr w:type="spellStart"/><w:r><w:t>ctc_no</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r><w:t xml:space="preserve">} </w:t></w:r>`,
+      `<w:r><w:t xml:space="preserve">CTC #: {ctc_no} </w:t></w:r>`,
     );
     xml = xml.replace(
-      `<w:r><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r><w:t>ctc_date_issued</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r><w:t xml:space="preserve">} </w:t></w:r>`,
-      `<w:r><w:t xml:space="preserve">{ctc_date_issued} </w:t></w:r>`,
+      `<w:r><w:t>Date Issued: {</w:t></w:r><w:proofErr w:type="spellStart"/><w:r><w:t>ctc_date_issued</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r><w:t xml:space="preserve">} </w:t></w:r>`,
+      `<w:r><w:t xml:space="preserve">Date Issued: {ctc_date_issued} </w:t></w:r>`,
     );
     xml = xml.replace(
-      `<w:r><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r><w:t>ctc_place_issued</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r><w:t>}</w:t></w:r>`,
-      `<w:r><w:t>{ctc_place_issued}</w:t></w:r>`,
+      `<w:r><w:t>Place Issued: {</w:t></w:r><w:proofErr w:type="spellStart"/><w:r><w:t>ctc_place_issued</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r><w:t>}</w:t></w:r>`,
+      `<w:r><w:t>Place Issued: {ctc_place_issued}</w:t></w:r>`,
     );
 
     xml = xml.replace(/APPLICANT NAME PLACEHOLDER/g, xmlEscape(name));
@@ -1152,6 +1262,9 @@ async function injectBarangayCertification(zip: any, req: RequestDetail, profile
     xml = xml.replace(/\{this_day\}/g,               xmlEscape(day + suffix));
     xml = xml.replace(/\{month\}/g,                  xmlEscape(MONTH));
     xml = xml.replace(/\{year\}/g,                   xmlEscape(year));
+    xml = xml.replace(/CTC #: \{ctc_no\} /g,        `CTC #: ${xmlEscape(ctcNo)} `);
+    xml = xml.replace(/Date Issued: \{ctc_date_issued\} /g, `Date Issued: ${xmlEscape(ctcDate)} `);
+    xml = xml.replace(/Place Issued: \{ctc_place_issued\}/g, `Place Issued: ${xmlEscape(ctcPlace)}`);
     xml = xml.replace(/\{ctc_no\} /g,               xmlEscape(ctcNo) + ' ');
     xml = xml.replace(/\{ctc_no\}/g,                xmlEscape(ctcNo));
     xml = xml.replace(/\{ctc_date_issued\} /g,      xmlEscape(ctcDate) + ' ');
