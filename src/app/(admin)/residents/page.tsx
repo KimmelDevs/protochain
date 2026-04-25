@@ -1,453 +1,742 @@
 'use client';
 
-import { useState, useRef, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ShieldCheck, ShieldX, ShieldAlert, Loader2, Search,
-  Upload, FileText, ExternalLink, Copy, Check, Camera, QrCode, ScanText,
+  Search, Eye, User, Mail, Phone,
+  ShieldOff, AlertTriangle, X, Loader2,
 } from 'lucide-react';
-import { verifyDocumentOnChain, type VerifyResult } from '@/app/lib/blockchain';
-import Header from '@/app/components/header';
-import Footer from '@/app/components/footer';
-import WebcamScanner from '@/app/components/WebcamScanner';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/app/lib/supabase';
+import { revokeDocumentOnChain } from '@/app/lib/blockchain';
 
-async function computeSha256(file: File): Promise<string> {
-  const buf    = await file.arrayBuffer();
-  const digest = await crypto.subtle.digest('SHA-256', buf);
-  return Array.from(new Uint8Array(digest))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
+/* ─────────────────────────── types ─────────────────────────────────────── */
+interface Resident {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  address: string;
+  created_at: string;
+  role: string | null;
+  avatar_base64: string | null;
+  totalRequests: number;
+  approvedCount: number;
+  revokedCount: number;
 }
 
-const fmtDocType = (s: string) =>
-  s.split(/[\s\-_]+/)
-   .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-   .join(' ');
+/* ─────────────────────────── helpers ───────────────────────────────────── */
+const getInitials = (first: string, last: string) =>
+  `${first?.[0] ?? ''}${last?.[0] ?? ''}`.toUpperCase() || '?';
 
-function useCountdown(expiresAt: number | undefined | null) {
-  const [countdown, setCountdown] = useState('');
-  useEffect(() => {
-    if (!expiresAt) { setCountdown(''); return; }
-    const tick = () => {
-      const diff = expiresAt * 1000 - Date.now();
-      if (diff <= 0) { setCountdown('Expired'); return; }
-      const d = Math.floor(diff / 86400000);
-      const h = Math.floor((diff % 86400000) / 3600000);
-      const m = Math.floor((diff % 3600000) / 60000);
-      const s = Math.floor((diff % 60000) / 1000);
-      if (d > 0) setCountdown(`${d}d ${h}h ${m}m ${s}s`);
-      else if (h > 0) setCountdown(`${h}h ${m}m ${s}s`);
-      else setCountdown(`${m}m ${s}s`);
-    };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [expiresAt]);
-  return countdown;
-}
+const isThisMonth = (d: string) => {
+  const dt = new Date(d), now = new Date();
+  return dt.getMonth() === now.getMonth() && dt.getFullYear() === now.getFullYear();
+};
 
-export default function VerifyPage() {
+const fmt = (d: string) =>
+  new Date(d).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+
+/* ─────────────────────────── trust indicator ───────────────────────────── */
+function TrustDot({ revokedCount }: { revokedCount: number }) {
+  if (revokedCount > 0) {
+    return (
+      <span
+        title={`${revokedCount} revoked document${revokedCount !== 1 ? 's' : ''}`}
+        className="inline-flex items-center gap-1.5"
+      >
+        <span className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0 ring-2 ring-orange-200 dark:ring-orange-900/60" />
+        <span className="text-[10px] font-semibold tracking-[0.06em] uppercase text-orange-600 dark:text-orange-400 whitespace-nowrap">
+          {revokedCount} revoked
+        </span>
+      </span>
+    );
+  }
   return (
-    <Suspense>
-      <VerifyPageInner />
-    </Suspense>
+    <span
+      title="Clean record — no revoked documents"
+      className="inline-flex items-center gap-1.5"
+    >
+      <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0 ring-2 ring-emerald-200 dark:ring-emerald-900/60" />
+      <span className="text-[10px] font-semibold tracking-[0.06em] uppercase text-emerald-600 dark:text-emerald-400">
+        Clean
+      </span>
+    </span>
   );
 }
 
-function VerifyPageInner() {
-  const searchParams = useSearchParams();
-  const fileRef = useRef<HTMLInputElement>(null);
+/* ─────────────────────────── kill-switch modal ──────────────────────────── */
+interface KillSwitchModalProps {
+  resident: Resident;
+  onClose: () => void;
+  onConfirm: (reason: string) => Promise<void>;
+}
 
-  const [hash,       setHash]       = useState('');
-  const [fileName,   setFileName]   = useState('');
-  const [result,     setResult]     = useState<VerifyResult | null>(null);
-  const [loading,    setLoading]    = useState(false);
-  const [hashing,    setHashing]    = useState(false);
-  const [error,      setError]      = useState('');
-  const [copied,     setCopied]     = useState(false);
-  const [activeTab,  setActiveTab]  = useState<'file' | 'hash' | 'scan'>('file');
-  const [showWebcam, setShowWebcam] = useState(false);
+function KillSwitchModal({ resident, onClose, onConfirm }: KillSwitchModalProps) {
+  const fullName = `${resident.firstName} ${resident.lastName}`;
+  const [typed,   setTyped]   = useState('');
+  const [reason,  setReason]  = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Read ?hash= from URL (e.g. from QR code scan) and auto-populate + switch to hash tab
+  useEffect(() => { inputRef.current?.focus(); }, []);
   useEffect(() => {
-    const h = searchParams.get('hash');
-    if (h && /^[0-9a-f]{64}$/i.test(h)) {
-      setHash(h);
-      setActiveTab('hash');
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
+  const nameMatches = typed.trim().toLowerCase() === fullName.trim().toLowerCase();
+  const canSubmit   = nameMatches && reason.trim().length >= 5 && !loading;
+
+  const handleSubmit = async () => {
+    if (!canSubmit) return;
+    setError('');
+    setLoading(true);
+    try {
+      await onConfirm(reason.trim());
+    } catch (e: any) {
+      setError(e?.message ?? 'Something went wrong. Please try again.');
+      setLoading(false);
     }
-  }, [searchParams]);
-
-  const handleFile = async (file: File) => {
-    setHashing(true); setError(''); setResult(null);
-    try { const h = await computeSha256(file); setHash(h); setFileName(file.name); }
-    catch { setError('Failed to read file.'); }
-    finally { setHashing(false); }
   };
 
-  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0]; if (f) handleFile(f);
+  return (
+    <AnimatePresence>
+      <motion.div
+        key="backdrop"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] flex items-center justify-center px-4"
+        onClick={(e) => { if (e.target === e.currentTarget && !loading) onClose(); }}
+      >
+        <motion.div
+          key="panel"
+          initial={{ opacity: 0, scale: 0.97, y: 8 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.97, y: 8 }}
+          transition={{ duration: 0.15 }}
+          className="w-full max-w-md bg-white dark:bg-[#1C1C1F] border border-[#E8E6E1] dark:border-[#2C2C32] shadow-2xl"
+        >
+          {/* header */}
+          <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-[#E8E6E1] dark:border-[#2C2C32]">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 flex items-center justify-center bg-red-100 dark:bg-red-950/40">
+                <ShieldOff className="w-4 h-4 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <p className="text-[11px] tracking-[0.16em] uppercase text-red-600 dark:text-red-400 font-semibold">
+                  Danger Zone
+                </p>
+                <h2 className="mono text-[16px] font-bold text-[#1A1A1C] dark:text-[#EAEAEC] leading-tight">
+                  Revoke All Documents
+                </h2>
+              </div>
+            </div>
+            {!loading && (
+              <button
+                onClick={onClose}
+                className="w-7 h-7 flex items-center justify-center text-[#6C6C74] hover:text-[#1A1A1C] dark:hover:text-[#EAEAEC] transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* body */}
+          <div className="px-6 py-5 space-y-5">
+
+            {/* warning banner */}
+            <div className="flex items-start gap-3 border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 px-4 py-3">
+              <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-[13px] font-semibold text-amber-800 dark:text-amber-300 leading-snug">
+                  This will revoke {resident.approvedCount} active document{resident.approvedCount !== 1 ? 's' : ''}
+                </p>
+                <p className="text-[12px] text-amber-700 dark:text-amber-400 mt-1 leading-snug">
+                  Each document will be individually recorded as revoked on the blockchain. This action
+                  is <strong>permanent</strong> and cannot be undone.
+                </p>
+              </div>
+            </div>
+
+            {/* resident preview */}
+            <div className="flex items-center gap-3 py-3 border-y border-[#E8E6E1] dark:border-[#2C2C32]">
+              {resident.avatar_base64 ? (
+                <img
+                  src={resident.avatar_base64}
+                  alt=""
+                  className="w-9 h-9 rounded-full object-cover border border-[#E8E6E1] dark:border-[#2C2C32] flex-shrink-0"
+                />
+              ) : (
+                <div className="w-9 h-9 flex-shrink-0 bg-orange-500 flex items-center justify-center">
+                  <span className="mono text-[11px] font-bold text-white">
+                    {getInitials(resident.firstName, resident.lastName)}
+                  </span>
+                </div>
+              )}
+              <div>
+                <p className="text-[13px] font-semibold text-[#1A1A1C] dark:text-[#EAEAEC]">{fullName}</p>
+                <p className="mono text-[11px] text-[#6C6C74] dark:text-[#9090A0]">{resident.email}</p>
+              </div>
+            </div>
+
+            {/* reason */}
+            <div>
+              <label className="block text-[11px] font-semibold tracking-[0.1em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-2">
+                Reason for revocation
+              </label>
+              <textarea
+                value={reason}
+                onChange={e => setReason(e.target.value)}
+                disabled={loading}
+                rows={2}
+                placeholder="e.g. Resident involved in a legal case filed on Apr 25, 2026"
+                className="w-full px-3 py-2.5 text-[13px] bg-[#F6F5F3] dark:bg-[#111113] border border-[#E8E6E1] dark:border-[#2C2C32] text-[#1A1A1C] dark:text-[#EAEAEC] placeholder-[#B0B0B8] dark:placeholder-[#55555F] resize-none focus:outline-none focus:border-red-400 dark:focus:border-red-600 transition-colors"
+              />
+              {reason.trim().length > 0 && reason.trim().length < 5 && (
+                <p className="text-[11px] text-red-500 mt-1">Reason must be at least 5 characters.</p>
+              )}
+            </div>
+
+            {/* name confirmation */}
+            <div>
+              <label className="block text-[11px] font-semibold tracking-[0.1em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-1">
+                Type the resident's full name to confirm
+              </label>
+              <p className="mono text-[11px] text-[#9090A0] mb-2">
+                Type exactly: <span className="text-[#1A1A1C] dark:text-[#EAEAEC] font-bold">{fullName}</span>
+              </p>
+              <input
+                ref={inputRef}
+                type="text"
+                value={typed}
+                onChange={e => setTyped(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleSubmit(); }}
+                disabled={loading}
+                placeholder={fullName}
+                className={`w-full px-3 py-2.5 text-[13px] bg-[#F6F5F3] dark:bg-[#111113] border text-[#1A1A1C] dark:text-[#EAEAEC] placeholder-[#B0B0B8] dark:placeholder-[#55555F] focus:outline-none transition-colors
+                  ${typed.length === 0
+                    ? 'border-[#E8E6E1] dark:border-[#2C2C32]'
+                    : nameMatches
+                    ? 'border-emerald-400 dark:border-emerald-600'
+                    : 'border-red-300 dark:border-red-700'}`}
+              />
+              {typed.length > 0 && !nameMatches && (
+                <p className="text-[11px] text-red-500 mt-1">Name does not match. Check capitalization.</p>
+              )}
+              {nameMatches && (
+                <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-1">✓ Name confirmed</p>
+              )}
+            </div>
+
+            {error && (
+              <div className="border-l-2 border-red-500 pl-3 py-1">
+                <p className="text-[12px] text-red-600 dark:text-red-400">{error}</p>
+              </div>
+            )}
+          </div>
+
+          {/* footer */}
+          <div className="flex items-center gap-3 px-6 pb-6 pt-2">
+            <button
+              onClick={onClose}
+              disabled={loading}
+              className="flex-1 py-2.5 text-[12px] font-semibold tracking-[0.06em] uppercase border border-[#E8E6E1] dark:border-[#2C2C32] text-[#3A3A3E] dark:text-[#BABABC] hover:border-[#1A1A1C] dark:hover:border-[#EAEAEC] transition-colors disabled:opacity-40"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={!canSubmit}
+              className="flex-1 py-2.5 text-[12px] font-bold tracking-[0.06em] uppercase bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <><Loader2 className="w-3.5 h-3.5 animate-spin" />Revoking…</>
+              ) : (
+                <><ShieldOff className="w-3.5 h-3.5" />Revoke All</>
+              )}
+            </button>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+/* ─────────────────────────── page ──────────────────────────────────────── */
+export default function ResidentsPage() {
+  const router = useRouter();
+  const [residents,   setResidents]   = useState<Resident[]>([]);
+  const [loading,     setLoading]     = useState(true);
+  const [search,      setSearch]      = useState('');
+
+  // kill-switch state
+  const [killTarget,  setKillTarget]  = useState<Resident | null>(null);
+  const [killResults, setKillResults] = useState<
+    Record<string, { success: boolean; message: string }>
+  >({});
+
+  /* ── data load ───────────────────────────────────────────────────────── */
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { router.push('/login'); return; }
+
+        const { data: pd, error } = await supabase
+          .from('profiles')
+          .select('id, firstName, lastName, email, role, avatar_base64, created_at')
+          .eq('role', 'resident')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        if (!pd?.length) { setResidents([]); return; }
+
+        const ids = pd.map((p: any) => p.id);
+
+        // fetch request rows with status so we can compute approvedCount + revokedCount
+        const { data: rd } = await supabase
+          .from('requests')
+          .select('user_id, status')
+          .in('user_id', ids);
+
+        const totalMap:    Record<string, number> = {};
+        const approvedMap: Record<string, number> = {};
+        const revokedMap:  Record<string, number> = {};
+
+        for (const r of (rd ?? [])) {
+          totalMap[r.user_id]    = (totalMap[r.user_id]    ?? 0) + 1;
+          if (r.status === 'approved') approvedMap[r.user_id] = (approvedMap[r.user_id] ?? 0) + 1;
+          if (r.status === 'revoked')  revokedMap[r.user_id]  = (revokedMap[r.user_id]  ?? 0) + 1;
+        }
+
+        const hydrated = await Promise.all(pd.map(async (p: any) => {
+          try {
+            const res = await fetch(`/api/profile?id=${p.id}`);
+            if (res.ok) {
+              const j = await res.json();
+              return {
+                ...p,
+                phone:         j.data?.phone   ?? '',
+                address:       j.data?.address ?? '',
+                totalRequests: totalMap[p.id]    ?? 0,
+                approvedCount: approvedMap[p.id] ?? 0,
+                revokedCount:  revokedMap[p.id]  ?? 0,
+              };
+            }
+          } catch {}
+          return {
+            ...p,
+            phone:         '',
+            address:       '',
+            totalRequests: totalMap[p.id]    ?? 0,
+            approvedCount: approvedMap[p.id] ?? 0,
+            revokedCount:  revokedMap[p.id]  ?? 0,
+          };
+        }));
+
+        setResidents(hydrated);
+      } catch (e) { console.error(e); }
+      finally     { setLoading(false); }
+    })();
+  }, [router]);
+
+  /* ── kill-switch handler ─────────────────────────────────────────────── */
+  const handleKillSwitch = async (reason: string) => {
+    if (!killTarget) return;
+    const resident = killTarget;
+
+    const { data: approvedDocs } = await supabase
+      .from('requests')
+      .select('id, type, payload_hash')
+      .eq('user_id', resident.id)
+      .eq('status', 'approved');
+
+    if (!approvedDocs?.length) {
+      setKillTarget(null);
+      setKillResults(prev => ({
+        ...prev,
+        [resident.id]: { success: false, message: 'No active documents found.' },
+      }));
+      return;
+    }
+
+    const { data: { user: adminUser } } = await supabase.auth.getUser();
+    const { data: adminProfile } = await supabase
+      .from('profiles')
+      .select('firstName, lastName, email')
+      .eq('id', adminUser?.id ?? '')
+      .single();
+
+    const adminName  = adminProfile ? `${adminProfile.firstName} ${adminProfile.lastName}` : 'Admin';
+    const adminEmail = adminProfile?.email ?? adminUser?.email ?? '';
+    const fullName   = `${resident.firstName} ${resident.lastName}`;
+    const batchId    = crypto.randomUUID();
+
+    let revokedCount = 0;
+    const errors: string[] = [];
+
+    for (const doc of approvedDocs) {
+      try {
+        let txHash: string | null = null;
+        if (doc.payload_hash) txHash = await revokeDocumentOnChain(doc.payload_hash);
+
+        await fetch(`/api/requests?id=${doc.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status:         'revoked',
+            revoke_tx_hash: txHash,
+            notes:          `Bulk revocation — ${reason}`,
+          }),
+        });
+
+        await supabase.from('audit_logs').insert({
+          request_id:      doc.id,
+          action:          'revoked',
+          performed_by:    adminUser?.id ?? '',
+          performer_email: adminEmail,
+          performer_name:  adminName,
+          batch_id:        batchId,
+          notes:           `ASH Kill-Switch applied to ${fullName}. Reason: ${reason}${txHash ? ` | TX: ${txHash}` : ''}`,
+        });
+
+        revokedCount++;
+      } catch (err: any) {
+        errors.push(`${doc.type ?? 'doc'}: ${err?.message ?? 'failed'}`);
+      }
+    }
+
+    // update counts in local state without a full reload
+    setResidents(prev => prev.map(r =>
+      r.id === resident.id
+        ? { ...r, approvedCount: 0, revokedCount: r.revokedCount + revokedCount }
+        : r
+    ));
+
+    setKillTarget(null);
+    setKillResults(prev => ({
+      ...prev,
+      [resident.id]: {
+        success: revokedCount > 0,
+        message: errors.length === 0
+          ? `Revoked ${revokedCount} doc${revokedCount !== 1 ? 's' : ''} for ${fullName}.`
+          : `Revoked ${revokedCount} of ${approvedDocs.length}. ${errors.length} failed.`,
+      },
+    }));
   };
-  const onDrop = (e: React.DragEvent) => {
-    e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f);
-  };
 
-  const handleVerify = async () => {
-    const h = hash.trim();
-    if (!h) { setError('Please enter or upload a document to verify.'); return; }
-    if (h.length !== 64) { setError('SHA-256 hash must be exactly 64 characters.'); return; }
-    setLoading(true); setError(''); setResult(null);
-    try { setResult(await verifyDocumentOnChain(h)); }
-    catch (e: unknown) { setError(e instanceof Error ? e.message : 'Verification failed.'); }
-    finally { setLoading(false); }
-  };
+  /* ── derived data ────────────────────────────────────────────────────── */
+  const filtered = residents.filter(r => {
+    const q = search.toLowerCase();
+    return (
+      `${r.firstName ?? ''} ${r.lastName ?? ''}`.toLowerCase().includes(q) ||
+      (r.email ?? '').toLowerCase().includes(q) ||
+      (r.id    ?? '').toLowerCase().includes(q)
+    );
+  });
 
-  const copyHash = () => { navigator.clipboard.writeText(hash); setCopied(true); setTimeout(() => setCopied(false), 2000); };
+  const totalReqs    = residents.reduce((s, r) => s + (r.totalRequests ?? 0), 0);
+  const newThisMonth = residents.filter(r => isThisMonth(r.created_at)).length;
+  const avgReqs      = residents.length ? Math.round(totalReqs / residents.length) : 0;
+  const flaggedCount = residents.filter(r => r.revokedCount > 0).length;
 
-  const handleScanResult = (scannedHash: string) => {
-    setHash(scannedHash); setError(''); setResult(null);
-    setActiveTab('file');
-  };
+  const stats = [
+    { label: 'Total Residents', value: residents.length },
+    { label: 'New This Month',  value: newThisMonth     },
+    { label: 'Total Requests',  value: totalReqs        },
+    { label: 'Flagged',         value: flaggedCount,
+      note: 'has revoked docs', accent: flaggedCount > 0 },
+  ];
 
-  const isAuthentic = result?.exists && !result?.isRevoked && !result?.isExpired;
-  const isExpiredDoc = result?.exists && !result?.isRevoked && result?.isExpired;
-  const isRevoked   = result?.exists && result?.isRevoked;
-  const isNotFound  = result && !result.exists;
-
-  const countdown = useCountdown(result?.expiresAt);
+  /* ── loading ─────────────────────────────────────────────────────────── */
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-[#F6F5F3] dark:bg-[#111113]">
+      <span className="mono text-[12px] tracking-[0.25em] text-[#6C6C74] dark:text-[#9090A0] uppercase animate-pulse">
+        Loading…
+      </span>
+    </div>
+  );
 
   return (
     <>
-      <input ref={fileRef} type="file" className="hidden" onChange={onFileChange} />
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+        .pjs  { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .mono { font-family: ui-monospace, 'JetBrains Mono', 'Fira Mono', monospace; }
+      `}</style>
 
-      <AnimatePresence>
-        {showWebcam && (
-          <WebcamScanner
-            accentBorder="border-orange-400"
-            accentBtn="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400"
-            accentDot="bg-orange-400"
-            onClose={() => setShowWebcam(false)}
-            onHash={handleScanResult}
-          />
-        )}
-      </AnimatePresence>
+      {/* kill-switch modal */}
+      {killTarget && (
+        <KillSwitchModal
+          resident={killTarget}
+          onClose={() => setKillTarget(null)}
+          onConfirm={handleKillSwitch}
+        />
+      )}
 
-      <div className="min-h-screen bg-gradient-to-br from-[#0f0f23] via-[#1a1a2e] to-[#0f0f23]">
-        <Header />
+      <div className="pjs min-h-screen bg-[#F6F5F3] dark:bg-[#111113] transition-colors duration-200">
+        <div className="max-w-6xl mx-auto px-6 lg:px-10 pt-6 pb-14">
 
-        {/* Decorative particles */}
-        <div className="fixed inset-0 opacity-20 pointer-events-none">
-          <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-purple-500 rounded-full animate-pulse" />
-          <div className="absolute top-1/3 right-1/3 w-3 h-3 bg-blue-500 rounded-full animate-pulse delay-75" />
-          <div className="absolute bottom-1/4 left-1/3 w-2 h-2 bg-cyan-500 rounded-full animate-pulse delay-150" />
-        </div>
-
-        <div className="relative z-10 max-w-2xl mx-auto px-4 pt-28 pb-20">
-
-          {/* HEADER */}
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mb-10 text-center">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/20 border border-orange-500/30 mb-5">
-              <ShieldCheck className="w-4 h-4 text-orange-400" />
-              <span className="text-xs font-semibold text-orange-300">Blockchain Verification</span>
+          {/* ── MASTHEAD ─────────────────────────────────────────────── */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="border-b-2 border-[#1A1A1C] dark:border-[#EAEAEC] pb-5 mb-10"
+          >
+            <div className="flex items-end justify-between">
+              <div>
+                <p className="text-[11px] tracking-[0.2em] text-[#6C6C74] dark:text-[#9090A0] mb-2 uppercase">
+                  Directory
+                </p>
+                <h1 className="mono text-[26px] font-bold leading-none text-[#1A1A1C] dark:text-[#EAEAEC] tracking-tight">
+                  RESIDENTS
+                </h1>
+              </div>
+              <Link
+                href="/admindashboard"
+                className="text-[11px] font-500 tracking-[0.08em] uppercase text-orange-600 dark:text-orange-400 hover:text-orange-700 transition-colors"
+              >
+                ← Dashboard
+              </Link>
             </div>
-            <h1 className="text-4xl md:text-5xl font-extrabold mb-4 bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent tracking-tight">
-              Verify Document
-            </h1>
-            <p className="text-[15px] text-[#b0b4ba] max-w-md mx-auto leading-relaxed">
-              Upload your document, paste its hash, or scan the QR code / printed text on the document with your webcam.
-            </p>
           </motion.div>
 
-          {/* TABS */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="flex gap-2 mb-4">
-            {(['file', 'hash', 'scan'] as const).map(tab => (
-              <button key={tab}
-                onClick={() => { setActiveTab(tab); setResult(null); setError(''); }}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[13px] font-semibold rounded-lg transition-all ${
-                  activeTab === tab
-                    ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white shadow-lg shadow-orange-500/20'
-                    : 'bg-white/5 border border-white/10 text-[#b0b4ba] hover:text-white hover:border-orange-500/50'
+          {/* ── STAT STRIP ───────────────────────────────────────────── */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.07 }}
+            className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-6 mb-12"
+          >
+            {stats.map(({ label, value, note, accent }) => (
+              <div
+                key={label}
+                className={`border-t-2 pt-3 pb-4 ${
+                  accent
+                    ? 'border-orange-500'
+                    : 'border-[#1A1A1C] dark:border-[#EAEAEC]'
+                }`}
+              >
+                <p className="text-[11px] font-semibold tracking-[0.12em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-2">
+                  {label}
+                </p>
+                <p className={`mono text-4xl font-bold tabular-nums leading-none ${
+                  accent && value > 0
+                    ? 'text-orange-600 dark:text-orange-400'
+                    : 'text-[#1A1A1C] dark:text-[#EAEAEC]'
                 }`}>
-                {tab === 'file' && '① Upload'}
-                {tab === 'hash' && '② Hash'}
-                {tab === 'scan' && <><Camera className="w-3.5 h-3.5" /> Scan</>}
-              </button>
+                  {value}
+                </p>
+                {note && (
+                  <p className="text-[10px] text-[#9090A0] dark:text-[#6C6C74] mt-1.5 tracking-wide">
+                    {note}
+                  </p>
+                )}
+              </div>
             ))}
           </motion.div>
 
-          {/* INPUT PANEL */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-            className="bg-white/5 border border-white/10 rounded-xl p-6 mb-4 backdrop-blur-sm">
-
-            <AnimatePresence mode="wait">
-              {activeTab === 'file' && (
-                <motion.div key="file" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                  <div onDrop={onDrop} onDragOver={e => e.preventDefault()} onClick={() => fileRef.current?.click()}
-                    className="border-2 border-dashed border-white/20 hover:border-orange-500/60 transition-colors cursor-pointer p-10 text-center mb-4 rounded-lg bg-white/[0.02]">
-                    {hashing ? (
-                      <div className="flex flex-col items-center gap-2"><Loader2 className="w-6 h-6 animate-spin text-orange-400" /><p className="text-[12px] text-[#b0b4ba]">Computing SHA-256…</p></div>
-                    ) : fileName ? (
-                      <div className="flex flex-col items-center gap-2"><FileText className="w-6 h-6 text-emerald-400" /><p className="text-[13px] font-medium text-white">{fileName}</p><p className="text-[11px] text-[#b0b4ba]">Click to change file</p></div>
-                    ) : (
-                      <div className="flex flex-col items-center gap-2"><Upload className="w-6 h-6 text-[#b0b4ba]" /><p className="text-[13px] text-white font-medium">Drop your document here</p><p className="text-[11px] text-[#b0b4ba]">or click to browse — .docx, .pdf</p></div>
-                    )}
-                  </div>
-                  {hash && (
-                    <div className="border-l-2 border-orange-500 pl-3 py-1 mb-4 bg-orange-500/5 rounded-r-lg">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] font-bold tracking-[0.1em] uppercase text-orange-400">Computed SHA-256</span>
-                        <button onClick={copyHash} className="text-[10px] text-[#b0b4ba] hover:text-orange-400 flex items-center gap-1 transition-colors">
-                          {copied ? <><Check className="w-3 h-3" /> Copied</> : <><Copy className="w-3 h-3" /> Copy</>}
-                        </button>
-                      </div>
-                      <p className="text-[10px] text-[#b0b4ba] break-all leading-relaxed font-mono">{hash}</p>
-                    </div>
-                  )}
-                </motion.div>
-              )}
-
-              {activeTab === 'hash' && (
-                <motion.div key="hash" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                  <label className="text-[11px] tracking-[0.1em] uppercase text-[#b0b4ba] block mb-2 font-semibold">SHA-256 Hash (64 characters)</label>
-                  <textarea value={hash} onChange={e => { setHash(e.target.value); setResult(null); }} rows={3}
-                    placeholder="Paste your 64-character SHA-256 hash here…"
-                    className="w-full font-mono text-[12px] bg-white/5 border border-white/20 focus:border-orange-500/60 rounded-lg p-3 text-white placeholder-[#555860] focus:outline-none resize-none mb-1 transition-colors" />
-                  <p className={`text-[10px] font-mono ${hash.trim().length === 64 ? 'text-emerald-400' : 'text-[#b0b4ba]'}`}>
-                    {hash.trim().length} / 64 characters
-                  </p>
-                </motion.div>
-              )}
-
-              {activeTab === 'scan' && (
-                <motion.div key="scan" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                  <p className="text-[13px] text-[#b0b4ba] mb-5 leading-relaxed">
-                    Use your webcam to scan the barangay document. Works on the <strong className="text-white">embedded QR code</strong>, printed <strong className="text-white">hash text</strong>, or <strong className="text-white">verify URL</strong> — including the digital ESCDA stamp.
-                  </p>
-                  <div className="grid grid-cols-2 gap-3 mb-5">
-                    {[
-                      { icon: <QrCode className="w-5 h-5 text-orange-400" />, title: 'QR Code', desc: 'Auto-detects the embedded QR continuously' },
-                      { icon: <ScanText className="w-5 h-5 text-orange-400" />, title: 'OCR / Text', desc: 'Reads hash text, URLs & digital stamps' },
-                    ].map(({ icon, title, desc }) => (
-                      <button key={title} onClick={() => setShowWebcam(true)}
-                        className="group flex flex-col items-center gap-3 border-2 border-dashed border-white/15 hover:border-orange-500/60 rounded-lg p-5 transition-colors bg-white/[0.02]">
-                        <div className="w-10 h-10 bg-orange-500/10 group-hover:bg-orange-500/20 rounded-lg flex items-center justify-center transition-colors">{icon}</div>
-                        <div className="text-center">
-                          <p className="text-[11px] font-bold tracking-wide uppercase text-white mb-1">{title}</p>
-                          <p className="text-[9px] text-[#b0b4ba] leading-relaxed">{desc}</p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                  {hash && (
-                    <div className="border-l-2 border-emerald-500 pl-3 py-1 bg-emerald-500/5 rounded-r-lg">
-                      <p className="text-[10px] font-bold tracking-wide uppercase text-emerald-400 mb-1">✓ Hash captured from scan</p>
-                      <p className="font-mono text-[10px] text-[#b0b4ba] break-all">{hash}</p>
-                    </div>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {error && <p className="text-red-400 text-[12px] mb-4 border-l-2 border-red-500 pl-3 mt-2">{error}</p>}
-
-            <button onClick={handleVerify} disabled={loading || hashing || !hash.trim()}
-              className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 disabled:opacity-40 disabled:cursor-not-allowed text-white text-[13px] font-bold tracking-wide py-3 rounded-lg transition-all transform hover:scale-[1.02] shadow-lg shadow-orange-500/20 mt-4">
-              {loading
-                ? <><Loader2 className="w-4 h-4 animate-spin" />Verifying on Blockchain…</>
-                : <><Search className="w-4 h-4" />Verify on Blockchain</>}
-            </button>
+          {/* ── SEARCH ───────────────────────────────────────────────── */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="mb-6"
+          >
+            <div className="relative max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6C6C74] dark:text-[#9090A0]" />
+              <input
+                type="text"
+                placeholder="Search by name, email, or ID…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="w-full pl-9 pr-4 py-2.5 text-[13px] bg-white dark:bg-[#1C1C1F] border border-[#E8E6E1] dark:border-[#2C2C32] rounded-xl text-[#1A1A1C] dark:text-[#EAEAEC] placeholder-[#B0B0B8] dark:placeholder-[#55555F] focus:outline-none focus:border-[#E8500A] transition-colors"
+              />
+            </div>
           </motion.div>
 
-          {/* RESULT */}
-          <AnimatePresence>
-            {result && (
-              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                className={`rounded-xl border-2 p-6 backdrop-blur-sm ${
-                  isAuthentic  ? 'border-emerald-500/50 bg-emerald-500/10'
-                  : isExpiredDoc ? 'border-red-500/50 bg-red-500/10'
-                  : isRevoked  ? 'border-amber-500/50 bg-amber-500/10'
-                  : 'border-red-500/50 bg-red-500/10'
-                }`}>
+          {/* ── TABLE ────────────────────────────────────────────────── */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.13 }}
+          >
+            {/* legend */}
+            <div className="flex items-center gap-5 mb-3">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-emerald-200 dark:ring-emerald-900/60" />
+                <span className="text-[10px] text-[#6C6C74] dark:text-[#9090A0] tracking-wide">Clean record</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-orange-500 ring-2 ring-orange-200 dark:ring-orange-900/60" />
+                <span className="text-[10px] text-[#6C6C74] dark:text-[#9090A0] tracking-wide">Has revoked docs</span>
+              </span>
+            </div>
 
-                {isAuthentic && (                  <>
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-                        <ShieldCheck className="w-5 h-5 text-emerald-400" />
-                      </div>
-                      <div>
-                        <p className="text-[14px] font-bold text-emerald-400 uppercase tracking-wide">Authentic Document</p>
-                        <p className="text-[12px] text-emerald-400/70 mt-0.5">Officially recorded on the Sepolia blockchain.</p>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-6">
-                      {[
-                        { label: 'Document Type', value: result.documentType ? fmtDocType(result.documentType) : '—' },
-                        { label: 'Recorded On', value: result.timestamp ? new Date(result.timestamp * 1000).toLocaleString('en-PH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—' },
-                      ].map(({ label, value }) => (
-                        <div key={label} className="bg-white/5 rounded-lg p-3">
-                          <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#b0b4ba] mb-1">{label}</p>
-                          <p className="text-[13px] font-semibold text-white">{value}</p>
+            {/* col headers */}
+            <div className="grid grid-cols-[1fr_160px_120px_110px_80px_80px] py-2 border-b border-[#E8E6E1] dark:border-[#2C2C32]">
+              {['Resident', 'Contact', 'Registered', 'Trust', 'Requests', ''].map(h => (
+                <span key={h} className="text-[11px] font-semibold tracking-[0.12em] uppercase text-[#6C6C74] dark:text-[#9090A0]">
+                  {h}
+                </span>
+              ))}
+            </div>
+
+            {residents.length === 0 ? (
+              <div className="py-20 flex flex-col items-center gap-3">
+                <User className="w-6 h-6 text-[#c8c6c0] dark:text-[#3a3845]" />
+                <p className="mono text-[12px] tracking-widest uppercase text-[#6C6C74] dark:text-[#9090A0]">
+                  No residents yet
+                </p>
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="py-20 flex flex-col items-center gap-3">
+                <Search className="w-6 h-6 text-[#c8c6c0] dark:text-[#3a3845]" />
+                <p className="mono text-[12px] tracking-widest uppercase text-[#6C6C74] dark:text-[#9090A0]">
+                  No results match
+                </p>
+              </div>
+            ) : (
+              <AnimatePresence>
+                {filtered.map((res, i) => {
+                  const result = killResults[res.id];
+                  return (
+                    <motion.div key={res.id}>
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.025 * i }}
+                        className={`group grid grid-cols-[1fr_160px_120px_110px_80px_80px] items-center py-3.5 border-b border-[#E8E6E1] dark:border-[#2C2C32] -mx-2 px-2 transition-colors duration-100
+                          ${res.revokedCount > 0
+                            ? 'hover:bg-orange-50/60 dark:hover:bg-orange-950/10'
+                            : 'hover:bg-[#F6F5F3] dark:hover:bg-[#1C1C1F]'}`}
+                      >
+                        {/* resident identity */}
+                        <div className="flex items-center gap-3 min-w-0 pr-4">
+                          {res.avatar_base64 ? (
+                            <img
+                              src={res.avatar_base64}
+                              alt=""
+                              className="w-8 h-8 rounded-full object-cover flex-shrink-0 border border-[#E8E6E1] dark:border-[#2C2C32]"
+                            />
+                          ) : (
+                            <div className="w-8 h-8 flex-shrink-0 bg-orange-500 flex items-center justify-center">
+                              <span className="mono text-[10px] font-bold text-white leading-none">
+                                {getInitials(res.firstName, res.lastName)}
+                              </span>
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <p className="text-[14px] font-medium text-[#1A1A1C] dark:text-[#EAEAEC] truncate leading-none">
+                              {res.firstName} {res.lastName}
+                            </p>
+                            <p className="mono text-[11px] text-[#6C6C74] dark:text-[#9090A0] mt-1.5 truncate">
+                              {res.id.slice(0, 8).toUpperCase()}
+                            </p>
+                          </div>
                         </div>
-                      ))}
-                      <div className="sm:col-span-2 bg-white/5 rounded-lg p-3">
-                        <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#b0b4ba] mb-1">Recorded By (Wallet)</p>
-                        <p className="font-mono text-[11px] text-[#b0b4ba] break-all">{result.recordedBy || '—'}</p>
-                      </div>
-                      <div className={`rounded-lg p-3 ${result.isExpired ? 'bg-red-500/10 border border-red-500/30' : 'bg-white/5'}`}>
-                        <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#b0b4ba] mb-1">Valid Until</p>
-                        <p className={`text-[13px] font-semibold ${result.isExpired ? 'text-red-400' : 'text-white'}`}>
-                          {result.expiresAt ? new Date(result.expiresAt * 1000).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' }) : '—'}
-                        </p>
-                        {!result.isExpired && countdown && (
-                          <p className="text-[10px] text-emerald-400 mt-1 flex items-center gap-1 font-mono">
-                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                            Expires in {countdown}
-                          </p>
-                        )}
-                        {result.isExpired && (
-                          <span className="text-[10px] font-bold text-red-400 uppercase tracking-wide">⚠ Expired</span>
-                        )}
-                      </div>
-                      <div className={`rounded-lg p-3 ${result.isExpired ? 'bg-red-500/10 border border-red-500/30' : 'bg-emerald-500/10 border border-emerald-500/20'}`}>
-                        <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#b0b4ba] mb-1">Validity Status</p>
-                        <span className={`inline-flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wide ${result.isExpired ? 'text-red-400' : 'text-emerald-400'}`}>
-                          {result.isExpired ? '⚠ Document Expired' : '✓ Currently Valid'}
+
+                        {/* contact */}
+                        <div className="pr-3 min-w-0">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <Mail className="w-3 h-3 text-[#6C6C74] dark:text-[#9090A0] flex-shrink-0" />
+                            <p className="text-[12px] text-[#3A3A3E] dark:text-[#BABABC] truncate">{res.email}</p>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <Phone className="w-3 h-3 text-[#6C6C74] dark:text-[#9090A0] flex-shrink-0" />
+                            <p className="text-[12px] text-[#6C6C74] dark:text-[#9090A0] truncate">{res.phone || '—'}</p>
+                          </div>
+                        </div>
+
+                        {/* registered */}
+                        <span className="mono text-[11px] text-[#6C6C74] dark:text-[#9090A0]">
+                          {fmt(res.created_at)}
                         </span>
-                      </div>
-                      <div className="sm:col-span-2 bg-white/5 rounded-lg p-3">
-                        <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#b0b4ba] mb-1">Payload Hash (on-chain)</p>
-                        <p className="font-mono text-[10px] text-[#b0b4ba] break-all">{hash}</p>
-                      </div>
-                      {result.payloadSnapshot && (
-                        <div className="sm:col-span-2 bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-3">
-                          <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-emerald-400 mb-2">🔒 Locked Fields</p>
-                          {(() => {
-                            const parts = result.payloadSnapshot!.split('|');
-                            const labeled: { label: string; value: string }[] = [];
-                            if (parts[0]) labeled.push({ label: 'Document Type', value: parts[0] });
-                            if (parts[1]) labeled.push({ label: 'Full Name', value: parts[1] });
-                            if (parts[2]) labeled.push({ label: 'Purpose', value: parts[2] });
-                            for (let i = 3; i < parts.length - 1; i++) {
-                              const eq = parts[i].indexOf('='); if (eq === -1) continue;
-                              const v = parts[i].slice(eq + 1); if (v) labeled.push({ label: parts[i].slice(0, eq).replace(/_/g, ' '), value: v });
-                            }
-                            const last = parts[parts.length - 1];
-                            if (last && parts.length > 1) labeled.push({ label: 'Issued At', value: new Date(last).toLocaleString('en-PH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) });
-                            return (
-                              <div className="grid grid-cols-1 gap-1.5">
-                                {labeled.map(({ label, value }, i) => (
-                                  <div key={i} className="flex gap-2 text-[10px] font-mono">
-                                    <span className="text-emerald-400/70 shrink-0 w-36 truncate capitalize">{label}</span>
-                                    <span className="text-[#b0b4ba]">{value}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            );
-                          })()}
-                          <p className="text-[9px] text-emerald-400/50 mt-2">Any change to these fields would produce a different hash.</p>
+
+                        {/* trust indicator */}
+                        <div>
+                          <TrustDot revokedCount={res.revokedCount} />
                         </div>
-                      )}
-                    </div>
-                    <a href={`https://sepolia.etherscan.io/address/${result.recordedBy}`} target="_blank" rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-[11px] font-bold tracking-wide uppercase text-emerald-400 hover:text-emerald-300 transition-colors">
-                      <ExternalLink className="w-3.5 h-3.5" /> View on Etherscan
-                    </a>
-                  </>
-                )}
 
-                {isExpiredDoc && (
-                  <>
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
-                        <ShieldAlert className="w-5 h-5 text-red-400" />
-                      </div>
-                      <div>
-                        <p className="text-[14px] font-bold text-red-400 uppercase tracking-wide">Document Expired</p>
-                        <p className="text-[12px] text-red-400/70 mt-0.5">This document was genuine but has passed its validity date.</p>
-                      </div>
-                    </div>
-                    <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-                      <p className="text-[11px] font-bold text-red-400">⚠ THIS DOCUMENT HAS EXPIRED — DO NOT ACCEPT AS VALID</p>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="bg-white/5 rounded-lg p-3">
-                        <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#b0b4ba] mb-1">Document Type</p>
-                        <p className="text-[13px] font-semibold text-white">{result.documentType ? fmtDocType(result.documentType) : '—'}</p>
-                      </div>
-                      <div className="bg-white/5 rounded-lg p-3">
-                        <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#b0b4ba] mb-1">Originally Recorded</p>
-                        <p className="text-[13px] font-semibold text-white">
-                          {result.timestamp ? new Date(result.timestamp * 1000).toLocaleString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' }) : '—'}
-                        </p>
-                      </div>
-                      <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
-                        <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#b0b4ba] mb-1">Expired On</p>
-                        <p className="text-[13px] font-semibold text-red-400">
-                          {result.expiresAt ? new Date(result.expiresAt * 1000).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' }) : '—'}
-                        </p>
-                      </div>
-                      <div className="bg-white/5 rounded-lg p-3">
-                        <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#b0b4ba] mb-1">Hash</p>
-                        <p className="font-mono text-[10px] text-[#b0b4ba] break-all">{hash}</p>
-                      </div>
-                    </div>
-                  </>
-                )}
+                        {/* request count */}
+                        <span className="mono text-[13px] font-bold tabular-nums text-[#1A1A1C] dark:text-[#EAEAEC]">
+                          {res.totalRequests ?? 0}
+                        </span>
 
-                {isRevoked && (
-                  <>
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-                        <ShieldAlert className="w-5 h-5 text-amber-400" />
-                      </div>
-                      <div>
-                        <p className="text-[14px] font-bold text-amber-400 uppercase tracking-wide">Document Revoked</p>
-                        <p className="text-[12px] text-amber-400/70 mt-0.5">This document has been officially revoked and is no longer valid.</p>
-                      </div>
-                    </div>
-                    <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-                      <p className="text-[11px] font-bold text-amber-400">⚠ DO NOT ACCEPT THIS DOCUMENT AS VALID</p>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="bg-white/5 rounded-lg p-3">
-                        <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#b0b4ba] mb-1">Document Type</p>
-                        <p className="text-[13px] font-semibold text-white">{result.documentType ? fmtDocType(result.documentType) : '—'}</p>
-                      </div>
-                      <div className="bg-white/5 rounded-lg p-3">
-                        <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#b0b4ba] mb-1">Originally Recorded</p>
-                        <p className="text-[13px] font-semibold text-white">
-                          {result.timestamp ? new Date(result.timestamp * 1000).toLocaleString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' }) : '—'}
-                        </p>
-                      </div>
-                    </div>
-                  </>
-                )}
+                        {/* actions */}
+                        <div className="flex items-center justify-end gap-1.5">
+                          {/* kill-switch button */}
+                          <button
+                            onClick={() => {
+                              setKillResults(prev => { const n = { ...prev }; delete n[res.id]; return n; });
+                              setKillTarget(res);
+                            }}
+                            disabled={res.approvedCount === 0}
+                            title={
+                              res.approvedCount === 0
+                                ? 'No active documents to revoke'
+                                : `Kill-switch: revoke all ${res.approvedCount} active doc${res.approvedCount !== 1 ? 's' : ''}`
+                            }
+                            className="flex items-center justify-center w-7 h-7 border border-[#E8E6E1] dark:border-[#2C2C32] hover:bg-red-600 hover:border-red-600 group/ks transition-colors duration-150 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-[#E8E6E1] dark:disabled:hover:border-[#2C2C32]"
+                          >
+                            <ShieldOff className="w-3.5 h-3.5 text-[#6C6C74] dark:text-[#9090A0] group-hover/ks:text-white transition-colors" />
+                          </button>
 
-                {isNotFound && (
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <ShieldX className="w-5 h-5 text-red-400" />
-                    </div>
-                    <div>
-                      <p className="text-[14px] font-bold text-red-400 uppercase tracking-wide mb-1">Not Found on Blockchain</p>
-                      <p className="text-[13px] text-red-400/70 leading-relaxed">No record exists for this hash. The document may not have been issued by the barangay, or the file may have been tampered with.</p>
-                      <div className="mt-4 bg-white/5 rounded-lg p-3">
-                        <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#b0b4ba] mb-1">Hash Checked</p>
-                        <p className="font-mono text-[10px] text-[#b0b4ba] break-all">{hash}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </motion.div>
+                          {/* view profile */}
+                          <Link href={`/residents/${res.id}`}>
+                            <span className="flex items-center justify-center w-7 h-7 border border-[#E8E6E1] dark:border-[#2C2C32] hover:bg-orange-600 hover:border-orange-600 group/btn transition-colors duration-150">
+                              <Eye className="w-3.5 h-3.5 text-[#6C6C74] dark:text-[#9090A0] group-hover/btn:text-white transition-colors" />
+                            </span>
+                          </Link>
+                        </div>
+                      </motion.div>
+
+                      {/* inline result banner per row */}
+                      <AnimatePresence>
+                        {result && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="overflow-hidden"
+                          >
+                            <div className={`flex items-center justify-between gap-4 px-2 py-2 border-b border-[#E8E6E1] dark:border-[#2C2C32]
+                              ${result.success
+                                ? 'bg-emerald-50 dark:bg-emerald-950/20'
+                                : 'bg-red-50 dark:bg-red-950/20'}`}
+                            >
+                              <p className={`text-[11px] leading-snug ${result.success ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                                {result.success ? '✓' : '✕'} {result.message}
+                              </p>
+                              <button
+                                onClick={() => setKillResults(prev => { const n = { ...prev }; delete n[res.id]; return n; })}
+                                className="mono text-[10px] opacity-50 hover:opacity-100 flex-shrink-0"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
             )}
-          </AnimatePresence>
 
-          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
-            className="text-[11px] text-center text-[#555860] mt-8 leading-relaxed">
-            Verification is done against the Sepolia Ethereum testnet. Records are permanent and tamper-proof once on-chain.
-          </motion.p>
+            {filtered.length > 0 && (
+              <p className="mono text-[11px] text-[#6C6C74] dark:text-[#9090A0] mt-3">
+                Showing {filtered.length} of {residents.length} resident{residents.length !== 1 ? 's' : ''}
+              </p>
+            )}
+          </motion.div>
+
         </div>
-        <Footer />
       </div>
     </>
   );
