@@ -740,6 +740,7 @@ async function injectBusinessClearance(zip: any, req: RequestDetail, profile: Pr
   const { day, suffix, MONTH, year } = getCurrentDateParts();
 
   await patchXml(zip, 'word/document.xml', xml => {
+    // ── Old template split-run normalizers (rsidR 0005616E / 00F7455D / 00464B19) ──
     xml = xml.replace(
       '<w:r w:rsidR="0005616E" w:rsidRPr="0005616E"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="0005616E" w:rsidRPr="0005616E"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>fullname</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="0005616E" w:rsidRPr="0005616E"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>}</w:t></w:r>',
       '<w:r w:rsidR="0005616E" w:rsidRPr="0005616E"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>{fullname}</w:t></w:r>',
@@ -761,6 +762,23 @@ async function injectBusinessClearance(zip: any, req: RequestDetail, profile: Pr
       '<w:r w:rsidR="00464B19" w:rsidRPr="00464B19"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:w w:val="102"/><w:kern w:val="0"/></w:rPr><w:t>{ctc_place_issued}</w:t></w:r>',
     );
 
+    // ── New template CTC normalizers (rsidRPr 000511D4, prefix-merged pattern) ──
+    // CTC #: { | ctc_no | } 
+    xml = xml.replace(
+      '<w:r w:rsidRPr="000511D4"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:kern w:val="0"/></w:rPr><w:t>CTC #: {</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidRPr="000511D4"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:kern w:val="0"/></w:rPr><w:t>ctc_no</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidRPr="000511D4"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:kern w:val="0"/></w:rPr><w:t xml:space="preserve">} </w:t></w:r>',
+      '<w:r w:rsidRPr="000511D4"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:kern w:val="0"/></w:rPr><w:t xml:space="preserve">CTC #: {ctc_no} </w:t></w:r>',
+    );
+    // Date Issued: { | ctc_date_issued | } 
+    xml = xml.replace(
+      '<w:r w:rsidRPr="000511D4"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:kern w:val="0"/></w:rPr><w:t>Date Issued: {</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidRPr="000511D4"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:kern w:val="0"/></w:rPr><w:t>ctc_date_issued</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidRPr="000511D4"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:kern w:val="0"/></w:rPr><w:t xml:space="preserve">} </w:t></w:r>',
+      '<w:r w:rsidRPr="000511D4"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:kern w:val="0"/></w:rPr><w:t xml:space="preserve">Date Issued: {ctc_date_issued} </w:t></w:r>',
+    );
+    // Place Issued: { | ctc_place_issued | }
+    xml = xml.replace(
+      '<w:r w:rsidRPr="000511D4"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:kern w:val="0"/></w:rPr><w:t>Place Issued: {</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidRPr="000511D4"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:kern w:val="0"/></w:rPr><w:t>ctc_place_issued</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidRPr="000511D4"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:kern w:val="0"/></w:rPr><w:t>}</w:t></w:r>',
+      '<w:r w:rsidRPr="000511D4"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:kern w:val="0"/></w:rPr><w:t>Place Issued: {ctc_place_issued}</w:t></w:r>',
+    );
+
     xml = xml.replace(/APPLICANT NAME PLACEHOLDER/g, xmlEscape(owner));
     xml = xml.replace(/\{fullname\}/g,               xmlEscape(owner));
     xml = xml.replace(/\{business_name\} /g,         xmlEscape(business) + ' ');
@@ -769,9 +787,14 @@ async function injectBusinessClearance(zip: any, req: RequestDetail, profile: Pr
     xml = xml.replace(/\{this_day\}/g,               xmlEscape(day + suffix));
     xml = xml.replace(/\{month\}/g,                  xmlEscape(MONTH));
     xml = xml.replace(/\{year\}/g,                   xmlEscape(year));
-    xml = xml.replace(/\{ctc_date_issued\}/g,        xmlEscape(ctcDate));
-    xml = xml.replace(/\{ctc_place_issued\}/g,       xmlEscape(ctcPlace));
-    xml = xml.replace(/\{ctc_no\}/g,                 xmlEscape(ctcNo));
+    xml = xml.replace(/CTC #: \{ctc_no\} /g,        `CTC #: ${xmlEscape(ctcNo)} `);
+    xml = xml.replace(/Date Issued: \{ctc_date_issued\} /g, `Date Issued: ${xmlEscape(ctcDate)} `);
+    xml = xml.replace(/Place Issued: \{ctc_place_issued\}/g, `Place Issued: ${xmlEscape(ctcPlace)}`);
+    xml = xml.replace(/\{ctc_no\} /g,               xmlEscape(ctcNo) + ' ');
+    xml = xml.replace(/\{ctc_no\}/g,                xmlEscape(ctcNo));
+    xml = xml.replace(/\{ctc_date_issued\} /g,      xmlEscape(ctcDate) + ' ');
+    xml = xml.replace(/\{ctc_date_issued\}/g,       xmlEscape(ctcDate));
+    xml = xml.replace(/\{ctc_place_issued\}/g,      xmlEscape(ctcPlace));
 
     xml = xml.replace(
       /BUSINESS CLEARANCE is Grante GREGORIO/g,
@@ -1124,7 +1147,12 @@ async function injectCertificateOfResidency(zip: any, req: RequestDetail, profil
       `<w:r w:rsidR="${R}"><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="${R}"><w:t>this_day</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="${R}"><w:t>}</w:t></w:r>`,
       `<w:r w:rsidR="${R}"><w:t>{this_day}</w:t></w:r>`,
     );
-    // Normalize split {fullname}
+    // Normalize split {fullname} — closing run has trailing space in actual XML
+    xml = xml.replace(
+      `<w:r w:rsidR="${R}"><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="${R}"><w:t>fullname</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="${R}"><w:t xml:space="preserve">} </w:t></w:r>`,
+      `<w:r w:rsidR="${R}"><w:t xml:space="preserve">{fullname} </w:t></w:r>`,
+    );
+    // Fallback without trailing space
     xml = xml.replace(
       `<w:r w:rsidR="${R}"><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="${R}"><w:t>fullname</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="${R}"><w:t>}</w:t></w:r>`,
       `<w:r w:rsidR="${R}"><w:t>{fullname}</w:t></w:r>`,
@@ -1228,7 +1256,12 @@ async function injectBarangayCertification(zip: any, req: RequestDetail, profile
       `<w:r w:rsidR="${R}"><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="${R}"><w:t>this_day</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="${R}"><w:t>}</w:t></w:r>`,
       `<w:r w:rsidR="${R}"><w:t>{this_day}</w:t></w:r>`,
     );
-    // Normalize split {fullname}
+    // Normalize split {fullname} — closing run has trailing space in actual XML
+    xml = xml.replace(
+      `<w:r w:rsidR="${R}"><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="${R}"><w:t>fullname</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="${R}"><w:t xml:space="preserve">} </w:t></w:r>`,
+      `<w:r w:rsidR="${R}"><w:t xml:space="preserve">{fullname} </w:t></w:r>`,
+    );
+    // Fallback without trailing space
     xml = xml.replace(
       `<w:r w:rsidR="${R}"><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="${R}"><w:t>fullname</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="${R}"><w:t>}</w:t></w:r>`,
       `<w:r w:rsidR="${R}"><w:t>{fullname}</w:t></w:r>`,
