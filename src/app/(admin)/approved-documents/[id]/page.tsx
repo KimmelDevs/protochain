@@ -256,6 +256,25 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'revoked', revoke_tx_hash: txHash }),
       });
+
+      // Write audit log entry for this individual revocation
+      const { data: { user: adminUser } } = await supabase.auth.getUser();
+      const { data: adminProfile } = await supabase
+        .from('profiles')
+        .select('firstName, lastName, email')
+        .eq('id', adminUser?.id ?? '')
+        .single();
+      const adminName  = adminProfile ? `${adminProfile.firstName} ${adminProfile.lastName}` : 'Admin';
+      const adminEmail = adminProfile?.email ?? adminUser?.email ?? '';
+      await supabase.from('audit_logs').insert({
+        request_id:      id,
+        action:          'revoked',
+        performed_by:    adminUser?.id ?? '',
+        performer_email: adminEmail,
+        performer_name:  adminName,
+        notes:           `Document revoked on-chain${txHash ? `. TX: ${txHash}` : ''}`,
+      });
+
       setIsRevoked(true);
       setRevokeSuccess(`Document revoked on-chain. Tx: ${txHash.slice(0, 20)}…${txHash.slice(-10)}`);
     } catch (e: unknown) {
