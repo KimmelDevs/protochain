@@ -55,7 +55,6 @@ export interface RequestDetail {
   payload_hash?:             string;
   payload_snapshot?:         string;
   chain_tx_hash?:            string;
-  revoke_tx_hash?:           string;
   created_at:                string;
   processed_at?:             string;
   // Document-specific fields
@@ -921,6 +920,27 @@ async function injectOathOfUndertaking(zip: any, req: RequestDetail, profile: Pr
   });
 }
 
+// ─── Universal split-run normalizer ──────────────────────────────────────────
+//
+// Word splits placeholder text across multiple <w:r> runs when edited,
+// making exact-string matching fragile. This regex-based approach collapses
+// any split-run pattern for a given token regardless of rsidR values, rPr
+// formatting, or xml:space attributes.
+//
+// Used as a FIRST PASS before the existing hardcoded normalizations — both
+// approaches try to match; whichever succeeds wins.
+//
+function normalizeSplitPlaceholder(xml: string, token: string): string {
+  const esc     = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const chars   = `{${token}}`.split('');
+  const runPat  = (c: string) =>
+    `<w:r[^>]*>(?:<w:rPr>[\\s\\S]*?<\\/w:rPr>)?<w:t[^>]*>${esc(c)}<\\/w:t><\\/w:r>`;
+  const sep     = '(?:<w:proofErr[^/]*/>)*';
+  const pattern = chars.map(runPat).join(sep);
+  const re      = new RegExp(pattern, 'g');
+  return xml.replace(re, `<w:r><w:t>{${token}}</w:t></w:r>`);
+}
+
 /**
  * CERTIFICATE OF INDIGENCY
  *
@@ -940,6 +960,10 @@ async function injectCertificateOfIndigency(zip: any, req: RequestDetail, profil
   const R = '00084929';
 
   await patchXml(zip, 'word/document.xml', xml => {
+    // First pass: universal regex normalizer (handles any rsidR variation)
+    for (const token of ['fullname', 'this_day', 'ctc_no', 'ctc_date_issued', 'ctc_place_issued']) {
+      xml = normalizeSplitPlaceholder(xml, token);
+    }
     // Normalize split {this_day} runs
     xml = xml.replace(
       `<w:r w:rsidR="${R}"><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="${R}"><w:t>this_day</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="${R}"><w:t>}</w:t></w:r>`,
@@ -1009,6 +1033,10 @@ async function injectCertificateOfResidency(zip: any, req: RequestDetail, profil
   const rPrResidency = '<w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr>';
 
   await patchXml(zip, 'word/document.xml', xml => {
+    // First pass: universal regex normalizer (handles any rsidR variation)
+    for (const token of ['fullname', 'this_day', 'ctc_no', 'ctc_date_issued', 'ctc_place_issued', 'years_lived', 'months_lived']) {
+      xml = normalizeSplitPlaceholder(xml, token);
+    }
     // Normalize split {this_day}
     xml = xml.replace(
       `<w:r w:rsidR="${R}"><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="${R}"><w:t>this_day</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="${R}"><w:t>}</w:t></w:r>`,
@@ -1090,6 +1118,10 @@ async function injectBarangayCertification(zip: any, req: RequestDetail, profile
   const R = '00993485';
 
   await patchXml(zip, 'word/document.xml', xml => {
+    // First pass: universal regex normalizer (handles any rsidR variation)
+    for (const token of ['fullname', 'this_day', 'ctc_no', 'ctc_date_issued', 'ctc_place_issued']) {
+      xml = normalizeSplitPlaceholder(xml, token);
+    }
     // Normalize split {this_day}
     xml = xml.replace(
       `<w:r w:rsidR="${R}"><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="${R}"><w:t>this_day</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="${R}"><w:t>}</w:t></w:r>`,
@@ -1170,7 +1202,7 @@ export async function generateDocument(
     console.warn('QR generation failed — placeholder image left unchanged.');
   }
 
-  if (['barangay-clearance', 'business-clearance'].includes(docType)) {
+  if (['barangay-clearance', 'business-clearance', 'certificate-of-indigency', 'certificate-of-residency', 'barangay-certification'].includes(docType)) {
     const sealDataUrl = await generateDigitalSealDataUrl(
       req.chain_tx_hash ?? null,
       req.file_hash     ?? null,
