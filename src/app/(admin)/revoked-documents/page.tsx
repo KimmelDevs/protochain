@@ -294,7 +294,7 @@ export default function RevokedDocumentsPage() {
                       </span>
 
                       {/* view */}
-                      <Link href={`/approved-documents/${req.id}`} className="flex justify-end">
+                      <Link href={`/revoked-documents/${req.id}`} className="flex justify-end">
                         <span className="flex items-center justify-center w-7 h-7 border border-[#E8E6E1] dark:border-[#2C2C32] hover:bg-orange-600 hover:border-orange-600 group/btn transition-colors duration-150">
                           <Eye className="w-3.5 h-3.5 text-[#6C6C74] dark:text-[#9090A0] group-hover/btn:text-white transition-colors" />
                         </span>

@@ -55,6 +55,7 @@ export interface RequestDetail {
   payload_hash?:             string;
   payload_snapshot?:         string;
   chain_tx_hash?:            string;
+  revoke_tx_hash?:           string;
   created_at:                string;
   processed_at?:             string;
   // Document-specific fields
