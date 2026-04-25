@@ -692,6 +692,51 @@ export default function ResidentDetailPage({ params }: { params: Promise<{ id: s
                 </div>
               </div>
 
+              {/* Recent Activity */}
+              <div>
+                <SectionLabel label="Recent Activity" />
+                {(() => {
+                  const recent = requests
+                    .filter(r => r.status === 'approved' || r.status === 'revoked')
+                    .slice(0, 5);
+                  if (!recent.length) return (
+                    <p className="text-[12px] text-[#6C6C74] dark:text-[#9090A0]">No approved or revoked documents yet.</p>
+                  );
+                  return (
+                    <div className="space-y-2">
+                      {recent.map(r => (
+                        <Link
+                          key={r.id}
+                          href={requestLink(r)}
+                          className="flex items-center justify-between gap-3 px-3 py-2.5 border border-[#E8E6E1] dark:border-[#2C2C32] bg-white dark:bg-[#1C1C1F] hover:border-orange-400 dark:hover:border-orange-600 transition-colors group"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-[12px] font-medium text-[#1A1A1C] dark:text-[#EAEAEC] truncate">
+                              {fmtDocType(r.type ?? r.document_type)}
+                            </p>
+                            <p className="mono text-[10px] text-[#6C6C74] dark:text-[#9090A0] mt-0.5">
+                              {new Date(r.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <span className={`inline-block w-1.5 h-1.5 rounded-full ${
+                              r.status === 'approved' ? 'bg-emerald-400' : 'bg-orange-400'
+                            }`} />
+                            <span className={`mono text-[9px] font-bold uppercase tracking-[0.08em] ${
+                              r.status === 'approved'
+                                ? 'text-emerald-600 dark:text-emerald-400'
+                                : 'text-orange-600 dark:text-orange-400'
+                            }`}>
+                              {r.status}
+                            </span>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+
               {/* ── ASH KILL-SWITCH ─────────────────────────────────────── */}
               <div>
                 <SectionLabel label="Active-State Heartbeat" />
