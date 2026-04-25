@@ -9,7 +9,7 @@ import Button from '@/app/components/ui/Button';
 import {
   ArrowLeft, User, MapPin, Phone, Mail,
   CheckCircle, Clock, XCircle, Download, Loader2,
-  Pencil, X, Save, History, Bell, BellOff,
+  Pencil, X, Save, History, Bell, BellOff, ShieldCheck,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -28,6 +28,9 @@ interface RequestDetail {
   bcn_no: string | null; user_id: string;
   follow_up_requested: boolean | null;
   follow_up_requested_at: string | null;
+  file_hash: string | null;
+  payload_hash: string | null;
+  chain_tx_hash: string | null;
 }
 
 interface Profile {
@@ -46,6 +49,43 @@ interface EditHistory {
 
 /* ─── Variants ───────────────────────────────────────────────── */
 const EASE = [0.25, 0.46, 0.45, 0.94] as [number, number, number, number];
+
+const HashDisplay = ({ hash, txHash }: { hash: string; txHash?: string | null }) => {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="border-l-2 border-emerald-500 pl-3 py-1 space-y-2">
+      <div>
+        <div className="flex items-center gap-2 mb-1">
+          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+          <span className="text-[10px] font-700 tracking-[0.08em] uppercase text-emerald-600 dark:text-emerald-400">
+            SHA-256 Hash
+          </span>
+        </div>
+        <p className="mono text-[10px] text-[#60646c] dark:text-[#b0b4ba] break-all leading-relaxed mb-1">
+          {hash}
+        </p>
+        <button
+          onClick={() => { navigator.clipboard.writeText(hash); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+          className="mono text-[10px] text-orange-600 dark:text-orange-400 hover:underline"
+        >
+          {copied ? '✓ Copied' : 'Copy hash'}
+        </button>
+      </div>
+      {txHash && (
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />
+            <span className="text-[10px] font-700 tracking-[0.08em] uppercase text-blue-500">On-Chain (Sepolia)</span>
+          </div>
+          <a href={`https://sepolia.etherscan.io/tx/${txHash}`} target="_blank" rel="noopener noreferrer"
+            className="mono text-[10px] text-blue-500 hover:underline break-all">
+            {txHash.slice(0, 20)}…{txHash.slice(-10)} ↗
+          </a>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const fadeUp = (delay = 0) => ({
   initial:    { opacity: 0, y: 20 },
@@ -694,6 +734,26 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                         Download Document
                       </Button>
                     </a>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
+            {/* Blockchain verification — shown for approved docs that have been hashed */}
+            {request.status === 'approved' && (request.file_hash || request.chain_tx_hash) && (
+              <motion.div {...slideInRight(0.32)}>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <ShieldCheck className="w-5 h-5 text-emerald-500" />
+                      Verification
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <HashDisplay
+                      hash={request.file_hash ?? request.payload_hash ?? ''}
+                      txHash={request.chain_tx_hash}
+                    />
                   </CardContent>
                 </Card>
               </motion.div>

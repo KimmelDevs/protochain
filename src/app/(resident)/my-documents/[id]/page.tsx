@@ -37,6 +37,7 @@ interface RequestDoc {
   bcn_no: string | null;
   user_id: string;
   file_hash: string | null;
+  payload_hash: string | null;
   chain_tx_hash: string | null;
 }
 
@@ -488,7 +489,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
               </Card>
             </motion.div>
             {/* Blockchain verification card */}
-            {doc.file_hash && (
+            {(doc.file_hash || doc.chain_tx_hash) && (
               <motion.div {...slideIn('right', 0.35)}>
                 <Card>
                   <CardHeader>
@@ -498,7 +499,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <HashDisplay hash={doc.file_hash} txHash={doc.chain_tx_hash} />
+                    <HashDisplay hash={doc.file_hash ?? doc.payload_hash ?? ''} txHash={doc.chain_tx_hash} />
                   </CardContent>
                 </Card>
               </motion.div>
