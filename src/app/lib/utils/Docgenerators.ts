@@ -902,6 +902,29 @@ async function injectJobSeekerCert(zip: any, req: RequestDetail, profile: Profil
   const footerDate = `${MONTH} ${dayPadded}, ${year}`;
 
   await patchXml(zip, 'word/document.xml', xml => {
+    // Normalize split {fullname} runs (rsidR="0073151E", split by spellCheck proofErr nodes)
+    xml = xml.replace(
+      '<w:r w:rsidR="0073151E" w:rsidRPr="0073151E"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>{</w:t></w:r>' +
+      '<w:proofErr w:type="spellStart"/>' +
+      '<w:r w:rsidR="0073151E" w:rsidRPr="0073151E"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>fullname</w:t></w:r>' +
+      '<w:proofErr w:type="spellEnd"/>' +
+      '<w:r w:rsidR="0073151E" w:rsidRPr="0073151E"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>}</w:t></w:r>',
+      '<w:r w:rsidR="0073151E" w:rsidRPr="0073151E"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>{fullname}</w:t></w:r>',
+    );
+
+    // Normalize split {this_day} runs (rsidR="00592014", split as "{" + "this" + "_day" + "}")
+    xml = xml.replace(
+      '<w:r w:rsidR="00592014"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>{</w:t></w:r>' +
+      '<w:proofErr w:type="spellStart"/>' +
+      '<w:r w:rsidR="00592014"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>this</w:t></w:r>' +
+      '<w:proofErr w:type="gramEnd"/>' +
+      '<w:r w:rsidR="00592014"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>_day</w:t></w:r>' +
+      '<w:proofErr w:type="spellEnd"/>' +
+      '<w:r w:rsidR="00592014"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>}</w:t></w:r>',
+      '<w:r w:rsidR="00592014"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>{this_day}</w:t></w:r>',
+    );
+
+    // Normalize split {purok/location} runs (rsidR="0073151E", no proofErr nodes)
     xml = xml.replace(
       '<w:r w:rsidR="0073151E"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>{</w:t></w:r>' +
       '<w:r w:rsidR="0073151E" w:rsidRPr="0073151E"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>purok/location</w:t></w:r>' +
