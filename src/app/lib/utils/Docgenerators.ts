@@ -35,9 +35,6 @@
 import { supabase } from '@/app/lib/supabase';
 import { rsEncode, hexToBytes, bytesToHex } from '@/app/lib/utils/reedsolomon';
 
-// ─── QR placeholder shape name (same in every template) ───────────────────────
-const QR_SHAPE_NAME = 'Picture 1117202640';
-
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface RequestDetail {
@@ -458,10 +455,16 @@ async function injectQRIntoZip(zip: any, qrDataUrl: string): Promise<void> {
   const docFile = zip.file('word/document.xml');
   if (!docFile) return;
   const xml: string = await docFile.async('string');
-  const shapePos = xml.indexOf(QR_SHAPE_NAME);
-  if (shapePos === -1) { console.warn(`QR shape "${QR_SHAPE_NAME}" not found`); return; }
+
+  // All templates use descr="{qr}" as the alt-text placeholder for the QR image.
+  const QR_DESCR = 'descr="{qr}"';
+  const shapePos = xml.indexOf(QR_DESCR);
+  if (shapePos === -1) { console.warn(`QR placeholder "${QR_DESCR}" not found in document.xml`); return; }
+
+  // Search forward from the placeholder for the r:embed attribute (within the same anchor/drawing block).
   const embedMatch = xml.slice(shapePos, shapePos + 2000).match(/r:embed="(rId\d+)"/);
-  if (!embedMatch) { console.warn('No r:embed for QR'); return; }
+  if (!embedMatch) { console.warn('No r:embed found near QR placeholder'); return; }
+
   const relsFile = zip.file('word/_rels/document.xml.rels');
   if (!relsFile) return;
   const relMatch = (await relsFile.async('string')).match(
@@ -534,7 +537,8 @@ async function generateDigitalSealDataUrl(
 }
 
 async function injectDigitalSealIntoZip(zip: any, sealDataUrl: string): Promise<void> {
-  const SEAL_ALT  = 'Digital Seal';
+  // All templates use descr="{seal}" as the alt-text placeholder for the seal anchor.
+  const SEAL_PLACEHOLDER = '{seal}';
   const SEAL_RID  = 'rId_seal';
   const SEAL_FILE = 'digital_seal.png';
   const docFile = zip.file('word/document.xml');
@@ -558,7 +562,7 @@ async function injectDigitalSealIntoZip(zip: any, sealDataUrl: string): Promise<
     zip.file('word/_rels/document.xml.rels', relsXml);
   }
 
-  // ── Helper: build the floating anchor XML ────────────────────────────────
+  // ── Helper: build the floating anchor XML ─────────────────────────────────
   const buildSealAnchor = (
     cx: string, cy: string,
     posH: string, posV: string,
@@ -572,7 +576,7 @@ async function injectDigitalSealIntoZip(zip: any, sealDataUrl: string): Promise<
     `<wp:positionH relativeFrom="${relH}"><wp:posOffset>${posH}</wp:posOffset></wp:positionH>` +
     `<wp:positionV relativeFrom="${relV}"><wp:posOffset>${posV}</wp:posOffset></wp:positionV>` +
     `<wp:extent cx="${cx}" cy="${cy}"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:wrapNone/>` +
-    `<wp:docPr id="9001" name="Digital Seal" descr="${SEAL_ALT}"/>` +
+    `<wp:docPr id="9001" name="Digital Seal" descr="${SEAL_PLACEHOLDER}"/>` +
     `<wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr>` +
     `<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">` +
     `<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">` +
@@ -584,11 +588,11 @@ async function injectDigitalSealIntoZip(zip: any, sealDataUrl: string): Promise<
     `<a:prstGeom prst="ellipse"><a:avLst/></a:prstGeom></pic:spPr>` +
     `</pic:pic></a:graphicData></a:graphic></wp:anchor>`;
 
-  const descrPos = xml.indexOf(`descr="${SEAL_ALT}"`);
+  // ── Find the {seal} placeholder anchor in the template ────────────────────
+  const descrPos = xml.indexOf(`descr="${SEAL_PLACEHOLDER}"`);
 
   if (descrPos !== -1) {
-    // ── Path A: template already has a Digital Seal placeholder anchor ────────
-    // Replace the existing anchor in-place (original behaviour).
+    // ── Path A: template has a {seal} placeholder anchor — replace it in-place
     const anchorStart = xml.slice(0, descrPos).lastIndexOf('<wp:anchor');
     if (anchorStart === -1) return;
     const fromAnchor = xml.slice(anchorStart);
@@ -606,25 +610,17 @@ async function injectDigitalSealIntoZip(zip: any, sealDataUrl: string): Promise<
     console.log(`Digital Seal replaced (H=${posH} V=${posV})`);
   } else {
     // ── Path B: no placeholder — append a new floating anchor ─────────────────
-    // Used by Certificate of Indigency, Certificate of Residency, and
-    // Barangay Certification whose templates have no pre-existing seal shape.
-    //
-    // Position: bottom-right signature area, page-relative.
-    // Legal paper: 12242 × 19165 twips → 7,773,670 × 12,169,775 EMU
-    // Seal size matches clearance template: 1,057,910 × 1,059,180 EMU (~1.16 in)
-    //
-    // Try to derive posH/posV from the Captain Signature anchor so the seal
-    // lands in the same horizontal band regardless of per-doc layout.
+    // Fallback for any future template that lacks a {seal} anchor.
     const cx = '1057910';
     const cy = '1059180';
     const relHeight = '251699200';
 
-    let posH = '5601360';  // fallback: right-side, page-relative
-    let posV = '8762238';  // fallback: ~72 % down the page, page-relative
+    let posH = '5601360';
+    let posV = '8762238';
     let relH = 'page';
     let relV = 'page';
 
-    // Derive from Captain Signature anchor if present
+    // Derive position from Captain Signature anchor if present
     const capIdx = xml.indexOf('Captain Signature');
     if (capIdx !== -1) {
       const capAnchorStart = xml.slice(0, capIdx).lastIndexOf('<wp:anchor');
@@ -632,21 +628,17 @@ async function injectDigitalSealIntoZip(zip: any, sealDataUrl: string): Promise<
         const capAnchorSnippet = xml.slice(capAnchorStart, capAnchorStart + 800);
         const capH    = capAnchorSnippet.match(/<wp:positionH relativeFrom="([^"]+)">[\s\S]*?<wp:posOffset>(\d+)/);
         const capV    = capAnchorSnippet.match(/<wp:positionV relativeFrom="([^"]+)">[\s\S]*?<wp:posOffset>(\d+)/);
-        const capRelH = capH?.[1] ?? relH;
-        const capRelV = capV?.[1] ?? relV;
         const capPosH = capH ? parseInt(capH[2]) : null;
         const capPosV = capV ? parseInt(capV[2]) : null;
         if (capPosH !== null && capPosV !== null) {
-          // Place seal slightly left of captain sig, same vertical band
           posH = String(capPosH - 200000);
           posV = String(capPosV + 400000);
-          relH = capRelH;
-          relV = capRelV;
+          relH = capH?.[1] ?? relH;
+          relV = capV?.[1] ?? relV;
         }
       }
     }
 
-    // Inject as a drawing inside a new paragraph just before </w:body>
     const bodyEnd = xml.lastIndexOf('</w:body>');
     if (bodyEnd === -1) return;
     const sealPara =
