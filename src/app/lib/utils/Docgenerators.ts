@@ -740,11 +740,6 @@ async function injectBusinessClearance(zip: any, req: RequestDetail, profile: Pr
   const { day, suffix, MONTH, year } = getCurrentDateParts();
 
   await patchXml(zip, 'word/document.xml', xml => {
-    // ── Universal normalizer first (catches any rsidR variation) ──────────────
-    for (const token of ['fullname', 'this_day', 'business_name', 'ctc_no', 'ctc_date_issued', 'ctc_place_issued']) {
-      xml = normalizeSplitPlaceholder(xml, token);
-    }
-
     // ── Old template split-run normalizers (rsidR 0005616E / 00F7455D / 00464B19) ──
     xml = xml.replace(
       '<w:r w:rsidR="0005616E" w:rsidRPr="0005616E"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="0005616E" w:rsidRPr="0005616E"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>fullname</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="0005616E" w:rsidRPr="0005616E"><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>}</w:t></w:r>',
@@ -1152,7 +1147,12 @@ async function injectCertificateOfResidency(zip: any, req: RequestDetail, profil
       `<w:r w:rsidR="${R}"><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="${R}"><w:t>this_day</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="${R}"><w:t>}</w:t></w:r>`,
       `<w:r w:rsidR="${R}"><w:t>{this_day}</w:t></w:r>`,
     );
-    // Normalize split {fullname}
+    // Normalize split {fullname} — closing run has trailing space in actual XML
+    xml = xml.replace(
+      `<w:r w:rsidR="${R}"><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="${R}"><w:t>fullname</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="${R}"><w:t xml:space="preserve">} </w:t></w:r>`,
+      `<w:r w:rsidR="${R}"><w:t xml:space="preserve">{fullname} </w:t></w:r>`,
+    );
+    // Fallback without trailing space
     xml = xml.replace(
       `<w:r w:rsidR="${R}"><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="${R}"><w:t>fullname</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="${R}"><w:t>}</w:t></w:r>`,
       `<w:r w:rsidR="${R}"><w:t>{fullname}</w:t></w:r>`,
@@ -1256,7 +1256,12 @@ async function injectBarangayCertification(zip: any, req: RequestDetail, profile
       `<w:r w:rsidR="${R}"><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="${R}"><w:t>this_day</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="${R}"><w:t>}</w:t></w:r>`,
       `<w:r w:rsidR="${R}"><w:t>{this_day}</w:t></w:r>`,
     );
-    // Normalize split {fullname}
+    // Normalize split {fullname} — closing run has trailing space in actual XML
+    xml = xml.replace(
+      `<w:r w:rsidR="${R}"><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="${R}"><w:t>fullname</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="${R}"><w:t xml:space="preserve">} </w:t></w:r>`,
+      `<w:r w:rsidR="${R}"><w:t xml:space="preserve">{fullname} </w:t></w:r>`,
+    );
+    // Fallback without trailing space
     xml = xml.replace(
       `<w:r w:rsidR="${R}"><w:t>{</w:t></w:r><w:proofErr w:type="spellStart"/><w:r w:rsidR="${R}"><w:t>fullname</w:t></w:r><w:proofErr w:type="spellEnd"/><w:r w:rsidR="${R}"><w:t>}</w:t></w:r>`,
       `<w:r w:rsidR="${R}"><w:t>{fullname}</w:t></w:r>`,
