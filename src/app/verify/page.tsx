@@ -25,6 +25,28 @@ const fmtDocType = (s: string) =>
    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
    .join(' ');
 
+function useCountdown(expiresAt: number | undefined | null) {
+  const [countdown, setCountdown] = useState('');
+  useEffect(() => {
+    if (!expiresAt) { setCountdown(''); return; }
+    const tick = () => {
+      const diff = expiresAt * 1000 - Date.now();
+      if (diff <= 0) { setCountdown('Expired'); return; }
+      const d = Math.floor(diff / 86400000);
+      const h = Math.floor((diff % 86400000) / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      if (d > 0) setCountdown(`${d}d ${h}h ${m}m ${s}s`);
+      else if (h > 0) setCountdown(`${h}h ${m}m ${s}s`);
+      else setCountdown(`${m}m ${s}s`);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [expiresAt]);
+  return countdown;
+}
+
 export default function VerifyPage() {
   return (
     <Suspense>
@@ -91,6 +113,8 @@ function VerifyPageInner() {
   const isExpiredDoc = result?.exists && !result?.isRevoked && result?.isExpired;
   const isRevoked   = result?.exists && result?.isRevoked;
   const isNotFound  = result && !result.exists;
+
+  const countdown = useCountdown(result?.expiresAt);
 
   return (
     <>
@@ -274,6 +298,12 @@ function VerifyPageInner() {
                         <p className={`text-[13px] font-semibold ${result.isExpired ? 'text-red-400' : 'text-white'}`}>
                           {result.expiresAt ? new Date(result.expiresAt * 1000).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' }) : '—'}
                         </p>
+                        {!result.isExpired && countdown && (
+                          <p className="text-[10px] text-emerald-400 mt-1 flex items-center gap-1 font-mono">
+                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                            Expires in {countdown}
+                          </p>
+                        )}
                         {result.isExpired && (
                           <span className="text-[10px] font-bold text-red-400 uppercase tracking-wide">⚠ Expired</span>
                         )}
