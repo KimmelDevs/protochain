@@ -279,10 +279,22 @@ export default function SettingsPage() {
     showToast('Signature saved and ECDSA-signed successfully!');
   };
 
+  // ── Roles allowed to view General & System tabs ────────────────────────────
+  const canViewSettings = adminPosition === 'Barangay Captain' || adminPosition === 'Barangay Secretary';
+
+  const settingsAccessDenied = (
+    <div className="flex items-start gap-3 px-4 py-4 border border-[#E8E6E1] dark:border-[#2C2C32] bg-[#f5f4f0] dark:bg-[#1C1C1F] rounded-xl">
+      <Key className="w-4 h-4 text-[#6C6C74] dark:text-[#9090A0] flex-shrink-0 mt-0.5" />
+      <p className="text-[13px] text-[#6C6C74] dark:text-[#9090A0] leading-snug">
+        You do not have permission to view this section. Only the Barangay Captain and Barangay Secretary can access these settings.
+      </p>
+    </div>
+  );
+
   // ── Tab: General ───────────────────────────────────────────────────────────
   const generalTab = loadingInfo ? (
     <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-orange-500" /></div>
-  ) : (
+  ) : !canViewSettings ? settingsAccessDenied : (
     <div className="space-y-10">
       <div>
         <SectionLabel label="Barangay Information" />
@@ -332,7 +344,7 @@ export default function SettingsPage() {
   // ── Tab: System ────────────────────────────────────────────────────────────
   const systemTab = loadingInfo ? (
     <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-orange-500" /></div>
-  ) : (
+  ) : !canViewSettings ? settingsAccessDenied : (
     <div className="space-y-10">
       <div>
         <SectionLabel label="System Configuration" />
@@ -378,31 +390,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <div className="border-t border-[#E8E6E1] dark:border-[#2C2C32]" />
-
-      <div>
-        <SectionLabel label="Security Settings" />
-        <div className="border-l-2 border-orange-500 pl-4 py-0.5 mb-6">
-          <p className="text-[11px] font-700 tracking-[0.08em] uppercase text-orange-600 dark:text-orange-400 leading-none mb-1">Caution</p>
-          <p className="text-[13px] text-[#3A3A3E] dark:text-[#BABABC]">
-            Blockchain settings should only be modified by system administrators. Contact your IT department for assistance.
-          </p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5 mb-6">
-          <div>
-            <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-1.5">Blockchain Network</p>
-            <p className="text-[14px] font-medium text-[#1A1A1C] dark:text-[#EAEAEC]">Ethereum Sepolia Testnet</p>
-          </div>
-          <div>
-            <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-1.5">Smart Contract</p>
-            <p className="mono text-[13px] text-[#1A1A1C] dark:text-[#EAEAEC]">0x1234&hellip;5678</p>
-          </div>
-        </div>
-        <button className="text-[11px] font-700 tracking-[0.08em] uppercase border border-[#E8E6E1] dark:border-[#2C2C32] text-[#3A3A3E] dark:text-[#BABABC] hover:border-[#1a1917] dark:hover:border-[#f0eee8] hover:text-[#1A1A1C] dark:hover:text-[#f0eee8] px-4 py-2 flex items-center gap-2 transition-colors">
-          <Key className="w-3.5 h-3.5" />
-          Manage API Keys
-        </button>
-      </div>
     </div>
   );
 
