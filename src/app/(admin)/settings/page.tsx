@@ -187,8 +187,10 @@ export default function SettingsPage() {
     try {
       const { error } = await supabase
         .from('barangay_settings')
-        .update({ bypass_two_step_approval: val, updated_at: new Date().toISOString() })
-        .eq('id', 1);
+        .upsert(
+          { id: 1, bypass_two_step_approval: val, updated_at: new Date().toISOString() },
+          { onConflict: 'id' },
+        );
 
       if (error) {
         setBypassEnabled(!val);
