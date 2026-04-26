@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ShieldCheck, ShieldX, ShieldAlert, Loader2, Search,
-  Upload, FileText, ExternalLink, Copy, Check, Camera, QrCode, ScanText,
+  Upload, FileText, ExternalLink, Copy, Check, Camera, QrCode,
 } from 'lucide-react';
 import { verifyDocumentOnChain, type VerifyResult } from '@/app/lib/blockchain';
 import Header from '@/app/components/header';
@@ -221,22 +221,19 @@ function VerifyPageInner() {
               {activeTab === 'scan' && (
                 <motion.div key="scan" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                   <p className="text-[13px] text-[#b0b4ba] mb-5 leading-relaxed">
-                    Use your webcam to scan the barangay document. Works on the <strong className="text-white">embedded QR code</strong>, printed <strong className="text-white">hash text</strong>, or <strong className="text-white">verify URL</strong> — including the digital ESCDA stamp.
+                    Use your webcam to scan the <strong className="text-white">embedded QR code</strong> on the barangay document. The scanner continuously auto-detects and extracts the verification hash.
                   </p>
-                  <div className="grid grid-cols-2 gap-3 mb-5">
-                    {[
-                      { icon: <QrCode className="w-5 h-5 text-orange-400" />, title: 'QR Code', desc: 'Auto-detects the embedded QR continuously' },
-                      { icon: <ScanText className="w-5 h-5 text-orange-400" />, title: 'OCR / Text', desc: 'Reads hash text, URLs & digital stamps' },
-                    ].map(({ icon, title, desc }) => (
-                      <button key={title} onClick={() => setShowWebcam(true)}
-                        className="group flex flex-col items-center gap-3 border-2 border-dashed border-white/15 hover:border-orange-500/60 rounded-lg p-5 transition-colors bg-white/[0.02]">
-                        <div className="w-10 h-10 bg-orange-500/10 group-hover:bg-orange-500/20 rounded-lg flex items-center justify-center transition-colors">{icon}</div>
-                        <div className="text-center">
-                          <p className="text-[11px] font-bold tracking-wide uppercase text-white mb-1">{title}</p>
-                          <p className="text-[9px] text-[#b0b4ba] leading-relaxed">{desc}</p>
-                        </div>
-                      </button>
-                    ))}
+                  <div className="mb-5">
+                    <button onClick={() => setShowWebcam(true)}
+                      className="group flex flex-col items-center gap-3 border-2 border-dashed border-white/15 hover:border-orange-500/60 rounded-lg p-5 transition-colors bg-white/[0.02] w-full">
+                      <div className="w-10 h-10 bg-orange-500/10 group-hover:bg-orange-500/20 rounded-lg flex items-center justify-center transition-colors">
+                        <QrCode className="w-5 h-5 text-orange-400" />
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[11px] font-bold tracking-wide uppercase text-white mb-1">Scan QR Code</p>
+                        <p className="text-[9px] text-[#b0b4ba] leading-relaxed">Auto-detects the embedded QR code continuously</p>
+                      </div>
+                    </button>
                   </div>
                   {hash && (
                     <div className="border-l-2 border-emerald-500 pl-3 py-1 bg-emerald-500/5 rounded-r-lg">
