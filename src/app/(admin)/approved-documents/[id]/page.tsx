@@ -214,6 +214,7 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
   const [uploading,         setUploading]         = useState(false);
   const [generatedBlob,     setGeneratedBlob]     = useState<Blob | null>(null);
   const [generatedFileName, setGeneratedFileName] = useState('');
+  const [generatedFileHashHint, setGeneratedFileHashHint] = useState<string | null>(null);
   const [uploadedHash,        setUploadedHash]        = useState<string | null>(null);
   const [uploadedPayloadHash, setUploadedPayloadHash] = useState<string | null>(null);
   const [chainTxHash,       setChainTxHash]       = useState<string | null>(null);
@@ -293,23 +294,25 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
     if (!request || !profile) return;
     setGenerating(true); setError('');
     try {
-      const { blob, fileName } = await generateDocument(request, profile);
+      const { blob, fileName, fileHashHint } = await generateDocument(request, profile);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url; a.download = fileName; a.click();
       URL.revokeObjectURL(url);
-      setGeneratedBlob(blob); setGeneratedFileName(fileName);
+      setGeneratedBlob(blob); setGeneratedFileName(fileName); setGeneratedFileHashHint(fileHashHint);
       setSuccess('Document generated. Upload it below to share with the resident.');
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to generate.');
     } finally { setGenerating(false); }
   };
 
-  const uploadFile = async (file: Blob, fileName: string) => {
+  const uploadFile = async (file: Blob, fileName: string, fileHashHint?: string) => {
     setUploading(true); setError(''); setChainError('');
     try {
-      // ── File-only hash (kept for independent file verification) ───────────────
-      const fileHash = await sha256Hex(file);
+      // ── File-only hash — use the pre-QR hint from generateDocument if available.
+      // The hint is hashed BEFORE the QR is injected, so it matches what the QR encodes.
+      // Re-hashing the final blob here would produce a different hash and break verify.
+      const fileHash = fileHashHint ?? await sha256Hex(file);
 
       // ── Combined payload hash (file bytes + all locked metadata) ─────────────
       const _profile    = request ? normaliseProfile(request as unknown as Record<string, string>) : { id: '', firstName: '', lastName: '', email: '' };
@@ -618,7 +621,7 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
                     <OutlineBtn
                       label={`Step 2: Upload Document`}
                       icon={Upload}
-                      onClick={() => uploadFile(generatedBlob, generatedFileName)}
+                      onClick={() => uploadFile(generatedBlob, generatedFileName, generatedFileHashHint ?? undefined)}
                       loading={uploading}
                       disabled={uploading}
                     />

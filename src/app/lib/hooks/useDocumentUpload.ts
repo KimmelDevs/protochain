@@ -46,7 +46,7 @@ export interface UseDocumentUploadReturn {
   setUploadedHash: (hash: string | null) => void;
   setChainTxHash: (hash: string | null) => void;
   clearErrors: () => void;
-  uploadFile: (file: Blob, fileName: string) => Promise<void>;
+  uploadFile: (file: Blob, fileName: string, fileHashHint?: string) => Promise<void>;
   recordOnChain: () => Promise<void>;
 }
 
@@ -94,15 +94,17 @@ export function useDocumentUpload({
   };
 
   /* ── uploadFile ───────────────────────────────────────────────────────── */
-  const uploadFile = async (file: Blob, fileName: string) => {
+  const uploadFile = async (file: Blob, fileName: string, fileHashHint?: string) => {
     if (!request) return;
     setUploading(true);
     setUploadError('');
     setChainError('');
 
     try {
-      // 1. File-only hash
-      const fileHash = await sha256Hex(file);
+      // 1. File-only hash — use the hint from generateDocument if provided.
+      //    The hint is the hash of the pre-QR blob; it's what the QR encodes,
+      //    so verify/?hash=<hint> will find the right DB row.
+      const fileHash = fileHashHint ?? await sha256Hex(file);
 
       // 2. Combined payload hash (file bytes + canonical metadata string)
       const profile: Profile = normaliseProfile(request as unknown as Record<string, string>);

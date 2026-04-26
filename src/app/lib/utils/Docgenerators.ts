@@ -1348,7 +1348,7 @@ async function injectBarangayCertification(zip: any, req: RequestDetail, profile
 export async function generateDocument(
   req:     RequestDetail,
   profile: Profile,
-): Promise<{ blob: Blob; fileName: string }> {
+): Promise<{ blob: Blob; fileName: string; fileHashHint: string }> {
   const docType = req.document_type ?? req.type ?? '';
 
   const { zip } = await loadTemplate(docType);
@@ -1378,7 +1378,38 @@ export async function generateDocument(
     await injectSignatureIntoZip(zip, 'Kagawad Signature', sigs.kagawad, 'sig_kagawad.png', 'rId_kag');
   }
 
-  const qrDataUrl = await generateQRDataUrl(req.id, req.file_hash ?? null);
+  // ── Step 1: Generate a pre-QR blob to compute the file hash ─────────────
+  // This solves the chicken-and-egg problem: the QR must encode the file hash,
+  // but the file hash only exists after the blob is generated.
+  // Solution: generate the blob once (without QR), hash it, then inject the QR
+  // using that hash, then generate the final blob. The hash will differ slightly
+  // (QR pixels added) but this pre-hash is immediately saved to the DB on upload,
+  // so verify always looks up the correct payload_hash via file_hash.
+  //
+  // Actually, we need the FINAL blob's hash to match what gets uploaded.
+  // So the correct approach is:
+  //   1. Generate blob WITHOUT QR → compute hash of that intermediate state
+  //   2. Use that hash in the QR URL
+  //   3. Inject QR → generate FINAL blob
+  //   4. Return final blob + the pre-QR hash as fileHashHint
+  //
+  // The upload hook must then save fileHashHint as file_hash (not re-hash the final blob),
+  // because the QR itself encodes fileHashHint and verify will look it up.
+  // -OR- simpler: generate blob → hash it → that IS the file_hash → QR encodes it →
+  // re-inject QR → final blob. The final blob hash differs, but we store fileHashHint.
+  //
+  // SIMPLEST correct approach:
+  //   Pre-blob hash → QR → final blob. Store pre-blob hash. QR encodes pre-blob hash.
+  //   verify/?hash=<pre-blob-hash> → DB lookup → payload_hash → chain. ✓
+
+  const preQrBuffer  = await zip.generateAsync({ type: 'arraybuffer' });
+  const preQrBlob    = new Blob([preQrBuffer], {
+    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  });
+  const fileHashHint = await sha256Hex(preQrBlob);
+
+  // ── Step 2: Generate QR using the pre-QR hash ────────────────────────────
+  const qrDataUrl = await generateQRDataUrl(req.id, fileHashHint);
   if (qrDataUrl) {
     await injectQRIntoZip(zip, qrDataUrl);
   } else {
@@ -1388,11 +1419,12 @@ export async function generateDocument(
   if (['barangay-clearance', 'business-clearance', 'certificate-of-indigency', 'certificate-of-residency', 'barangay-certification'].includes(docType)) {
     const sealDataUrl = await generateDigitalSealDataUrl(
       req.chain_tx_hash ?? null,
-      req.file_hash     ?? null,
+      fileHashHint,
     );
     await injectDigitalSealIntoZip(zip, sealDataUrl);
   }
 
+  // ── Step 3: Generate the final blob ──────────────────────────────────────
   const outBuffer = await zip.generateAsync({ type: 'arraybuffer' });
   const blob = new Blob([outBuffer], {
     type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -1412,7 +1444,7 @@ export async function generateDocument(
   const docLabel = docLabelMap[docType] ?? docType.replace(/-/g, '_');
   const fileName = `${docLabel}_${safeName}.docx`;
 
-  return { blob, fileName };
+  return { blob, fileName, fileHashHint };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
