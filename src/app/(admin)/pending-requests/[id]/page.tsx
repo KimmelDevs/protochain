@@ -639,7 +639,7 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
                   <div className="space-y-4">
 
                     {/* Step 1 — Secretary (hidden from Barangay Captain) */}
-                    {adminPosition !== 'Barangay Captain' && (
+                    {adminPosition === 'Barangay Secretary' && (
                     <div>
                       <p className="mono text-[10px] tracking-[0.15em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-1.5">
                         Step 1 — Barangay Secretary
@@ -662,7 +662,7 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
                     )}
 
                     {/* Step 2 — Captain (hidden from Barangay Secretary) */}
-                    {adminPosition !== 'Barangay Secretary' && (
+                    {adminPosition === 'Barangay Captain' && (
                     <div>
                       <p className="mono text-[10px] tracking-[0.15em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-1.5">
                         Step 2 — Barangay Captain
@@ -715,10 +715,12 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
                     )}
 
                     {/* Reject */}
+                    {(adminPosition === 'Barangay Captain' || adminPosition === 'Barangay Secretary') && (
                     <div>
                       <p className="mono text-[10px] tracking-[0.15em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-1.5">Reject</p>
                       <ActionBtn label="Reject Request" icon={XCircle} variant="danger" onClick={() => setShowRejectModal(true)} />
                     </div>
+                    )}
                   </div>
                 )}
 
