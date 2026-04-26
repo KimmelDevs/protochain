@@ -269,6 +269,7 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
   const [adminId,           setAdminId]           = useState<string | null>(null);
   const [adminEmail,        setAdminEmail]        = useState<string | null>(null);
   const [adminName,         setAdminName]         = useState<string | null>(null);
+  const [adminPosition,     setAdminPosition]     = useState<string | null>(null);
   const [loading,           setLoading]           = useState(true);
   const [notFound,          setNotFound]          = useState(false);
 
@@ -316,6 +317,8 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
             if (p) {
               const name = `${p.firstName ?? p.first_name ?? ''} ${p.lastName ?? p.last_name ?? ''}`.trim();
               if (name) setAdminName(name);
+              const pos = p.position ?? p.position ?? null;
+              if (pos) setAdminPosition(pos);
             }
           }
         }
@@ -668,15 +671,34 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
                       </p>
                       {captainLocked ? (
                         <div className="space-y-2">
-                          <div className="flex items-center gap-2 px-3 py-2.5 border border-[#E8E6E1] dark:border-[#2C2C32] bg-[#f5f4f0] dark:bg-[#1C1C1F] opacity-60 cursor-not-allowed">
-                            <Lock className="w-4 h-4 text-[#6C6C74] dark:text-[#9090A0] flex-shrink-0" />
-                            <span className="text-[12px] font-semibold text-[#6C6C74] dark:text-[#9090A0]">Captain Approval Locked</span>
-                          </div>
-                          <div className="border-l-2 border-amber-400 pl-3 py-1">
-                            <p className="text-[11px] text-amber-700 dark:text-amber-400 leading-snug">
-                              Waiting for Secretary approval before the Captain can approve this document. To skip this requirement, enable Bypass in Settings.
-                            </p>
-                          </div>
+                          {adminPosition === 'Barangay Captain' ? (
+                            <>
+                              <button
+                                disabled
+                                className="flex items-center justify-center gap-2 w-full px-4 py-2.5 border rounded-xl text-[12px] font-semibold transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed overflow-hidden bg-amber-50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400"
+                              >
+                                <Clock className="w-4 h-4 flex-shrink-0" />
+                                <span className="truncate">Wait for Secretary Approval</span>
+                              </button>
+                              <div className="border-l-2 border-amber-400 pl-3 py-1">
+                                <p className="text-[11px] text-amber-700 dark:text-amber-400 leading-snug">
+                                  The Secretary must approve this request first before you can give final approval.
+                                </p>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="flex items-center gap-2 px-3 py-2.5 border border-[#E8E6E1] dark:border-[#2C2C32] bg-[#f5f4f0] dark:bg-[#1C1C1F] opacity-60 cursor-not-allowed">
+                                <Lock className="w-4 h-4 text-[#6C6C74] dark:text-[#9090A0] flex-shrink-0" />
+                                <span className="text-[12px] font-semibold text-[#6C6C74] dark:text-[#9090A0]">Captain Approval Locked</span>
+                              </div>
+                              <div className="border-l-2 border-amber-400 pl-3 py-1">
+                                <p className="text-[11px] text-amber-700 dark:text-amber-400 leading-snug">
+                                  Waiting for Secretary approval before the Captain can approve this document. To skip this requirement, enable Bypass in Settings.
+                                </p>
+                              </div>
+                            </>
+                          )}
                         </div>
                       ) : (
                         <ActionBtn

@@ -340,8 +340,8 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
 
   return (
     <div
-      className="flex min-h-screen transition-colors duration-200"
-      style={{ background: '#F6F5F3', fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+      className="flex min-h-screen bg-[#F6F5F3] dark:bg-[#111113] transition-colors duration-200"
+      style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
     >
       <SuperAdminSidebar profile={profile} />
       <main className="flex-1 overflow-y-auto min-w-0">

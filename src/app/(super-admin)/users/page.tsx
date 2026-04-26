@@ -12,16 +12,6 @@ const POSITIONS = [
   '',
   'Barangay Captain',
   'Barangay Secretary',
-  'Barangay Treasurer',
-  'Kagawad',
-  'SK Chairperson',
-  'SK Kagawad',
-  'Barangay Tanod Chief',
-  'Barangay Tanod',
-  'Lupon Member',
-  'BCPC Chairperson',
-  'Health Worker',
-  'Day Care Worker',
 ];
 
 const ROLE_BADGE: Record<string, string> = {
