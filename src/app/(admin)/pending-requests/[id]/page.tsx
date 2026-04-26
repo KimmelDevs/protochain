@@ -661,7 +661,8 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
                     </div>
                     )}
 
-                    {/* Step 2 — Captain */}
+                    {/* Step 2 — Captain (hidden from Barangay Secretary) */}
+                    {adminPosition !== 'Barangay Secretary' && (
                     <div>
                       <p className="mono text-[10px] tracking-[0.15em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-1.5">
                         Step 2 — Barangay Captain
@@ -711,6 +712,7 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
                         />
                       )}
                     </div>
+                    )}
 
                     {/* Reject */}
                     <div>
