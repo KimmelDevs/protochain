@@ -26,7 +26,7 @@ const SECONDARY = [
   { label: 'Settings', href: '/settings', icon: Settings },
 ];
 
-interface AdminProfile { firstName: string; lastName: string; role: string; }
+interface AdminProfile { firstName: string; lastName: string; role: string; position?: string; }
 
 export default function AdminSidebar() {
   const pathname = usePathname();
@@ -40,7 +40,7 @@ export default function AdminSidebar() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       const { data } = await supabase
-        .from('profiles').select('firstName, lastName, role').eq('id', user.id).single();
+        .from('profiles').select('firstName, lastName, role, position').eq('id', user.id).single();
       if (data) setProfile(data);
     })();
   }, []);
@@ -66,7 +66,7 @@ export default function AdminSidebar() {
     ? `${profile.firstName?.[0] ?? ''}${profile.lastName?.[0] ?? ''}`.toUpperCase()
     : '?';
   const fullName  = profile ? `${profile.firstName} ${profile.lastName}` : 'Loading…';
-  const roleLabel = profile?.role === 'admin' ? 'Administrator' : (profile?.role ?? '');
+  const roleLabel = profile?.position || (profile?.role === 'admin' ? 'Administrator' : (profile?.role ?? ''));
 
   return (
     <>

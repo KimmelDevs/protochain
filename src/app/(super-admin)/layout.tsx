@@ -63,7 +63,7 @@ function SuperAdminSidebar({ profile }: { profile: Profile | null }) {
     ? `${profile.firstName?.[0] ?? ''}${profile.lastName?.[0] ?? ''}`.toUpperCase()
     : '?';
   const fullName  = profile ? `${profile.firstName} ${profile.lastName}` : 'Loading…';
-  const roleLabel = profile?.position || 'Super Admin';
+  const roleLabel = 'Super Admin';
 
   const isActive = (href: string) =>
     pathname === href ||
