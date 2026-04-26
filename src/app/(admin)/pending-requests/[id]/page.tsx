@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import {
   CheckCircle, XCircle, User, Mail, Phone,
   MapPin, Loader2, Download, Upload, Wand2,
-  ShieldCheck, AlertTriangle, Clock, Lock, History, CalendarDays,
+  ShieldCheck, AlertTriangle, Clock, Lock, History, CalendarDays, Info,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -734,7 +734,18 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
                 )}
               </div>
 
+              {/* NO POSITION NOTICE */}
+                {!adminPosition && (
+                  <div className="mt-4 flex items-start gap-2.5 px-3 py-3 border border-[#E8E6E1] dark:border-[#2C2C32] bg-[#f5f4f0] dark:bg-[#1C1C1F] rounded-xl">
+                    <Info className="w-4 h-4 text-[#6C6C74] dark:text-[#9090A0] flex-shrink-0 mt-0.5" />
+                    <p className="text-[12px] text-[#6C6C74] dark:text-[#9090A0] leading-snug">
+                      You have no available actions here because you have no assigned Barangay Position. Contact your Super Admin to assign you a role.
+                    </p>
+                  </div>
+                )}
+
               {/* DOCUMENT */}
+              {(adminPosition === 'Barangay Captain' || adminPosition === 'Barangay Secretary') && (
               <div>
                 <SectionLabel label="Document" />
                 <div className="space-y-2.5">
@@ -773,6 +784,7 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
                   {!request.file_url && uploadedHash && <HashDisplay hash={uploadedHash} txHash={chainTxHash} onRecord={handleRecordOnChain} recording={chainRecording} />}
                 </div>
               </div>
+              )}
 
             </motion.div>
           </div>
