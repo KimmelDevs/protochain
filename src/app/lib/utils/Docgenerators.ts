@@ -969,42 +969,56 @@ async function injectOathOfUndertaking(zip: any, req: RequestDetail, profile: Pr
   const fullName  = `${firstName} ${lastName}`;
   const age    = profile.age            ?? '___';
   const purok  = req.purok              ?? '___';
-  const years  = req.years_of_residency ?? '___';
+  const years  = req.years_of_residency ?? req.years_lived ?? '___';
   const { day, suffix, MONTH, year } = getCurrentDateParts();
+  const RY = '00DF566C'; // rsidR for {years_lived} runs in the Oath template
 
   await patchXml(zip, 'word/document.xml', xml => {
     xml = xml.replace(
-      '<w:r w:rsidR="00CC4651"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>{</w:t></w:r>' +
-      '<w:proofErr w:type="spellStart"/>' +
-      '<w:r w:rsidR="00CC4651"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>fullname</w:t></w:r>' +
-      '<w:proofErr w:type="spellEnd"/>' +
-      '<w:proofErr w:type="gramStart"/>' +
-      '<w:r w:rsidR="00CC4651"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>}</w:t></w:r>',
-      '<w:r w:rsidR="00CC4651"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>{fullname}</w:t></w:r>',
+      '<w:r w:rsidR=\"00CC4651\"><w:rPr><w:b/><w:bCs/><w:sz w:val=\"24\"/><w:szCs w:val=\"24\"/><w:lang w:val=\"en-US\"/></w:rPr><w:t>{</w:t></w:r>' +
+      '<w:proofErr w:type=\"spellStart\"/>' +
+      '<w:r w:rsidR=\"00CC4651\"><w:rPr><w:b/><w:bCs/><w:sz w:val=\"24\"/><w:szCs w:val=\"24\"/><w:lang w:val=\"en-US\"/></w:rPr><w:t>fullname</w:t></w:r>' +
+      '<w:proofErr w:type=\"spellEnd\"/>' +
+      '<w:proofErr w:type=\"gramStart\"/>' +
+      '<w:r w:rsidR=\"00CC4651\"><w:rPr><w:b/><w:bCs/><w:sz w:val=\"24\"/><w:szCs w:val=\"24\"/><w:lang w:val=\"en-US\"/></w:rPr><w:t>}</w:t></w:r>',
+      '<w:r w:rsidR=\"00CC4651\"><w:rPr><w:b/><w:bCs/><w:sz w:val=\"24\"/><w:szCs w:val=\"24\"/><w:lang w:val=\"en-US\"/></w:rPr><w:t>{fullname}</w:t></w:r>',
     );
     xml = xml.replace(
-      '<w:r w:rsidR="00CC4651"><w:rPr><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>{</w:t></w:r>' +
-      '<w:proofErr w:type="gramEnd"/>' +
-      '<w:r w:rsidR="00CC4651"><w:rPr><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>year}</w:t></w:r>',
-      '<w:r w:rsidR="00CC4651"><w:rPr><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>{year}</w:t></w:r>',
+      '<w:r w:rsidR=\"00CC4651\"><w:rPr><w:sz w:val=\"24\"/><w:szCs w:val=\"24\"/><w:lang w:val=\"en-US\"/></w:rPr><w:t>{</w:t></w:r>' +
+      '<w:proofErr w:type=\"gramEnd\"/>' +
+      '<w:r w:rsidR=\"00CC4651\"><w:rPr><w:sz w:val=\"24\"/><w:szCs w:val=\"24\"/><w:lang w:val=\"en-US\"/></w:rPr><w:t>year}</w:t></w:r>',
+      '<w:r w:rsidR=\"00CC4651\"><w:rPr><w:sz w:val=\"24\"/><w:szCs w:val=\"24\"/><w:lang w:val=\"en-US\"/></w:rPr><w:t>{year}</w:t></w:r>',
     );
     xml = xml.replace(
-      '<w:r w:rsidR="00CC4651"><w:rPr><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>{</w:t></w:r>' +
-      '<w:proofErr w:type="spellStart"/>' +
-      '<w:r w:rsidR="00CC4651"><w:rPr><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>this_</w:t></w:r>' +
-      '<w:proofErr w:type="gramStart"/>' +
-      '<w:r w:rsidR="00CC4651"><w:rPr><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>day</w:t></w:r>' +
-      '<w:proofErr w:type="spellEnd"/>' +
-      '<w:r w:rsidR="00CC4651"><w:rPr><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>}</w:t></w:r>',
-      '<w:r w:rsidR="00CC4651"><w:rPr><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="en-US"/></w:rPr><w:t>{this_day}</w:t></w:r>',
+      '<w:r w:rsidR=\"00CC4651\"><w:rPr><w:sz w:val=\"24\"/><w:szCs w:val=\"24\"/><w:lang w:val=\"en-US\"/></w:rPr><w:t>{</w:t></w:r>' +
+      '<w:proofErr w:type=\"spellStart\"/>' +
+      '<w:r w:rsidR=\"00CC4651\"><w:rPr><w:sz w:val=\"24\"/><w:szCs w:val=\"24\"/><w:lang w:val=\"en-US\"/></w:rPr><w:t>this_</w:t></w:r>' +
+      '<w:proofErr w:type=\"gramStart\"/>' +
+      '<w:r w:rsidR=\"00CC4651\"><w:rPr><w:sz w:val=\"24\"/><w:szCs w:val=\"24\"/><w:lang w:val=\"en-US\"/></w:rPr><w:t>day</w:t></w:r>' +
+      '<w:proofErr w:type=\"spellEnd\"/>' +
+      '<w:r w:rsidR=\"00CC4651\"><w:rPr><w:sz w:val=\"24\"/><w:szCs w:val=\"24\"/><w:lang w:val=\"en-US\"/></w:rPr><w:t>}</w:t></w:r>',
+      '<w:r w:rsidR=\"00CC4651\"><w:rPr><w:sz w:val=\"24\"/><w:szCs w:val=\"24\"/><w:lang w:val=\"en-US\"/></w:rPr><w:t>{this_day}</w:t></w:r>',
     );
 
-    xml = xml.replace(/\{fullname\}/g,  xmlEscape(fullName));
-    xml = xml.replace(/\{age\}/g,       xmlEscape(age));
-    xml = xml.replace(/\{this_day\}/g,  xmlEscape(day + suffix));
-    xml = xml.replace(/\{purok\}/g,     xmlEscape(purok));
-    xml = xml.replace(/\{month\}/g,     xmlEscape(MONTH));
-    xml = xml.replace(/\{year\}/g,      xmlEscape(year));
+    // Normalize split {years_lived} runs (rsidR 00DF566C, exact pattern from the docx)
+    xml = xml.replace(
+      `<w:r w:rsidR="${RY}" w:rsidRPr="${RY}"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>{</w:t></w:r>` +
+      `<w:proofErr w:type="spellStart"/>` +
+      `<w:r w:rsidR="${RY}" w:rsidRPr="${RY}"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>years_lived</w:t></w:r>` +
+      `<w:proofErr w:type="spellEnd"/>` +
+      `<w:r w:rsidR="${RY}" w:rsidRPr="${RY}"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>}</w:t></w:r>`,
+      `<w:r w:rsidR="${RY}" w:rsidRPr="${RY}"><w:rPr><w:b/><w:bCs/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>{years_lived}</w:t></w:r>`,
+    );
+    // Universal fallback normalizer for {years_lived}
+    xml = normalizeSplitPlaceholder(xml, 'years_lived');
+
+    xml = xml.replace(/\{fullname\}/g,    xmlEscape(fullName));
+    xml = xml.replace(/\{age\}/g,         xmlEscape(age));
+    xml = xml.replace(/\{this_day\}/g,    xmlEscape(day + suffix));
+    xml = xml.replace(/\{purok\}/g,       xmlEscape(purok));
+    xml = xml.replace(/\{month\}/g,       xmlEscape(MONTH));
+    xml = xml.replace(/\{year\}/g,        xmlEscape(year));
+    xml = xml.replace(/\{years_lived\}/g, xmlEscape(years));
 
     xml = xml.replace(/I, EGBERT KIA DELA CRUZ ,/g, `I, ${xmlEscape(fullName)} ,`);
     xml = xml.replace(/EGBERT KIA DELA CRUZ(?=<\/w:t>)/g, xmlEscape(fullName));
