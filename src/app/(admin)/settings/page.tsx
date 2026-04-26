@@ -234,19 +234,34 @@ export default function SettingsPage() {
   };
 
   // ── Signatures ─────────────────────────────────────────────────────────────
-  const [captainSig,   setCaptainSig]   = useState<SignatureRecord | null>(null);
-  const [secretarySig, setSecretarySig] = useState<SignatureRecord | null>(null);
-  const [loadingSigs,  setLoadingSigs]  = useState(true);
+  const [adminPosition, setAdminPosition] = useState<string | null>(null);
+  const [captainSig,    setCaptainSig]    = useState<SignatureRecord | null>(null);
+  const [secretarySig,  setSecretarySig]  = useState<SignatureRecord | null>(null);
+  const [kagawadSig,    setKagawadSig]    = useState<SignatureRecord | null>(null);
+  const [loadingSigs,   setLoadingSigs]   = useState(true);
 
   useEffect(() => {
     (async () => {
       try {
+        // Fetch the current admin's position
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: prof } = await supabase
+            .from('profiles')
+            .select('position')
+            .eq('id', user.id)
+            .single();
+          if (prof?.position) setAdminPosition(prof.position);
+        }
+        // Fetch all signatures
         const { data } = await supabase.from('admin_signatures').select('*');
         if (data) {
           const cap = data.find((r: any) => r.role === 'captain');
           const sec = data.find((r: any) => r.role === 'secretary');
+          const kag = data.find((r: any) => r.role === 'kagawad');
           if (cap) setCaptainSig(cap.record_json as SignatureRecord);
           if (sec) setSecretarySig(sec.record_json as SignatureRecord);
+          if (kag) setKagawadSig(kag.record_json as SignatureRecord);
         }
       } catch { /* table may not exist yet */ }
       finally { setLoadingSigs(false); }
@@ -260,6 +275,7 @@ export default function SettingsPage() {
     if (error) throw new Error('Failed to save: ' + error.message);
     if (record.role === 'captain')   setCaptainSig(record);
     if (record.role === 'secretary') setSecretarySig(record);
+    if (record.role === 'kagawad')   setKagawadSig(record);
     showToast('Signature saved and ECDSA-signed successfully!');
   };
 
@@ -393,23 +409,43 @@ export default function SettingsPage() {
   // ── Tab: Signatures ────────────────────────────────────────────────────────
   const signaturesTab = loadingSigs ? (
     <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-orange-500" /></div>
+  ) : !adminPosition ? (
+    // No position — show access denied notice
+    <div className="flex items-start gap-3 px-4 py-4 border border-[#E8E6E1] dark:border-[#2C2C32] bg-[#f5f4f0] dark:bg-[#1C1C1F] rounded-xl">
+      <Key className="w-4 h-4 text-[#6C6C74] dark:text-[#9090A0] flex-shrink-0 mt-0.5" />
+      <p className="text-[13px] text-[#6C6C74] dark:text-[#9090A0] leading-snug">
+        This account has no access to digital signatures. You need an assigned Barangay Position to manage signatures. Contact your Super Admin to assign you a role.
+      </p>
+    </div>
   ) : (
     <div className="space-y-10">
       <div className="border-l-2 border-orange-500 pl-4 py-0.5">
         <p className="text-[11px] font-700 tracking-[0.08em] uppercase text-orange-600 dark:text-orange-400 leading-none mb-1">ECDSA Digital Signatures</p>
         <p className="text-[13px] text-[#3A3A3E] dark:text-[#BABABC]">
-          Draw and save official signatures for the Barangay Captain and Secretary. Each signature is cryptographically signed using <strong>ECDSA P-256</strong> and will be automatically embedded into generated documents. The public key is stored for verification; the private key is never persisted.
+          Draw and save your official signature. Each signature is cryptographically signed using <strong>ECDSA P-256</strong> and will be automatically embedded into generated documents. The public key is stored for verification; the private key is never persisted.
         </p>
       </div>
-      <div className="border border-[#E8E6E1] dark:border-[#2C2C32] p-6">
-        <SectionLabel label="Barangay Captain / Punong Barangay" />
-        <SignaturePad role="captain" label="Captain's Official Signature" existingRecord={captainSig} onSave={handleSaveSignature} />
-      </div>
-      <div className="border-t border-[#E8E6E1] dark:border-[#2C2C32]" />
-      <div className="border border-[#E8E6E1] dark:border-[#2C2C32] p-6">
-        <SectionLabel label="Barangay Secretary" />
-        <SignaturePad role="secretary" label="Secretary's Official Signature" existingRecord={secretarySig} onSave={handleSaveSignature} />
-      </div>
+
+      {adminPosition === 'Barangay Captain' && (
+        <div className="border border-[#E8E6E1] dark:border-[#2C2C32] p-6">
+          <SectionLabel label="Barangay Captain / Punong Barangay" />
+          <SignaturePad role="captain" label="Captain's Official Signature" existingRecord={captainSig} onSave={handleSaveSignature} />
+        </div>
+      )}
+
+      {adminPosition === 'Barangay Secretary' && (
+        <div className="border border-[#E8E6E1] dark:border-[#2C2C32] p-6">
+          <SectionLabel label="Barangay Secretary" />
+          <SignaturePad role="secretary" label="Secretary's Official Signature" existingRecord={secretarySig} onSave={handleSaveSignature} />
+        </div>
+      )}
+
+      {adminPosition === 'Barangay Kagawad' && (
+        <div className="border border-[#E8E6E1] dark:border-[#2C2C32] p-6">
+          <SectionLabel label="Barangay Kagawad" />
+          <SignaturePad role="kagawad" label="Kagawad's Official Signature" existingRecord={kagawadSig} onSave={handleSaveSignature} />
+        </div>
+      )}
     </div>
   );
 

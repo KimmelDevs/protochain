@@ -12,6 +12,7 @@ const POSITIONS = [
   '',
   'Barangay Captain',
   'Barangay Secretary',
+  'Barangay Kagawad',
 ];
 
 const ROLE_BADGE: Record<string, string> = {

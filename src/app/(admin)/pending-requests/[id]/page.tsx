@@ -143,9 +143,9 @@ const Modal = ({ open, onClose, title, children }: { open: boolean; onClose: () 
 };
 
 /* ─── Approval Flow Banner ────────────────────────────────────────────── */
-function ApprovalFlowBanner({ status, bypassEnabled }: { status: string; bypassEnabled: boolean }) {
+function ApprovalFlowBanner({ status, bypassEnabled, isOath }: { status: string; bypassEnabled: boolean; isOath: boolean }) {
   const steps = [
-    { key: 'pending',            label: 'Step 1', title: 'Secretary Review', done: status !== 'pending' },
+    { key: 'pending',            label: 'Step 1', title: isOath ? 'Kagawad Review' : 'Secretary Review', done: status !== 'pending' },
     { key: 'secretary_approved', label: 'Step 2', title: 'Captain Approval', done: status === 'approved' },
     { key: 'approved',           label: 'Done',   title: 'Fully Approved',   done: status === 'approved' },
   ];
@@ -520,12 +520,23 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
   const isFullyApproved = request.status === 'approved';
   const isRejected      = request.status === 'rejected';
 
-  // Captain can approve if:
-  //  - bypass is ON (skip secretary step entirely), OR
-  //  - secretary has already approved
+  // Is this document type handled by Kagawad instead of Secretary for Step 1?
+  const isOath = (request.document_type ?? request.type) === 'oath-of-undertaking';
+
+  // Who does Step 1 for this document?
+  const step1Role = isOath ? 'Barangay Kagawad' : 'Barangay Secretary';
+
+  // Captain can approve if bypass is ON or secretary/kagawad has already approved
   const captainCanApprove = bypassEnabled || isSecApproved;
   // Captain button is locked when: request is still pending AND bypass is OFF
   const captainLocked = isPending && !bypassEnabled;
+
+  // Can this admin perform Step 1?
+  const canDoStep1 = adminPosition === step1Role;
+  // Can this admin perform Step 2 / Reject / Generate?
+  const canDoStep2 = adminPosition === 'Barangay Captain';
+  // Does this admin have any action at all?
+  const hasActions = canDoStep1 || canDoStep2;
 
   return (
     <>
@@ -568,7 +579,7 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
           )}
 
           {/* FLOW BANNER */}
-          {!isRejected && <ApprovalFlowBanner status={request.status} bypassEnabled={bypassEnabled} />}
+          {!isRejected && <ApprovalFlowBanner status={request.status} bypassEnabled={bypassEnabled} isOath={isOath} />}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
 
@@ -638,20 +649,20 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
                 ) : (
                   <div className="space-y-4">
 
-                    {/* Step 1 — Secretary (hidden from Barangay Captain) */}
-                    {adminPosition === 'Barangay Secretary' && (
+                    {/* Step 1 — Secretary or Kagawad depending on document type */}
+                    {canDoStep1 && (
                     <div>
                       <p className="mono text-[10px] tracking-[0.15em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-1.5">
-                        Step 1 — Barangay Secretary
+                        Step 1 — {step1Role}
                       </p>
                       {isSecApproved ? (
                         <div className="flex items-center gap-2 px-3 py-2 border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30">
                           <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-                          <span className="text-[12px] text-emerald-700 dark:text-emerald-400">Secretary approved</span>
+                          <span className="text-[12px] text-emerald-700 dark:text-emerald-400">{step1Role} approved</span>
                         </div>
                       ) : (
                         <ActionBtn
-                          label="Secretary: Approve"
+                          label={`${step1Role}: Approve`}
                           icon={CheckCircle}
                           variant="blue"
                           onClick={() => setShowSecModal(true)}
@@ -661,8 +672,8 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
                     </div>
                     )}
 
-                    {/* Step 2 — Captain (hidden from Barangay Secretary) */}
-                    {adminPosition === 'Barangay Captain' && (
+                    {/* Step 2 — Captain (hidden from Secretary and Kagawad) */}
+                    {canDoStep2 && (
                     <div>
                       <p className="mono text-[10px] tracking-[0.15em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-1.5">
                         Step 2 — Barangay Captain
@@ -715,7 +726,7 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
                     )}
 
                     {/* Reject */}
-                    {(adminPosition === 'Barangay Captain' || adminPosition === 'Barangay Secretary') && (
+                    {hasActions && (
                     <div>
                       <p className="mono text-[10px] tracking-[0.15em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-1.5">Reject</p>
                       <ActionBtn label="Reject Request" icon={XCircle} variant="danger" onClick={() => setShowRejectModal(true)} />
@@ -735,7 +746,7 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
               </div>
 
               {/* NO POSITION NOTICE */}
-                {!adminPosition && (
+                {!hasActions && !isRejected && !isFullyApproved && (
                   <div className="mt-4 flex items-start gap-2.5 px-3 py-3 border border-[#E8E6E1] dark:border-[#2C2C32] bg-[#f5f4f0] dark:bg-[#1C1C1F] rounded-xl">
                     <Info className="w-4 h-4 text-[#6C6C74] dark:text-[#9090A0] flex-shrink-0 mt-0.5" />
                     <p className="text-[12px] text-[#6C6C74] dark:text-[#9090A0] leading-snug">
@@ -745,7 +756,7 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
                 )}
 
               {/* DOCUMENT */}
-              {(adminPosition === 'Barangay Captain' || adminPosition === 'Barangay Secretary') && (
+              {hasActions && (
               <div>
                 <SectionLabel label="Document" />
                 <div className="space-y-2.5">
@@ -792,9 +803,9 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
       </div>
 
       {/* SECRETARY MODAL */}
-      <Modal open={showSecModal} onClose={() => setShowSecModal(false)} title="Secretary Approval — Step 1">
+      <Modal open={showSecModal} onClose={() => setShowSecModal(false)} title={`${step1Role} Approval — Step 1`}>
         <div className="space-y-4">
-          <AlertBanner variant="info">The Secretary is endorsing this request for the Captain's final approval.</AlertBanner>
+          <AlertBanner variant="info">{step1Role} is endorsing this request for the Captain's final approval.</AlertBanner>
           <div>
             <p className="mono text-[11px] tracking-[0.1em] uppercase text-[#6C6C74] dark:text-[#9090A0] mb-2">Endorsement Notes (Optional)</p>
             <textarea value={approvalNotes} onChange={e => setApprovalNotes(e.target.value)} rows={3} placeholder="Add endorsement notes..." className="w-full px-3 py-2.5 text-[13px] bg-white dark:bg-[#16161a] border border-[#E8E6E1] dark:border-[#2C2C32] text-[#1A1A1C] dark:text-[#EAEAEC] placeholder-[#7a7870] dark:placeholder-[#7e7b75] focus:outline-none focus:border-blue-500 resize-none transition-colors" />

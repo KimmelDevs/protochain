@@ -229,6 +229,7 @@ async function removeWhiteBackground(dataUrl: string): Promise<string> {
 interface SignatureImages {
   secretary: string | null;
   captain:   string | null;
+  kagawad:   string | null;
 }
 
 async function fetchSignatureImages(): Promise<SignatureImages> {
@@ -239,26 +240,29 @@ async function fetchSignatureImages(): Promise<SignatureImages> {
 
     if (error || !data || data.length === 0) {
       console.warn('Could not fetch admin_signatures:', error?.message);
-      return { secretary: null, captain: null };
+      return { secretary: null, captain: null, kagawad: null };
     }
 
     let secretary: string | null = null;
     let captain:   string | null = null;
+    let kagawad:   string | null = null;
 
     for (const row of data) {
       const record = row.record_json as { signatureDataUrl?: string } | null;
       if (!record?.signatureDataUrl) continue;
       if (row.role === 'secretary') secretary = record.signatureDataUrl;
       if (row.role === 'captain')   captain   = record.signatureDataUrl;
+      if (row.role === 'kagawad')   kagawad   = record.signatureDataUrl;
     }
 
     if (secretary) secretary = await removeWhiteBackground(secretary);
     if (captain)   captain   = await removeWhiteBackground(captain);
+    if (kagawad)   kagawad   = await removeWhiteBackground(kagawad);
 
-    return { secretary, captain };
+    return { secretary, captain, kagawad };
   } catch (err) {
     console.warn('fetchSignatureImages error:', err);
-    return { secretary: null, captain: null };
+    return { secretary: null, captain: null, kagawad: null };
   }
 }
 
@@ -1369,6 +1373,9 @@ export async function generateDocument(
   }
   if (sigs.captain) {
     await injectSignatureIntoZip(zip, 'Captain Signature', sigs.captain, 'sig_captain.png', 'rId_cap');
+  }
+  if (sigs.kagawad && docType === 'oath-of-undertaking') {
+    await injectSignatureIntoZip(zip, 'Kagawad Signature', sigs.kagawad, 'sig_kagawad.png', 'rId_kag');
   }
 
   const qrDataUrl = await generateQRDataUrl(req.id, req.file_hash ?? null);

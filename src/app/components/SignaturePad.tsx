@@ -14,7 +14,7 @@ export interface ECDSAKeyPair {
 }
 
 export interface SignatureRecord {
-  role: 'captain' | 'secretary';
+  role: 'captain' | 'secretary' | 'kagawad';
   name: string;
   signatureDataUrl: string;         // base64 PNG of the drawn signature
   publicKeyJwk: JsonWebKey;         // stored for verification
@@ -76,7 +76,7 @@ interface Point { x: number; y: number; }
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface SignaturePadProps {
-  role: 'captain' | 'secretary';
+  role: 'captain' | 'secretary' | 'kagawad';
   label: string;
   existingRecord: SignatureRecord | null;
   onSave: (record: SignatureRecord) => Promise<void>;
