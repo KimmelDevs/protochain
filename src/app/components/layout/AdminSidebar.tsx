@@ -59,7 +59,7 @@ export default function AdminSidebar() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push('/login');
+    router.replace('/');
   };
 
   const initials  = profile

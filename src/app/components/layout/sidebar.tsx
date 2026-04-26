@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { supabase } from '@/app/lib/supabase';
 import { 
   LayoutDashboard, 
   FileText, 
@@ -29,7 +30,13 @@ const menuItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router   = useRouter();
   const [darkMode, setDarkMode] = useState(false);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.replace('/');
+  };
 
   // Load saved theme
   useEffect(() => {
@@ -137,9 +144,7 @@ export default function Sidebar() {
       {/* border-color: color-border (#e0e1e6) */}
       <div className="p-4 border-t border-[#e0e1e6] dark:border-white/10 flex-shrink-0">
         <button
-          onClick={() => {
-            window.location.href = '/login';
-          }}
+          onClick={handleLogout}
           // color-destructive (#eb8e90) hover text — semantic destructive token
           className="flex items-center gap-3 px-4 py-3 rounded-lg w-full text-[#60646c] dark:text-[#b0b4ba] hover:text-[#eb8e90] hover:bg-[#eb8e90]/10 transition-all duration-200"
         >

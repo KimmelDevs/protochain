@@ -56,7 +56,7 @@ function SuperAdminSidebar({ profile }: { profile: Profile | null }) {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push('/login');
+    router.replace('/');
   };
 
   const initials  = profile
@@ -275,7 +275,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
         const { data: { session } } = await supabase.auth.getSession();
 
         if (!session?.user) {
-          if (mounted) router.replace('/login');
+          if (mounted) router.replace('/');
           return;
         }
 
@@ -286,7 +286,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
           .single();
 
         if (error || !prof || prof.role !== 'super_admin') {
-          if (mounted) router.replace('/login');
+          if (mounted) router.replace('/');
           return;
         }
 
@@ -302,12 +302,12 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
         }
       } catch (err) {
         console.error('Super-admin auth error:', err);
-        if (mounted) router.replace('/login');
+        if (mounted) router.replace('/');
       }
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session && mounted) router.replace('/login');
+      if (!session && mounted) router.replace('/');
     });
 
     verify();
