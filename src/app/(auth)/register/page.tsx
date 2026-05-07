@@ -334,7 +334,7 @@ function FloatingInput({ label, name, value, handleChange, type = 'text', error 
     <div>
       <div className="relative">
         <input
-          type={type} name={name} value={value} onChange={handleChange} placeholder=" "
+          type={type} name={name  } value={value} onChange={handleChange} placeholder=" "
           className={`peer w-full px-4 pt-6 pb-2 rounded-lg bg-white/10 border text-white focus:outline-none focus:ring-2 focus:ring-[#E8500A]
             ${error ? 'border-[#eb8e90]' : 'border-white/20'}`}
         />

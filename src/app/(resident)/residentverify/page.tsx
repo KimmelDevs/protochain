@@ -274,7 +274,7 @@ export default function VerifyPage() {
                         <p className="text-[13px] font-semibold text-[#1a1917] dark:text-[#f0eee8]">{result.documentType ? fmtDocType(result.documentType) : '—'}</p>
                       </div>
                       <div>
-                        <p className="mono text-[10px] font-bold tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">Recorded On</p>
+                        <p className="mono text-[10px] font-bold tracking-[0.15em] uppercase text-[#7a7870] dark:text-[#7e7b75] mb-1">Issued At</p>
                         <p className="text-[13px] font-semibold text-[#1a1917] dark:text-[#f0eee8]">
                           {result.timestamp ? new Date(result.timestamp * 1000).toLocaleString('en-PH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
                         </p>
@@ -326,7 +326,7 @@ export default function VerifyPage() {
                               const v = parts[i].slice(eq + 1); if (v) labeled.push({ label: parts[i].slice(0, eq).replace(/_/g, ' '), value: v });
                             }
                             const last = parts[parts.length - 1];
-                            if (last && parts.length > 1) labeled.push({ label: 'Issued At', value: new Date(last).toLocaleString('en-PH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) });
+                            if (last && parts.length > 1) labeled.push({ label: 'Requested At', value: new Date(last).toLocaleString('en-PH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) });
                             return (
                               <div className="grid grid-cols-1 gap-1.5">
                                 {labeled.map(({ label, value }, i) => (

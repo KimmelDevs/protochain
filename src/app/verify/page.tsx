@@ -279,7 +279,7 @@ function VerifyPageInner() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-6">
                       {[
                         { label: 'Document Type', value: result.documentType ? fmtDocType(result.documentType) : '—' },
-                        { label: 'Recorded On', value: result.timestamp ? new Date(result.timestamp * 1000).toLocaleString('en-PH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—' },
+                        { label: 'Issued At', value: result.timestamp ? new Date(result.timestamp * 1000).toLocaleString('en-PH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—' },
                       ].map(({ label, value }) => (
                         <div key={label} className="bg-white/5 rounded-lg p-3">
                           <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#b0b4ba] mb-1">{label}</p>
@@ -329,7 +329,7 @@ function VerifyPageInner() {
                               const v = parts[i].slice(eq + 1); if (v) labeled.push({ label: parts[i].slice(0, eq).replace(/_/g, ' '), value: v });
                             }
                             const last = parts[parts.length - 1];
-                            if (last && parts.length > 1) labeled.push({ label: 'Issued At', value: new Date(last).toLocaleString('en-PH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) });
+                            if (last && parts.length > 1) labeled.push({ label: 'Requested At', value: new Date(last).toLocaleString('en-PH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) });
                             return (
                               <div className="grid grid-cols-1 gap-1.5">
                                 {labeled.map(({ label, value }, i) => (
