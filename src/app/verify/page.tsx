@@ -97,7 +97,7 @@ function VerifyPageInner() {
     if (!h) { setError('Please enter or upload a document to verify.'); return; }
     if (h.length !== 64) { setError('SHA-256 hash must be exactly 64 characters.'); return; }
     setLoading(true); setError(''); setResult(null);
-    try { setResult(await verifyDocumentOnChain(h)); }
+    try { setResult(await verifyDocumentOnChain(h, activeTab === 'file' ? 'final_file_hash' : 'file_hash')); }
     catch (e: unknown) { setError(e instanceof Error ? e.message : 'Verification failed.'); }
     finally { setLoading(false); }
   };
@@ -106,7 +106,7 @@ function VerifyPageInner() {
 
   const handleScanResult = (scannedHash: string) => {
     setHash(scannedHash); setError(''); setResult(null);
-    setActiveTab('file');
+    setActiveTab('scan');
   };
 
   const isAuthentic = result?.exists && !result?.isRevoked && !result?.isExpired;

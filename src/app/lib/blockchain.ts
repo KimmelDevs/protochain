@@ -34,7 +34,6 @@ export async function recordDocumentOnChain(
   documentType: string,
   expiresAt?: number,
 ): Promise<string> {
-  // Default: 1 month from now if not provided
   const expiry = expiresAt ?? Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
   const res = await fetch('/api/blockchain', {
     method: 'POST',
@@ -73,7 +72,18 @@ export interface VerifyResult {
   payloadSnapshot?: string;
 }
 
-export async function verifyDocumentOnChain(hexHash: string): Promise<VerifyResult> {
+/**
+ * Verifies a document hash against the blockchain.
+ *
+ * @param hexHash  The SHA-256 hash to verify.
+ * @param lookup   Which DB column the payload-snapshot API should query first.
+ *                 "file_hash"       → QR scan / manual hash paste (default).
+ *                 "final_file_hash" → file-upload verify path.
+ */
+export async function verifyDocumentOnChain(
+  hexHash: string,
+  lookup: 'file_hash' | 'final_file_hash' = 'file_hash',
+): Promise<VerifyResult> {
   if (!CONTRACT_ADDRESS) {
     throw new Error('NEXT_PUBLIC_CONTRACT_ADDRESS is not set.');
   }
@@ -86,24 +96,24 @@ export async function verifyDocumentOnChain(hexHash: string): Promise<VerifyResu
   const provider = new JsonRpcProvider(rpcUrl);
   const contract = new Contract(CONTRACT_ADDRESS, ABI, provider);
 
-  // ── Step 1: use fileHash (🟦) to fetch payloadHash (🟧) + snapshot (🟩) from Supabase
-  let onChainHash    = hexHash;          // fallback: treat the input as the on-chain hash
+  // ── Step 1: resolve hash → payloadHash + snapshot from Supabase ──────────
+  //   QR / manual: lookup=file_hash        → queries file_hash, falls back to final_file_hash
+  //   Upload:      lookup=final_file_hash  → queries final_file_hash only
+  let onChainHash    = hexHash;
   let payloadSnapshot: string | undefined;
   try {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    const res  = await fetch(`${origin}/api/payload-snapshot?hash=${hexHash}`);
+    const res  = await fetch(`${origin}/api/payload-snapshot?hash=${hexHash}&lookup=${lookup}`);
     if (res.ok) {
       const json = await res.json();
-      // 🟧 payload_hash is what was actually recorded on-chain
       if (json.payload_hash)     onChainHash     = json.payload_hash;
-      // 🟩 payload_snapshot is the human-readable locked fields
       if (json.payload_snapshot) payloadSnapshot = json.payload_snapshot;
     }
   } catch {
     // Non-fatal — fall back to using the raw input hash
   }
 
-  // ── Step 2: verify 🟧 on-chain
+  // ── Step 2: verify on-chain
   const bytes32Hash = hexToBytes32(onChainHash);
   const r = await contract.verifyDocument(bytes32Hash);
 
