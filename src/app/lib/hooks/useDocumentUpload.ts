@@ -9,21 +9,6 @@
  *   4. Upload file to Supabase Storage
  *   5. PATCH the request row with file_url, file_hash, final_file_hash, payload_hash, payload_snapshot
  *   6. Record the payload hash on the Sepolia blockchain
- *
- * ── Why two file hashes? ──────────────────────────────────────────────────────
- *
- *  file_hash       → SHA-256 of the pre-QR blob. This is what the QR code
- *                    encodes in its URL (?hash=<file_hash>). The QR scan
- *                    verify path does: file_hash → payload_hash → chain. ✓
- *
- *  final_file_hash → SHA-256 of the final blob that is actually uploaded and
- *                    downloaded by the user (QR already injected). When a user
- *                    uploads that file on the verify page, computeSha256 will
- *                    produce this hash. The file-upload verify path does:
- *                    final_file_hash → payload_hash → chain. ✓
- *
- *  When no fileHashHint is provided (admin manually uploads a plain file with
- *  no QR injection), both hashes are identical and only one lookup is needed.
  */
 
 import { useState } from 'react';
@@ -39,15 +24,10 @@ import {
 } from '@/app/lib/utils/Docgenerators';
 
 export interface UseDocumentUploadOptions {
-  /** The request ID — used as the storage path prefix and for PATCH calls. */
   requestId: string;
-  /** The current request detail object. */
   request: RequestDetail | null;
-  /** Optional audit metadata appended to every PATCH body. */
   auditMeta?: () => Record<string, string | null>;
-  /** Called after a successful upload with the public URL and payload hash. */
   onSuccess?: (fileUrl: string, payloadHash: string) => void;
-  /** Called after the blockchain tx is confirmed with the tx hash. */
   onChainSuccess?: (txHash: string) => void;
 }
 
@@ -58,7 +38,6 @@ export interface UseDocumentUploadReturn {
   chainTxHash: string | null;
   uploadError: string;
   chainError: string;
-  /** Set the displayed payload hash manually (e.g. when loaded from the DB on mount). */
   setUploadedHash: (hash: string | null) => void;
   setChainTxHash: (hash: string | null) => void;
   clearErrors: () => void;
@@ -82,7 +61,6 @@ export function useDocumentUpload({
 
   const clearErrors = () => { setUploadError(''); setChainError(''); };
 
-  /* ── recordOnChain ────────────────────────────────────────────────────── */
   const _recordOnChain = async (payloadHash: string) => {
     setChainRecording(true);
     setChainError('');
@@ -103,13 +81,11 @@ export function useDocumentUpload({
     }
   };
 
-  /* ── recordOnChain (public — retries with the stored hash) ───────────── */
   const recordOnChain = async () => {
     if (!uploadedHash) return;
     await _recordOnChain(uploadedHash);
   };
 
-  /* ── uploadFile ───────────────────────────────────────────────────────── */
   const uploadFile = async (file: Blob, fileName: string, fileHashHint?: string) => {
     if (!request) return;
     setUploading(true);
@@ -117,24 +93,20 @@ export function useDocumentUpload({
     setChainError('');
 
     try {
-      // 1. file_hash — use the hint from generateDocument if provided.
-      //    The hint is SHA-256 of the pre-QR blob; it's what the QR encodes,
-      //    so verify/?hash=<hint> → DB lookup by file_hash → payload_hash → chain. ✓
+      // pre-QR hash — encoded in the QR URL, used by QR scan verify
       const fileHash = fileHashHint ?? await sha256Hex(file);
 
-      // 2. final_file_hash — SHA-256 of the actual blob being uploaded.
-      //    When fileHashHint is provided the final blob includes the injected QR,
-      //    so its hash differs from fileHashHint. When no hint exists both are equal.
-      //    verify (file-upload path) hashes the downloaded file → matches this. ✓
+      // post-QR hash — hash of the actual blob the user downloads.
+      // When the user uploads that file on the verify page, the browser
+      // computes this hash. Stored so the file-upload verify path can find the row.
       const finalFileHash = fileHashHint ? await sha256Hex(file) : fileHash;
 
-      // 3. Combined payload hash (file bytes + canonical metadata string).
-      //    This is what gets recorded on-chain.
+      // combined payload hash (file bytes + metadata) — recorded on-chain
       const profile: Profile = normaliseProfile(request as unknown as Record<string, string>);
       const payloadStr  = buildRequestPayload(request, profile);
       const payloadHash = await hashPayload(file, payloadStr);
 
-      // 4. Upload to Supabase Storage
+      // upload to storage
       const storagePath = `documents/${requestId}/${fileName}`;
       const { error: upErr } = await supabase.storage
         .from('documents')
@@ -145,22 +117,17 @@ export function useDocumentUpload({
         .from('documents')
         .getPublicUrl(storagePath);
 
-      // 4b. If a previous payload_hash exists on-chain, revoke it before re-recording.
-      //     This prevents the old record from showing as "REVOKED" after a re-upload.
+      // revoke old on-chain record if hash changed
       const existingPayloadHash: string | null = request?.payload_hash ?? null;
       if (existingPayloadHash && existingPayloadHash !== payloadHash) {
-        try {
-          await revokeDocumentOnChain(existingPayloadHash);
-        } catch {
-          // Non-fatal: old record may not exist on-chain yet — continue with new upload.
-        }
+        try { await revokeDocumentOnChain(existingPayloadHash); } catch { /* non-fatal */ }
       }
 
-      // 5. Persist hashes + snapshot to the request row
+      // persist to DB
       const patchBody = {
         file_url:         urlData.publicUrl,
-        file_hash:        fileHash,        // pre-QR hash — QR encodes this
-        final_file_hash:  finalFileHash,   // post-QR hash — what the user downloads
+        file_hash:        fileHash,
+        final_file_hash:  finalFileHash,
         payload_hash:     payloadHash,
         payload_snapshot: payloadStr,
         ...(auditMeta?.() ?? {}),
@@ -173,14 +140,9 @@ export function useDocumentUpload({
       const j = await res.json();
       if (!res.ok) throw new Error(j.error ?? 'Failed to update request.');
 
-      // Show the payload hash (what's recorded on-chain), not the raw file hash.
       setUploadedHash(payloadHash);
       onSuccess?.(urlData.publicUrl, payloadHash);
 
-      // 6. Record on-chain (non-blocking — errors surfaced via chainError).
-      //    Must use payloadHash (combined file+metadata hash), not fileHash,
-      //    because verifyDocumentOnChain looks up payload_hash from the DB
-      //    and checks THAT against the blockchain.
       await _recordOnChain(payloadHash);
     } catch (err: unknown) {
       setUploadError(err instanceof Error ? err.message : 'Upload failed.');

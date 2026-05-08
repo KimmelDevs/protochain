@@ -428,6 +428,11 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
       // Re-hashing the final blob here would produce a different hash and break verify.
       const fileHash = fileHashHint ?? await sha256Hex(file);
 
+      // ── Final file hash — SHA-256 of the actual blob the user downloads (post-QR).
+      // When the resident uploads the file on the verify page, the browser computes
+      // this hash. Stored so the file-upload verify path can find the row.
+      const finalFileHash = await sha256Hex(file);
+
       // ── Combined payload hash (file bytes + all locked metadata) ─────────────
       // Hash (file bytes || canonical payload string) so the blockchain record
       // proves the file AND every metadata field together.
@@ -440,13 +445,14 @@ export default function ReviewRequestPage({ params }: { params: Promise<{ id: st
       if (upErr) throw upErr;
       const { data: urlData } = supabase.storage.from('documents').getPublicUrl(storagePath);
 
-      // Persist file_hash (file only), payload_hash (combined), and the
-      // human-readable snapshot of every locked field.
+      // Persist file_hash (pre-QR), final_file_hash (post-QR), payload_hash (combined),
+      // and the human-readable snapshot of every locked field.
       const res = await fetch(`/api/requests?id=${id}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           file_url:         urlData.publicUrl,
           file_hash:        fileHash,
+          final_file_hash:  finalFileHash,
           payload_hash:     payloadHash,
           payload_snapshot: payloadStr,
           ...auditMeta(),

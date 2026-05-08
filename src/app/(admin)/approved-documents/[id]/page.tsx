@@ -314,6 +314,11 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
       // Re-hashing the final blob here would produce a different hash and break verify.
       const fileHash = fileHashHint ?? await sha256Hex(file);
 
+      // ── Final file hash — SHA-256 of the actual blob the user downloads (post-QR).
+      // When the resident uploads the file on the verify page, the browser computes
+      // this hash. Stored so the file-upload verify path can find the row.
+      const finalFileHash = await sha256Hex(file);
+
       // ── Combined payload hash (file bytes + all locked metadata) ─────────────
       const _profile    = request ? normaliseProfile(request as unknown as Record<string, string>) : { id: '', firstName: '', lastName: '', email: '' };
       const payloadStr  = request ? buildRequestPayload(request, _profile) : '';
@@ -329,6 +334,7 @@ export default function ApprovedDocumentDetailPage({ params }: { params: Promise
         body: JSON.stringify({
           file_url:         urlData.publicUrl,
           file_hash:        fileHash,
+          final_file_hash:  finalFileHash,
           payload_hash:     payloadHash,
           payload_snapshot: payloadStr,
         }),
